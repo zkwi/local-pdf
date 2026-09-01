@@ -1,0 +1,39 @@
+{
+  "name": "pdf2word",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "纯前端 PDF 转 Word（DOCX）工具，文件不离开浏览器",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "assets": "node scripts/copy-pdfjs-assets.mjs",
+    "predev": "npm run assets",
+    "dev": "vite",
+    "prebuild": "npm run assets",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --port 4173",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "postinstall": "node scripts/copy-pdfjs-assets.mjs"
+  },
+  "dependencies": {
+    "docx": "^9.7.1",
+    "pdfjs-dist": "^6.3.289",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tesseract.js": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.6",
+    "vitest": "^4.1.11"
+  }
+}

@@ -1,0 +1,124 @@
+import { describe, expect, it } from 'vitest';
+import { buildLines } from '../src/core/layout/lines.ts';
+import { linesToRuns } from '../src/core/semantic/build.ts';
+import { ptToHalfPoint, ptToPx96, ptToTwip } from '../src/core/geometry/units.ts';
+import { cleanFontName, mapFont } from '../src/core/docx/fonts.ts';
+import { mergeOcrSpans, shouldRunOcr } from '../src/core/ocr/engine.ts';
+import { line, span } from './helpers.ts';
+
+describe('linesToRuns', () => {
+  it('相同样式的相邻片段合并成一个 run', () => {
+    const { lines } = buildLines([
+      span({ text: '普通', x: 72, baseline: 100 }),
+      span({ text: '文字', x: 83, baseline: 100 }),
+    ]);
+    const runs = linesToRuns(lines);
+    expect(runs).toHaveLength(1);
+    expect(runs[0].text).toBe('普通文字');
+  });
+
+  it('粗体片段单独成 run', () => {
+    const { lines } = buildLines([
+      span({ text: '普通', x: 72, baseline: 100 }),
+      span({ text: '加粗', x: 83, baseline: 100, bold: true }),
+    ]);
+    const runs = linesToRuns(lines);
+    expect(runs).toHaveLength(2);
+    expect(runs[1].bold).toBe(true);
+  });
+
+  it('多行按中英文规则拼接', () => {
+    const { lines } = buildLines([
+      line('the quick brown', 72, 100, 90),
+      line('fox jumps', 72, 114, 60),
+    ]);
+    expect(linesToRuns(lines)[0].text).toBe('the quick brown fox jumps');
+  });
+
+  it('中文多行不产生空格', () => {
+    const { lines } = buildLines([
+      line('这是第一行中文内容', 72, 100, 90),
+      line('这是第二行中文内容', 72, 114, 90),
+    ]);
+    expect(linesToRuns(lines)[0].text).toBe('这是第一行中文内容这是第二行中文内容');
+  });
+});
+
+describe('单位换算', () => {
+  it('pt → twip / half-point / px96', () => {
+    expect(ptToTwip(12)).toBe(240);
+    expect(ptToHalfPoint(10.5)).toBe(21);
+    expect(ptToPx96(72)).toBeCloseTo(96);
+  });
+
+  it('字号不会取到 0', () => {
+    expect(ptToHalfPoint(0)).toBe(2);
+  });
+});
+
+describe('字体映射', () => {
+  it('去掉子集前缀', () => {
+    expect(cleanFontName('ABCDEE+Calibri')).toBe('Calibri');
+  });
+
+  it('中文字体映射到 eastAsia', () => {
+    expect(mapFont('SimSun', 'serif').eastAsia).toBe('宋体');
+    expect(mapFont('MicrosoftYaHei', 'sans-serif').eastAsia).toBe('微软雅黑');
+  });
+
+  it('未知字体按 family 回退', () => {
+    expect(mapFont('SomeUnknownFont', 'monospace').ascii).toBe('Consolas');
+    expect(mapFont(undefined, 'serif').ascii).toBe('Times New Roman');
+  });
+});
+
+describe('OCR 触发判断', () => {
+  const page = (charCount: number, imageCoverage: number, suspicious = false) => ({
+    index: 0,
+    width: 595,
+    height: 842,
+    rotation: 0,
+    spans: [],
+    images: [],
+    segments: [],
+    links: [],
+    ocrApplied: false,
+    textHealth: {
+      charCount,
+      printableRatio: 1,
+      replacementRatio: 0,
+      imageCoverage,
+      textCoverage: 0,
+      suspicious,
+    },
+  });
+
+  it('原生文字页面默认不 OCR', () => {
+    expect(shouldRunOcr(page(1800, 0.05), 'auto')).toBe(false);
+  });
+
+  it('整页图片没有文字时触发 OCR', () => {
+    expect(shouldRunOcr(page(0, 0.95), 'auto')).toBe(true);
+  });
+
+  it('乱码页面触发 OCR', () => {
+    expect(shouldRunOcr(page(900, 0, true), 'auto')).toBe(true);
+  });
+
+  it('关闭时永不触发，强制时永远触发', () => {
+    expect(shouldRunOcr(page(0, 0.95), 'off')).toBe(false);
+    expect(shouldRunOcr(page(1800, 0), 'force')).toBe(true);
+  });
+});
+
+describe('mergeOcrSpans', () => {
+  it('与原生文字重叠的 OCR 结果被丢弃', () => {
+    const native = [span({ text: '原生', x: 72, baseline: 100 })];
+    const ocr = [
+      { ...span({ text: '原生', x: 73, baseline: 100 }), source: 'ocr' as const },
+      { ...span({ text: '新增', x: 300, baseline: 400 }), source: 'ocr' as const },
+    ];
+    const merged = mergeOcrSpans(native, ocr);
+    expect(merged.map((s) => s.text)).toEqual(['原生', '新增']);
+  });
+});

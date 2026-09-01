@@ -1,0 +1,18 @@
+node_modules/
+dist/
+dist-ssr/
+coverage/
+*.local
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+tmp/
+outputs/
+public/tessdata/*
+!public/tessdata/.gitkeep
+public/pdfjs/
+.playwright-mcp/
+
+# 6.5 MB 的扫描件夹具不入库，用 tests/fixtures/make_fixtures.py 现生成
+tests/fixtures/scanned-no-text.pdf
