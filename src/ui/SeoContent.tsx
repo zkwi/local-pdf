@@ -2,8 +2,9 @@ import type { CSSProperties } from 'react';
 import { useI18n } from '../i18n/index.tsx';
 import type { MessageKey } from '../i18n/index.tsx';
 import { SITE } from '../site.ts';
+import type { ToolGroup } from './tools.ts';
 
-const FAQ_COUNT = 5;
+const FAQ_COUNT = 6;
 const STEP_COUNT = 3;
 const SITE_URL = 'https://localpdfconverter.com/';
 
@@ -12,13 +13,15 @@ const SITE_URL = 'https://localpdfconverter.com/';
  * 外加 schema.org 的 WebApplication + FAQPage 结构化数据（跟随当前语言）。
  * index.html 里有一份英文静态版给不跑 JS 的爬虫，tests/seo.test.ts 保证两边 FAQ 一致。
  */
-export function SeoContent() {
+export function SeoContent({ group }: { readonly group: ToolGroup }) {
   const { t, locale } = useI18n();
   const faq = Array.from({ length: FAQ_COUNT }, (_, i) => ({
     q: t(`seo.faq.q${i + 1}` as MessageKey),
     a: t(`seo.faq.a${i + 1}` as MessageKey),
   }));
-  const steps = Array.from({ length: STEP_COUNT }, (_, i) => t(`seo.how.${i + 1}` as MessageKey));
+  // 三步说明按方向分两套：转成 PDF 的页面不该再说"把 PDF 拖进来"
+  const prefix = group === 'to-pdf' ? 'seo.how.topdf' : 'seo.how';
+  const steps = Array.from({ length: STEP_COUNT }, (_, i) => t(`${prefix}.${i + 1}` as MessageKey));
 
   const jsonLd = {
     '@context': 'https://schema.org',

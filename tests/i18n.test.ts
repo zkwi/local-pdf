@@ -51,8 +51,10 @@ describe('i18n 文案表', () => {
       'loading',
       'extracting',
       'ocr-model-download',
+      'rendering',
       'ocr',
       'writing-docx',
+      'writing-images',
       'completed',
     ]) {
       expect(zhCN).toHaveProperty(`progress.${key}`);

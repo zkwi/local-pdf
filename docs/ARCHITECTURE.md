@@ -40,6 +40,7 @@ core/layout      ← contracts + geometry + util     （不碰 pdf.js，纯函�
 core/semantic    ← contracts + geometry + layout/text
 core/docx        ← contracts + geometry + docx
 core/markdown    ← contracts (+ 动态 import unified/remark、fflate)
+core/pdfgen      ← fflate、docx-preview、remark；转成 PDF：自写的 PDF 写入器 + 浏览器排版后的 DOM 坐标抽取（主线程，需要 DOM）
 core/ocr         ← contracts + geometry + util (+ 动态 import @paddleocr/paddleocr-js)
 core/converter   ← 以上全部，负责编排
 worker/          ← converter

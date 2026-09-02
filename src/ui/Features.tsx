@@ -1,16 +1,21 @@
 import type { CSSProperties, ReactElement } from 'react';
 import { useI18n } from '../i18n/index.tsx';
 import type { MessageKey } from '../i18n/index.tsx';
+import type { ToolGroup } from './tools.ts';
 
-const ITEMS = ['local', 'editable', 'ocr', 'free'] as const;
-type Item = (typeof ITEMS)[number];
+type Item = 'local' | 'editable' | 'ocr' | 'free' | 'vector' | 'compose';
+
+/** 两个方向各自的四张卖点卡：本地和免费共用，中间两张按方向换 */
+const ITEMS: Record<ToolGroup, readonly Item[]> = {
+  'from-pdf': ['local', 'editable', 'ocr', 'free'],
+  'to-pdf': ['local', 'vector', 'compose', 'free'],
+};
 
 /**
- * 拖放区下面的四张卖点卡：本地、可编辑、扫描件、免费开源。
- * 一眼看清"为什么用这个"，比散落各处的小标签清楚。
+ * 拖放区下面的四张卖点卡。一眼看清"为什么用这个"，比散落各处的小标签清楚。
  * 整个区块是首屏第 2 个入场的，四张卡再各自错开一点（见 styles.css 的 .reveal）。
  */
-export function Features() {
+export function Features({ group }: { readonly group: ToolGroup }) {
   const { t } = useI18n();
   return (
     <section
@@ -22,7 +27,7 @@ export function Features() {
         {t('features.label')}
       </h2>
       <ul className="features__list">
-        {ITEMS.map((item, index) => (
+        {ITEMS[group].map((item, index) => (
           <li key={item} className="features__item" style={{ '--i': index } as CSSProperties}>
             <span className="features__icon" aria-hidden="true">
               {ICONS[item]}
@@ -60,6 +65,21 @@ const ICONS: Record<Item, ReactElement> = {
   free: (
     <svg viewBox="0 0 24 24">
       <path d="m8 8-4 4 4 4M16 8l4 4-4 4M14 5l-4 14" />
+    </svg>
+  ),
+  vector: (
+    <svg viewBox="0 0 24 24">
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M7 9h10M7 13h6" />
+      <path d="M15 15v5M13 17.5h4" />
+    </svg>
+  ),
+  compose: (
+    <svg viewBox="0 0 24 24">
+      <rect x="3" y="3" width="7" height="7" rx="1.5" />
+      <rect x="14" y="3" width="7" height="7" rx="1.5" />
+      <rect x="3" y="14" width="7" height="7" rx="1.5" />
+      <path d="M17.5 14v7M14 17.5h7" />
     </svg>
   ),
 };

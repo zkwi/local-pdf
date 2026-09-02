@@ -8,7 +8,10 @@ export type OcrQuality = 'fast' | 'balanced';
 
 export type OcrLanguage = 'zh' | 'zh-Hant' | 'en' | 'ja';
 
-export type OutputFormat = 'docx' | 'markdown' | 'both';
+/** images：每页渲染成一张图片，不走文字抽取和版面分析 */
+export type OutputFormat = 'docx' | 'markdown' | 'both' | 'images';
+
+export type PageImageFormat = 'png' | 'jpeg';
 
 /** 界面语言；核心层只用它决定输出文件里少数几处可读文案（如图片替代文本） */
 export type Locale = 'zh-CN' | 'zh-TW' | 'en' | 'ja';
@@ -32,6 +35,9 @@ export interface ConvertOptions {
   /** 图片渲染倍率；OCR 时至少按 3 倍（约 216 DPI）渲染 */
   readonly renderScale: number;
   readonly maxPages: number;
+  /** 只在 output 为 images 时用：整页图片的格式与清晰度 */
+  readonly pageImageFormat: PageImageFormat;
+  readonly pageImageDpi: number;
   readonly password?: string;
 }
 
@@ -50,4 +56,6 @@ export const DEFAULT_OPTIONS: ConvertOptions = {
   detectColumns: true,
   renderScale: 2,
   maxPages: 1000,
+  pageImageFormat: 'png',
+  pageImageDpi: 150,
 };

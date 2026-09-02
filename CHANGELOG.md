@@ -5,6 +5,30 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-09-02
+
+### Added
+
+- Six tool pages with their own URLs and a two-group navigation bar (from PDF / to PDF): PDF → Word (`/`),
+  PDF → Markdown, PDF → Images, Word → PDF, Markdown → PDF and Images → PDF. Switching tools keeps queues
+  and selected images, deep links and the browser's back button work, and `?lang=` is carried along. The
+  former "Both" output is now an "Also create Markdown / Word" switch under More options.
+- PDF to images: every page rendered as a PNG or JPEG (96, 150 or 300 DPI, chosen under "More options"),
+  zipped when the document has more than one page. Text extraction, OCR and layout analysis are skipped
+  entirely in this mode.
+- Word → PDF and Markdown → PDF, entirely in the browser: the document is laid out by the browser in a
+  hidden frame, paginated with a multi-column trick, and written as a vector PDF with selectable,
+  searchable text, clickable links and images at their original resolution. Fonts are not embedded: Latin
+  text uses the PDF base fonts (metric-compatible Arial / Times New Roman / Courier New are used for the
+  layout), CJK text the reader's built-in CID fonts (Simplified / Traditional Chinese, Japanese, Korean,
+  selectable). Word documents keep their page size, margins, headers and footers, tables, images and
+  automatic numbering (the CSS counters docx-preview generates are evaluated into real text) and
+  PAGE / NUMPAGES fields filled in per page; Markdown
+  supports GFM tables, task lists, code blocks, quotes, and images dropped alongside the file or pasted text.
+- Images → PDF with a composer: thumbnails in upload order, drag to reorder (move buttons as well),
+  rotate, sort by name, page size (fit / A4 / Letter), orientation, margins and an image-quality choice.
+  JPEG originals are embedded without re-encoding and EXIF orientation is honoured.
+
 ## [0.2.0] — 2026-09-02
 
 ### Added

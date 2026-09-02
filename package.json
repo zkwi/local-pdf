@@ -1,6 +1,6 @@
 {
   "name": "local-pdf",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "Local PDF — convert PDF to Word and Markdown entirely in your browser. Private, free, open source.",
   "keywords": [
@@ -48,11 +48,14 @@
   "dependencies": {
     "@paddleocr/paddleocr-js": "^0.4.2",
     "docx": "^9.7.1",
+    "docx-preview": "^0.4.0",
     "fflate": "^0.8.3",
     "pdfjs-dist": "^6.3.289",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "rehype-stringify": "^10.0.1",
     "remark-gfm": "^4.0.1",
+    "remark-rehype": "^11.1.2",
     "remark-stringify": "^11.0.0",
     "unified": "^11.0.5"
   },

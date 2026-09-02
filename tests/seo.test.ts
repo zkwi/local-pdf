@@ -13,7 +13,7 @@ const text = html
 
 describe('index.html 的静态 SEO 内容', () => {
   it('FAQ 问答与英文文案表一字不差', () => {
-    for (let i = 1; i <= 5; i++) {
+    for (let i = 1; i <= 6; i++) {
       expect(text).toContain(en[`seo.faq.q${i}` as keyof typeof en]);
       expect(text).toContain(en[`seo.faq.a${i}` as keyof typeof en]);
     }

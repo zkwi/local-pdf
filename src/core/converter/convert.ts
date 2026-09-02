@@ -32,6 +32,9 @@ import type { StripResult } from '../ocr/strips.ts';
 import { computeTextHealth, describeError, PdfSession } from '../pdf/extractor.ts';
 import { cropToPng } from '../pdf/images.ts';
 import { buildSemanticDocument } from '../semantic/build.ts';
+// 主线程的转 PDF 代码也要用它；放在独立小模块里，免得把整条流水线拖进主包
+import { safeBaseName } from '../util/filename.ts';
+import { buildImageReport, packPageImages, renderPageImages } from './images.ts';
 
 /** 单份文档累计的图片字节上限，超过就停止抽图 */
 const MAX_TOTAL_IMAGE_BYTES = 80 * 1024 * 1024;
@@ -100,6 +103,37 @@ export async function convert(
         code: 'page-limit-exceeded',
         params: { total: session.pageCount, limit: totalPages },
       });
+    }
+
+    // 图片模式只渲染页面，后面的文字抽取、OCR 和版面分析都不需要
+    if (options.output === 'images') {
+      stageStart = now();
+      const images = await renderPageImages(session, totalPages, options, { check, report });
+      durations.rendering = now() - stageStart;
+
+      check();
+      report({ stage: 'writing', fraction: 0.92, key: 'writing-images' });
+      stageStart = now();
+      const output = packPageImages(
+        images,
+        totalPages,
+        safeBaseName(input.fileName),
+        options.pageImageFormat,
+      );
+      durations.writing = now() - stageStart;
+
+      const result: ConversionResult = {
+        outputs: [output],
+        report: buildImageReport(
+          input.fileName,
+          images,
+          [...warnings, ...session.warnings],
+          durations,
+          now() - started,
+        ),
+      };
+      report({ stage: 'completed', fraction: 1, key: 'completed' });
+      return result;
     }
 
     /** 第一次需要 OCR 时才创建引擎；模型下载进度挂在当前页的进度区间里 */
@@ -447,11 +481,7 @@ function buildReport(
   };
 }
 
-/** 去掉扩展名和文件系统不接受的字符 */
-export function safeBaseName(fileName: string): string {
-  const base = fileName.replace(/\.[^.]+$/, '').replace(/[\\/:*?"<>|]/g, '_');
-  return base || 'document';
-}
+export { safeBaseName };
 
 export function toDocxName(fileName: string): string {
   return `${safeBaseName(fileName)}.docx`;

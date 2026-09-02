@@ -9,6 +9,46 @@
     <xhtml:link rel="alternate" hreflang="ja" href="https://localpdfconverter.com/?lang=ja" />
   </url>
   <url>
+    <loc>https://localpdfconverter.com/pdf-to-markdown</loc>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://localpdfconverter.com/pdf-to-markdown" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://localpdfconverter.com/pdf-to-markdown?lang=en" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://localpdfconverter.com/pdf-to-markdown?lang=zh-CN" />
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://localpdfconverter.com/pdf-to-markdown?lang=zh-TW" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://localpdfconverter.com/pdf-to-markdown?lang=ja" />
+  </url>
+  <url>
+    <loc>https://localpdfconverter.com/pdf-to-images</loc>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://localpdfconverter.com/pdf-to-images" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://localpdfconverter.com/pdf-to-images?lang=en" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://localpdfconverter.com/pdf-to-images?lang=zh-CN" />
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://localpdfconverter.com/pdf-to-images?lang=zh-TW" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://localpdfconverter.com/pdf-to-images?lang=ja" />
+  </url>
+  <url>
+    <loc>https://localpdfconverter.com/word-to-pdf</loc>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://localpdfconverter.com/word-to-pdf" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://localpdfconverter.com/word-to-pdf?lang=en" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://localpdfconverter.com/word-to-pdf?lang=zh-CN" />
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://localpdfconverter.com/word-to-pdf?lang=zh-TW" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://localpdfconverter.com/word-to-pdf?lang=ja" />
+  </url>
+  <url>
+    <loc>https://localpdfconverter.com/markdown-to-pdf</loc>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://localpdfconverter.com/markdown-to-pdf" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://localpdfconverter.com/markdown-to-pdf?lang=en" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://localpdfconverter.com/markdown-to-pdf?lang=zh-CN" />
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://localpdfconverter.com/markdown-to-pdf?lang=zh-TW" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://localpdfconverter.com/markdown-to-pdf?lang=ja" />
+  </url>
+  <url>
+    <loc>https://localpdfconverter.com/images-to-pdf</loc>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://localpdfconverter.com/images-to-pdf" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://localpdfconverter.com/images-to-pdf?lang=en" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://localpdfconverter.com/images-to-pdf?lang=zh-CN" />
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://localpdfconverter.com/images-to-pdf?lang=zh-TW" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://localpdfconverter.com/images-to-pdf?lang=ja" />
+  </url>
+  <url>
     <loc>https://localpdfconverter.com/?lang=en</loc>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://localpdfconverter.com/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://localpdfconverter.com/?lang=en" />

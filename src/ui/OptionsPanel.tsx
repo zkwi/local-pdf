@@ -6,6 +6,7 @@ import type {
   OcrLanguage,
   OcrPolicy,
   OcrQuality,
+  PageImageFormat,
 } from '../core/contracts/options.ts';
 import { OCR_LANGUAGES, resolveOcrLanguage } from '../core/ocr/languages.ts';
 import { cachedModelBytes, clearModelCache } from '../core/ocr/model-cache.ts';
@@ -17,6 +18,9 @@ interface OptionsPanelProps {
   readonly options: ConvertOptions;
   readonly onChange: (options: ConvertOptions) => void;
   readonly ocrAvailable: boolean;
+  /** 顺便再生成另一种格式：Word 页上是 Markdown，Markdown 页上是 Word */
+  readonly also: boolean;
+  readonly onAlsoChange: (value: boolean) => void;
 }
 
 /** 运行时体积（SDK Worker + ORT wasm，gzip 后）与模型之和，给"首次下载"提示用 */
@@ -29,12 +33,23 @@ const MODE_KEY: Record<ConversionMode, 'editable' | 'plain'> = {
   editable: 'editable',
   'plain-text': 'plain',
 };
+const IMAGE_FORMATS: readonly PageImageFormat[] = ['png', 'jpeg'];
+const IMAGE_DPIS = ['96', '150', '300'] as const;
+type ImageDpi = (typeof IMAGE_DPIS)[number];
+/** A4 尺寸（pt），给"大约多少像素"的提示用 */
+const A4_PT = { width: 595, height: 842 };
 
 /**
  * "更多选项"展开后的内容，开关按钮在 App 主面板的顶栏里。默认设置已经是普通用户想要的，
  * 这里只放"结果不对时可能想调"的开关，用大白话标注，不提技术名词。
  */
-export function OptionsPanel({ options, onChange, ocrAvailable }: OptionsPanelProps) {
+export function OptionsPanel({
+  options,
+  onChange,
+  ocrAvailable,
+  also,
+  onAlsoChange,
+}: OptionsPanelProps) {
   const { t, locale } = useI18n();
   const set = <K extends keyof ConvertOptions>(key: K, value: ConvertOptions[K]): void => {
     onChange({ ...options, [key]: value });
@@ -43,119 +58,196 @@ export function OptionsPanel({ options, onChange, ocrAvailable }: OptionsPanelPr
     options.ocrQuality,
     resolveOcrLanguage({ ...options, locale }),
   );
-  const isDefault = JSON.stringify(options) === JSON.stringify(DEFAULT_OPTIONS);
+  // 输出格式由页面决定，不算改过设置
+  const isDefault =
+    !also &&
+    JSON.stringify({ ...options, output: DEFAULT_OPTIONS.output }) ===
+      JSON.stringify(DEFAULT_OPTIONS);
 
   return (
     <div className="advanced" id="advanced-panel">
       <div className="advanced__body">
-        <fieldset className="field">
-          <legend className="field__label">{t('ocr.label')}</legend>
-          {ocrAvailable ? (
-            <>
-              <Segmented
-                values={OCR_POLICIES}
-                value={options.ocr}
-                label={(v) => t(`ocr.${v}` as MessageKey)}
-                hint={(v) => t(`ocr.${v}.hint` as MessageKey)}
-                onChange={(v) => set('ocr', v)}
-              />
-              {options.ocr !== 'off' && (
-                <div className="subfield">
-                  <label className="field__row">
-                    <span>{t('ocr.quality.label')}</span>
-                    <Segmented
-                      compact
-                      values={QUALITIES}
-                      value={options.ocrQuality}
-                      label={(v) => t(`ocr.quality.${v}` as MessageKey)}
-                      hint={(v) => t(`ocr.quality.${v}.hint` as MessageKey)}
-                      onChange={(v) => set('ocrQuality', v)}
-                    />
-                  </label>
-                  <label className="field__row">
-                    <span>{t('ocr.language.label')}</span>
-                    <select
-                      value={options.ocrLanguage}
-                      onChange={(e) => set('ocrLanguage', e.target.value as OcrLanguage | 'auto')}
-                    >
-                      <option value="auto">{t('ocr.language.auto')}</option>
-                      {OCR_LANGUAGES.map((lang) => (
-                        <option key={lang.value} value={lang.value}>
-                          {t(`ocr.language.${lang.value}` as MessageKey)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <p className="field__hint">
-                    {t(`ocr.quality.${selection.quality}.hint` as MessageKey)}{' '}
-                    {t('ocr.download.hint', {
-                      size: formatMegabytes(selection.totalBytes + RUNTIME_BYTES),
-                    })}
-                    {selection.quality !== options.ocrQuality && ` ${t('ocr.japaneseNeedsSmall')}`}
-                  </p>
-                  <ModelCacheStatus />
-                </div>
+        {options.output === 'images' ? (
+          <ImageOptions options={options} set={set} />
+        ) : (
+          <>
+            <fieldset className="field">
+              <legend className="field__label">{t('output.label')}</legend>
+              <div className="checks">
+                <Toggle
+                  label={t(
+                    options.output === 'docx' ? 'advanced.also.markdown' : 'advanced.also.docx',
+                  )}
+                  checked={also}
+                  onChange={onAlsoChange}
+                />
+              </div>
+            </fieldset>
+
+            <fieldset className="field">
+              <legend className="field__label">{t('ocr.label')}</legend>
+              {ocrAvailable ? (
+                <>
+                  <Segmented
+                    values={OCR_POLICIES}
+                    value={options.ocr}
+                    label={(v) => t(`ocr.${v}` as MessageKey)}
+                    hint={(v) => t(`ocr.${v}.hint` as MessageKey)}
+                    onChange={(v) => set('ocr', v)}
+                  />
+                  {options.ocr !== 'off' && (
+                    <div className="subfield">
+                      <label className="field__row">
+                        <span>{t('ocr.quality.label')}</span>
+                        <Segmented
+                          compact
+                          values={QUALITIES}
+                          value={options.ocrQuality}
+                          label={(v) => t(`ocr.quality.${v}` as MessageKey)}
+                          hint={(v) => t(`ocr.quality.${v}.hint` as MessageKey)}
+                          onChange={(v) => set('ocrQuality', v)}
+                        />
+                      </label>
+                      <label className="field__row">
+                        <span>{t('ocr.language.label')}</span>
+                        <select
+                          value={options.ocrLanguage}
+                          onChange={(e) =>
+                            set('ocrLanguage', e.target.value as OcrLanguage | 'auto')
+                          }
+                        >
+                          <option value="auto">{t('ocr.language.auto')}</option>
+                          {OCR_LANGUAGES.map((lang) => (
+                            <option key={lang.value} value={lang.value}>
+                              {t(`ocr.language.${lang.value}` as MessageKey)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <p className="field__hint">
+                        {t(`ocr.quality.${selection.quality}.hint` as MessageKey)}{' '}
+                        {t('ocr.download.hint', {
+                          size: formatMegabytes(selection.totalBytes + RUNTIME_BYTES),
+                        })}
+                        {selection.quality !== options.ocrQuality &&
+                          ` ${t('ocr.japaneseNeedsSmall')}`}
+                      </p>
+                      <ModelCacheStatus />
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="field__hint">{t('ocr.unavailable')}</p>
               )}
-            </>
-          ) : (
-            <p className="field__hint">{t('ocr.unavailable')}</p>
-          )}
-        </fieldset>
+            </fieldset>
 
-        <fieldset className="field">
-          <legend className="field__label">{t('content.label')}</legend>
-          <Segmented
-            values={MODES}
-            value={options.mode}
-            label={(v) => t(`content.${MODE_KEY[v]}` as MessageKey)}
-            hint={(v) => t(`content.${MODE_KEY[v]}.hint` as MessageKey)}
-            onChange={(v) => set('mode', v)}
-          />
-        </fieldset>
+            <fieldset className="field">
+              <legend className="field__label">{t('content.label')}</legend>
+              <Segmented
+                values={MODES}
+                value={options.mode}
+                label={(v) => t(`content.${MODE_KEY[v]}` as MessageKey)}
+                hint={(v) => t(`content.${MODE_KEY[v]}.hint` as MessageKey)}
+                onChange={(v) => set('mode', v)}
+              />
+            </fieldset>
 
-        <fieldset className="field">
-          <legend className="field__label">{t('layout.label')}</legend>
-          <div className="checks">
-            <Toggle
-              label={t('layout.columns')}
-              checked={options.detectColumns}
-              onChange={(v) => set('detectColumns', v)}
-            />
-            <Toggle
-              label={t('layout.tables')}
-              checked={options.detectTables}
-              onChange={(v) => set('detectTables', v)}
-            />
-            <Toggle
-              label={t('layout.images')}
-              checked={options.extractImages}
-              onChange={(v) => set('extractImages', v)}
-            />
-            <Toggle
-              label={t('layout.headerFooter')}
-              checked={options.detectHeaderFooter}
-              onChange={(v) => set('detectHeaderFooter', v)}
-            />
-            <Toggle
-              label={t('layout.keepHeaderFooter')}
-              checked={options.keepHeaderFooter}
-              disabled={!options.detectHeaderFooter}
-              onChange={(v) => set('keepHeaderFooter', v)}
-            />
-          </div>
-        </fieldset>
+            <fieldset className="field">
+              <legend className="field__label">{t('layout.label')}</legend>
+              <div className="checks">
+                <Toggle
+                  label={t('layout.columns')}
+                  checked={options.detectColumns}
+                  onChange={(v) => set('detectColumns', v)}
+                />
+                <Toggle
+                  label={t('layout.tables')}
+                  checked={options.detectTables}
+                  onChange={(v) => set('detectTables', v)}
+                />
+                <Toggle
+                  label={t('layout.images')}
+                  checked={options.extractImages}
+                  onChange={(v) => set('extractImages', v)}
+                />
+                <Toggle
+                  label={t('layout.headerFooter')}
+                  checked={options.detectHeaderFooter}
+                  onChange={(v) => set('detectHeaderFooter', v)}
+                />
+                <Toggle
+                  label={t('layout.keepHeaderFooter')}
+                  checked={options.keepHeaderFooter}
+                  disabled={!options.detectHeaderFooter}
+                  onChange={(v) => set('keepHeaderFooter', v)}
+                />
+              </div>
+            </fieldset>
+          </>
+        )}
 
         {!isDefault && (
           <button
             type="button"
             className="link advanced__reset"
-            onClick={() => onChange({ ...DEFAULT_OPTIONS, output: options.output })}
+            onClick={() => {
+              onChange({ ...DEFAULT_OPTIONS, output: options.output });
+              onAlsoChange(false);
+            }}
           >
             {t('advanced.reset')}
           </button>
         )}
       </div>
     </div>
+  );
+}
+
+interface ImageOptionsProps {
+  readonly options: ConvertOptions;
+  readonly set: <K extends keyof ConvertOptions>(key: K, value: ConvertOptions[K]) => void;
+}
+
+/** 图片模式只有格式和清晰度两个选项；OCR、版面那些开关对它没意义，不显示 */
+function ImageOptions({ options, set }: ImageOptionsProps) {
+  const { t } = useI18n();
+  const scale = options.pageImageDpi / 72;
+  return (
+    <fieldset className="field">
+      <legend className="field__label">{t('images.label')}</legend>
+      <div className="subfield">
+        <div className="field__row">
+          <span>{t('images.format.label')}</span>
+          <Segmented
+            compact
+            values={IMAGE_FORMATS}
+            value={options.pageImageFormat}
+            label={(v) => v.toUpperCase()}
+            hint={(v) => t(`images.format.${v}.hint` as MessageKey)}
+            onChange={(v) => set('pageImageFormat', v)}
+          />
+        </div>
+        <div className="field__row">
+          <span>{t('images.dpi.label')}</span>
+          <Segmented
+            compact
+            values={IMAGE_DPIS}
+            value={String(options.pageImageDpi) as ImageDpi}
+            label={(v) => `${v} DPI`}
+            hint={(v) => t(`images.dpi.${v}.hint` as MessageKey)}
+            onChange={(v) => set('pageImageDpi', Number(v))}
+          />
+        </div>
+        <p className="field__hint">
+          {t(`images.format.${options.pageImageFormat}.hint` as MessageKey)}{' '}
+          {t(`images.dpi.${options.pageImageDpi}.hint` as MessageKey)}{' '}
+          {t('images.size.hint', {
+            width: Math.round(A4_PT.width * scale),
+            height: Math.round(A4_PT.height * scale),
+          })}
+        </p>
+      </div>
+    </fieldset>
   );
 }
 
@@ -168,7 +260,7 @@ interface SegmentedProps<T extends string> {
   readonly compact?: boolean;
 }
 
-function Segmented<T extends string>({
+export function Segmented<T extends string>({
   values,
   value,
   label,

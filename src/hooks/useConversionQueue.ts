@@ -55,7 +55,8 @@ function applyProgress(job: Job, progress: ConversionProgress, at: number): Job 
     progress,
     startedAt: job.startedAt ?? at,
     samples:
-      progress.stage === 'extracting' && progress.pageIndex !== undefined
+      (progress.stage === 'extracting' || progress.stage === 'rendering') &&
+      progress.pageIndex !== undefined
         ? pushSample(job.samples, progress.pageIndex, at)
         : job.samples,
     // 每个需要识别的页面进入 ocr 阶段时恰好发一条进度

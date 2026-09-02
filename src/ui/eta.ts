@@ -42,6 +42,7 @@ export function estimateRemainingMs(
   if (progress.totalPages === undefined) return null;
   if (
     progress.stage !== 'extracting' &&
+    progress.stage !== 'rendering' &&
     progress.stage !== 'ocr' &&
     progress.stage !== 'ocr-model'
   ) {

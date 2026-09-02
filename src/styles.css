@@ -647,6 +647,8 @@ h3 {
   color: var(--text-dim);
   font: inherit;
   font-size: 13.5px;
+  /* "150 DPI" 这类标签在窄屏上不能折成两行 */
+  white-space: nowrap;
   cursor: pointer;
   transition:
     background 0.2s,
@@ -1923,7 +1925,475 @@ h3 {
     min-width: 110px;
   }
 
+  /* 标签加分段选择器一行放不下时，选择器整组换到下一行，不要挤出框外 */
+  .field__row {
+    flex-wrap: wrap;
+  }
+
+  .field__row .segmented-wrap {
+    flex: 1 1 auto;
+  }
+
   .faq__item p {
     padding-right: 0;
+  }
+}
+
+/* ---------- 工具导航：两组各三个，像两条分段选择器 ---------- */
+
+.toolnav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px 28px;
+}
+
+.toolnav__group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toolnav__label {
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+.toolnav__list {
+  display: flex;
+  gap: 4px;
+  margin: 0;
+  padding: 3px;
+  list-style: none;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.toolnav__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  color: var(--text-dim);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    box-shadow 0.2s;
+}
+
+.toolnav__item:hover {
+  color: var(--text);
+}
+
+.toolnav__item--on {
+  background: var(--surface);
+  color: var(--accent-deep);
+  box-shadow:
+    var(--shadow-sm),
+    0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.toolnav__item svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.toolnav__item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* 六个工具页都挂着，只显示当前的 */
+.tool {
+  width: 100%;
+}
+
+.tool[hidden] {
+  display: none;
+}
+
+/* 设置行左侧的说明文字；没有下方提示行时设置行自己带底边距 */
+.panel__lead {
+  flex: 1 1 260px;
+  min-width: 0;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+
+.panel__bar--solo {
+  padding-bottom: 14px;
+}
+
+/* ---------- 图片转 PDF：缩略图网格 ---------- */
+
+.composer__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.composer__head h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.composer__hint {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+
+.thumbs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.thumb {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: grab;
+  user-select: none;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s,
+    opacity 0.2s;
+}
+
+.thumb:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.thumb--dragging {
+  opacity: 0.4;
+}
+
+/* 拖到某张图的左半边 / 右半边时，在那一侧亮一根插入线 */
+.thumb--before::before,
+.thumb--after::after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.thumb--before::before {
+  left: -8px;
+}
+
+.thumb--after::after {
+  right: -8px;
+}
+
+.thumb__frame {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  background: var(--surface);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.thumb__frame img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  transition: transform 0.25s var(--ease);
+}
+
+.thumb__index {
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.thumb__name {
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.thumb__meta {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.thumb__tools {
+  display: flex;
+  gap: 4px;
+}
+
+.thumb__tools button {
+  flex: 1;
+  padding: 4px 0;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.thumb__tools button:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.thumb__tools button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.composer__settings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px 24px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.composer__settings .field__row {
+  margin-top: 0;
+}
+
+.composer__settings .field__row > span:first-child {
+  min-width: 68px;
+}
+
+.composer__settings-hint {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.composer__bar {
+  gap: 12px;
+}
+
+.composer__name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 260px;
+  min-width: 0;
+  font-size: 13.5px;
+  color: var(--text-dim);
+}
+
+.composer__name input {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 13.5px;
+}
+
+.composer__ext {
+  font-family: var(--mono);
+  font-size: 12.5px;
+}
+
+.composer__bar .btn--primary {
+  margin-left: auto;
+}
+
+.composer__progress {
+  display: grid;
+  gap: 8px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.composer__result {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  border-top: 1px solid var(--border);
+}
+
+.composer__result p {
+  margin: 0;
+  font-size: 13.5px;
+}
+
+.composer__error {
+  color: var(--bad);
+}
+
+@media (width <= 560px) {
+  .toolnav {
+    gap: 8px;
+  }
+
+  .toolnav__group {
+    width: 100%;
+  }
+
+  .toolnav__label {
+    min-width: 64px;
+  }
+
+  .toolnav__list {
+    flex: 1;
+  }
+
+  .toolnav__list li {
+    flex: 1;
+  }
+
+  .toolnav__item {
+    justify-content: center;
+    padding: 7px 8px;
+  }
+
+  .thumbs {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+
+  .composer__settings {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .composer__bar .btn--primary {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
+/* 切换工具时标题和说明淡入一下，让人看见"换了" */
+.hero__title,
+.hero__lede {
+  animation: tool-in 0.35s var(--ease) both;
+}
+
+@keyframes tool-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__title,
+  .hero__lede {
+    animation: none;
+  }
+}
+
+.thumb__index {
+  box-shadow: 0 1px 4px rgb(0 0 0 / 35%);
+}
+
+.thumb__tools button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Markdown 页的内联编辑器 */
+.editor {
+  display: grid;
+  gap: 10px;
+  padding: 0 18px 16px;
+}
+
+.editor__toggle {
+  justify-self: start;
+  font-size: 13.5px;
+}
+
+.editor textarea {
+  width: 100%;
+  min-height: 220px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font: 13.5px/1.6 var(--mono);
+  resize: vertical;
+}
+
+.editor textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.editor__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+@media (width <= 560px) {
+  .editor {
+    padding-left: 14px;
+    padding-right: 14px;
   }
 }

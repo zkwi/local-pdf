@@ -4,6 +4,8 @@ export type ConversionStage =
   | 'queued'
   | 'loading'
   | 'extracting'
+  /** 图片模式：逐页渲染 */
+  | 'rendering'
   | 'ocr-model'
   | 'ocr'
   | 'analyzing'
@@ -20,6 +22,7 @@ export type ProgressKey =
   | 'queued'
   | 'loading'
   | 'extracting'
+  | 'rendering'
   | 'ocr-model-download'
   | 'ocr-model-init'
   | 'ocr-model-ready'
@@ -27,6 +30,7 @@ export type ProgressKey =
   | 'analyzing'
   | 'writing-docx'
   | 'writing-markdown'
+  | 'writing-images'
   | 'completed'
   | 'failed'
   | 'cancelled';
@@ -70,8 +74,11 @@ export interface ConversionReport {
   readonly ocrEngine?: string;
 }
 
-/** markdown：单个 .md；markdown-bundle：带图片和 manifest 的 zip */
-export type OutputKind = 'docx' | 'markdown' | 'markdown-bundle';
+/**
+ * markdown：单个 .md；markdown-bundle：带图片和 manifest 的 zip；
+ * image：单页文档的一张图；image-bundle：每页一张图的 zip
+ */
+export type OutputKind = 'docx' | 'markdown' | 'markdown-bundle' | 'image' | 'image-bundle';
 
 export interface ConversionOutput {
   readonly kind: OutputKind;

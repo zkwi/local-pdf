@@ -1,95 +1,75 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { DEFAULT_OPTIONS } from './core/contracts/options.ts';
-import type { ConvertOptions, OutputFormat } from './core/contracts/options.ts';
 import { useConversionQueue } from './hooks/useConversionQueue.ts';
+import { useToPdfQueue } from './hooks/useToPdfQueue.ts';
 import { useI18n } from './i18n/index.tsx';
 import type { MessageKey } from './i18n/index.tsx';
 import { SITE } from './site.ts';
 import { probeCapabilities } from './ui/capabilities.ts';
 import { CompatGate } from './ui/CompatGate.tsx';
-import { DropZone, splitPdfs } from './ui/DropZone.tsx';
 import { Features } from './ui/Features.tsx';
-import { JobCard } from './ui/JobCard.tsx';
 import { LanguageSelect } from './ui/LanguageSelect.tsx';
 import { Logo } from './ui/Logo.tsx';
-import { OptionsPanel } from './ui/OptionsPanel.tsx';
+import { useTool } from './ui/router.ts';
 import { SeoContent } from './ui/SeoContent.tsx';
+import { ShellContext } from './ui/shell.tsx';
+import type { FileSink, Shell } from './ui/shell.tsx';
+import { ToolNav } from './ui/ToolNav.tsx';
+import { TOOLS } from './ui/tools.ts';
+import { DocToPdfTool } from './ui/tools/DocToPdfTool.tsx';
+import { ImagesToPdfTool } from './ui/tools/ImagesToPdfTool.tsx';
+import { PdfConvertTool } from './ui/tools/PdfConvertTool.tsx';
 
-const OUTPUTS: readonly OutputFormat[] = ['docx', 'markdown', 'both'];
 const TOAST_MS = 4000;
 
 /** 首屏各区块按这个序号错开入场（见 styles.css 的 .reveal） */
 const reveal = (index: number): CSSProperties => ({ '--i': index }) as CSSProperties;
 
+function isEditable(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target.isContentEditable
+  );
+}
+
+/**
+ * 页面外壳：顶栏、工具导航、当前工具的标题和面板、卖点和说明。
+ * 六个工具页全部挂着、只显示当前这个，切换工具不丢队列和已选的图片。
+ */
 export function App() {
-  const { t, tn, locale } = useI18n();
+  const { t } = useI18n();
   const caps = useMemo(() => probeCapabilities(), []);
-  const [options, setOptions] = useState<ConvertOptions>(DEFAULT_OPTIONS);
+  const [tool, navigate] = useTool();
   const [dragging, setDragging] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const [sampleLoading, setSampleLoading] = useState(false);
-  const [advancedOpen, setAdvancedOpen] = useState(false);
-  const queueRef = useRef<HTMLDivElement>(null);
-  const { jobs, enqueue, cancel, retry, remove, clearFinished, warmUp } = useConversionQueue();
+  const [imagesBusy, setImagesBusy] = useState(false);
+  const sinkRef = useRef<FileSink | null>(null);
+  const pdfQueue = useConversionQueue();
+  const docQueue = useToPdfQueue();
   const ocrAvailable = caps.wasmSimd;
 
-  // 输出格式之外还改过设置时，"更多选项"按钮上亮一个点，收起也看得见
-  const settingsChanged = useMemo(
-    () =>
-      JSON.stringify({ ...options, output: DEFAULT_OPTIONS.output }) !==
-      JSON.stringify(DEFAULT_OPTIONS),
-    [options],
-  );
-
-  /** 界面语言和能力限制在提交时合并进去，用户设置本身不被改写 */
-  const effective = useCallback(
-    (base: ConvertOptions): ConvertOptions => ({
-      ...base,
-      locale,
-      ocr: ocrAvailable ? base.ocr : 'off',
+  const shell = useMemo<Shell>(
+    () => ({
+      setSink: (sink) => {
+        sinkRef.current = sink;
+      },
+      toast: (message) => setToast(message),
     }),
-    [locale, ocrAvailable],
+    [],
   );
 
-  const handleFiles = useCallback(
-    (files: readonly File[]) => {
-      const { pdfs, rejected } = splitPdfs(files);
-      if (rejected > 0) setToast(tn('drop.rejected', rejected));
-      if (pdfs.length > 0) enqueue(pdfs, effective(options));
-    },
-    [effective, enqueue, options, tn],
-  );
-
-  const handleRetry = useCallback(
-    (id: string, patch?: Partial<ConvertOptions>) => {
-      retry(id, effective({ ...options, ...patch }));
-    },
-    [effective, options, retry],
-  );
-
-  /** 没有文件的访客点一下就能看到效果 */
-  const loadSample = useCallback(async () => {
-    if (sampleLoading) return;
-    setSampleLoading(true);
-    try {
-      const response = await fetch(`${import.meta.env.BASE_URL}${SITE.samplePath}`);
-      if (!response.ok) throw new Error(String(response.status));
-      const blob = await response.blob();
-      handleFiles([new File([blob], 'local-pdf-sample.pdf', { type: 'application/pdf' })]);
-    } catch {
-      setToast(t('drop.sampleFailed'));
-    } finally {
-      setSampleLoading(false);
-    }
-  }, [handleFiles, sampleLoading, t]);
-
-  const finished = useMemo(() => jobs.filter((job) => job.status === 'done'), [jobs]);
-  const settled = jobs.filter((job) => job.status !== 'running' && job.status !== 'queued').length;
-  const busy = settled < jobs.length;
+  const pdfJobs = pdfQueue.jobs;
+  const pdfSettled = pdfJobs.filter((j) => j.status !== 'running' && j.status !== 'queued').length;
+  const docJobs = docQueue.jobs;
+  const docSettled = docJobs.filter((j) => j.status !== 'running' && j.status !== 'queued').length;
+  const busy = pdfSettled < pdfJobs.length || docSettled < docJobs.length || imagesBusy;
 
   // 页面空闲时先把转换 Worker（含 pdf.js，约 2 MB）拉起来，第一次转换不用等下载
+  const { warmUp } = pdfQueue;
   useEffect(() => {
+    if (tool.group !== 'from-pdf') return;
     const w = window as Window & { requestIdleCallback?: (cb: () => void) => number };
     if (typeof w.requestIdleCallback === 'function') {
       w.requestIdleCallback(() => warmUp());
@@ -97,9 +77,9 @@ export function App() {
     }
     const timer = setTimeout(() => warmUp(), 1500);
     return () => clearTimeout(timer);
-  }, [warmUp]);
+  }, [tool.group, warmUp]);
 
-  // 整页都是投放区：拖着文件进来时盖一层全屏提示，松手就开始；Ctrl+V 粘贴文件同样接住
+  // 整页都是投放区：拖着文件进来时盖一层全屏提示，松手交给当前工具；Ctrl+V 粘贴同样接住
   useEffect(() => {
     let depth = 0;
     const hasFiles = (e: DragEvent): boolean =>
@@ -122,13 +102,14 @@ export function App() {
       e.preventDefault();
       depth = 0;
       setDragging(false);
-      handleFiles([...(e.dataTransfer?.files ?? [])]);
+      sinkRef.current?.([...(e.dataTransfer?.files ?? [])]);
     };
     const onPaste = (e: ClipboardEvent): void => {
+      if (isEditable(e.target)) return;
       const files = [...(e.clipboardData?.files ?? [])];
-      if (files.length === 0) return;
-      e.preventDefault();
-      handleFiles(files);
+      const text = files.length === 0 ? e.clipboardData?.getData('text/plain') : undefined;
+      if (files.length === 0 && (text === undefined || text === '')) return;
+      if (sinkRef.current?.(files, text) === true) e.preventDefault();
     };
     window.addEventListener('dragenter', onEnter);
     window.addEventListener('dragleave', onLeave);
@@ -142,7 +123,7 @@ export function App() {
       window.removeEventListener('drop', onDrop);
       window.removeEventListener('paste', onPaste);
     };
-  }, [handleFiles]);
+  }, []);
 
   // 提示条几秒后自己消失
   useEffect(() => {
@@ -151,11 +132,16 @@ export function App() {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  // 转换中：标签页标题带进度，关页面前拦一下
+  // 标签页标题跟着工具走；转换中带进度，关页面前拦一下
+  const toolTitle = t(`tool.${tool.id}.title` as MessageKey);
   useEffect(() => {
-    const base = t('app.docTitle');
-    document.title = busy ? `⏳ ${settled}/${jobs.length} · ${base}` : base;
-  }, [busy, settled, jobs.length, t]);
+    const base =
+      tool.id === 'pdf-to-word' ? t('app.docTitle') : t('tool.docTitle', { tool: toolTitle });
+    const total = pdfJobs.length + docJobs.length;
+    const settled = pdfSettled + docSettled;
+    document.title =
+      busy && total > 0 ? `⏳ ${settled}/${total} · ${base}` : busy ? `⏳ ${base}` : base;
+  }, [busy, docJobs.length, docSettled, pdfJobs.length, pdfSettled, t, tool.id, toolTitle]);
 
   useEffect(() => {
     if (!busy) return;
@@ -166,203 +152,113 @@ export function App() {
     return () => window.removeEventListener('beforeunload', guard);
   }, [busy]);
 
-  // 新任务加进来时把队列滚进视野，小屏上它在拖放区下面看不见
-  const prevCount = useRef(0);
-  useEffect(() => {
-    if (jobs.length > prevCount.current) {
-      queueRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-    prevCount.current = jobs.length;
-  }, [jobs.length]);
-
-  const downloadAll = useCallback(() => {
-    for (const job of finished) {
-      for (const output of job.result?.outputs ?? []) {
-        const link = document.createElement('a');
-        link.href = output.url;
-        link.download = output.fileName;
-        document.body.append(link);
-        link.click();
-        link.remove();
-      }
-    }
-  }, [finished]);
-
   return (
     <CompatGate caps={caps}>
-      <div className="app" data-dragging={dragging || undefined}>
-        <header className="masthead reveal" style={reveal(0)}>
-          <div className="masthead__brand">
-            <Logo size={36} />
-            <span className="masthead__name">{t('app.title')}</span>
+      <ShellContext.Provider value={shell}>
+        <div className="app" data-dragging={dragging || undefined}>
+          <header className="masthead reveal" style={reveal(0)}>
+            <div className="masthead__brand">
+              <Logo size={36} />
+              <span className="masthead__name">{t('app.title')}</span>
+            </div>
+            <div className="masthead__actions">
+              <LanguageSelect />
+              <a
+                className="ghlink"
+                href={SITE.repo}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={t('app.github')}
+              >
+                <GitHubIcon />
+                <span>GitHub</span>
+              </a>
+              <span className="badge" title={t('app.badgeLocalTitle')}>
+                {t('app.badgeLocal')}
+              </span>
+            </div>
+          </header>
+
+          <div className="reveal" style={reveal(1)}>
+            <ToolNav active={tool} onSelect={navigate} />
           </div>
-          <div className="masthead__actions">
-            <LanguageSelect />
-            <a
-              className="ghlink"
-              href={SITE.repo}
-              target="_blank"
-              rel="noopener noreferrer"
-              title={t('app.github')}
-            >
-              <GitHubIcon />
-              <span>GitHub</span>
-            </a>
-            <span className="badge" title={t('app.badgeLocalTitle')}>
-              {t('app.badgeLocal')}
-            </span>
-          </div>
-        </header>
 
-        <main className="main">
-          {!ocrAvailable && <p className="banner banner--warn">{t('ocr.unavailable')}</p>}
-          {caps.lowMemory && <p className="banner">{t('compat.lowMemory')}</p>}
+          <main className="main">
+            {!ocrAvailable && tool.group === 'from-pdf' && (
+              <p className="banner banner--warn">{t('ocr.unavailable')}</p>
+            )}
+            {caps.lowMemory && <p className="banner">{t('compat.lowMemory')}</p>}
 
-          <section className="hero reveal" style={reveal(1)} aria-labelledby="hero-title">
-            <h1 id="hero-title" className="hero__title">
-              {t('app.feature')}
-            </h1>
-            <p className="hero__lede">{t('app.tagline')}</p>
-
-            {/*
-             * 主面板：主体按有没有任务切换拖放区 / 队列，设置行在下面，
-             * "更多选项"展开时只往下伸，不会把拖放区推下去；所有操作不出首屏。
-             */}
-            <div className="panel">
-              <div className="panel__body" ref={queueRef}>
-                {jobs.length === 0 ? (
-                  <DropZone onFiles={handleFiles} onSample={loadSample} />
-                ) : (
-                  <>
-                    <div className="queue__head">
-                      <h2>{t('queue.title', { count: jobs.length })}</h2>
-                      <div className="queue__actions">
-                        {finished.length > 1 && (
-                          <button className="btn btn--ghost" type="button" onClick={downloadAll}>
-                            {t('queue.downloadAll', { count: finished.length })}
-                          </button>
-                        )}
-                        {!busy && (
-                          <button className="btn btn--ghost" type="button" onClick={clearFinished}>
-                            {t('queue.clear')}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    <div className="queue__list">
-                      {jobs.map((job) => (
-                        <JobCard
-                          key={job.id}
-                          job={job}
-                          onCancel={cancel}
-                          onRetry={handleRetry}
-                          onRemove={remove}
-                        />
-                      ))}
-                    </div>
-                    <DropZone onFiles={handleFiles} compact />
-                  </>
-                )}
-              </div>
-
-              <div className="panel__bar">
-                <div className="panel__output">
-                  <span className="eyebrow">{t('output.label')}</span>
-                  <div
-                    className="segmented segmented--large"
-                    role="radiogroup"
-                    aria-label={t('output.label')}
-                    // 滑块位置交给 CSS 算：改哪个选中就把序号写进变量
-                    style={
-                      {
-                        '--count': OUTPUTS.length,
-                        '--index': OUTPUTS.indexOf(options.output),
-                      } as CSSProperties
-                    }
-                  >
-                    {OUTPUTS.map((value) => (
-                      <button
-                        key={value}
-                        type="button"
-                        role="radio"
-                        aria-checked={options.output === value}
-                        className={`segmented__item${options.output === value ? ' segmented__item--on' : ''}`}
-                        onClick={() => setOptions((o) => ({ ...o, output: value }))}
-                      >
-                        {t(`output.${value}` as MessageKey)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  className={`panel__more${advancedOpen ? ' panel__more--open' : ''}`}
-                  aria-expanded={advancedOpen}
-                  aria-controls="advanced-panel"
-                  onClick={() => setAdvancedOpen((v) => !v)}
-                >
-                  <SlidersIcon />
-                  <span>{t('advanced.toggle')}</span>
-                  {settingsChanged && <span className="panel__dot" aria-hidden="true" />}
-                  <span className="panel__chevron" aria-hidden="true">
-                    ›
-                  </span>
-                </button>
-              </div>
-              <p className="panel__hint" key={options.output}>
-                {t(`output.${options.output}.hint` as MessageKey)}
+            <section className="hero reveal" style={reveal(1)} aria-labelledby="hero-title">
+              <h1 id="hero-title" className="hero__title" key={`title-${tool.id}`}>
+                {toolTitle}
+              </h1>
+              <p className="hero__lede" key={`lede-${tool.id}`}>
+                {t(`tool.${tool.id}.lede` as MessageKey)}
               </p>
 
-              {advancedOpen && (
-                <OptionsPanel options={options} onChange={setOptions} ocrAvailable={ocrAvailable} />
-              )}
+              {TOOLS.map((each) => {
+                const active = each.id === tool.id;
+                return (
+                  <div key={each.id} className="tool" hidden={!active}>
+                    {each.group === 'from-pdf' && (
+                      <PdfConvertTool
+                        tool={each}
+                        active={active}
+                        queue={pdfQueue}
+                        ocrAvailable={ocrAvailable}
+                      />
+                    )}
+                    {(each.id === 'word-to-pdf' || each.id === 'markdown-to-pdf') && (
+                      <DocToPdfTool
+                        tool={each}
+                        source={each.id === 'word-to-pdf' ? 'word' : 'markdown'}
+                        active={active}
+                        queue={docQueue}
+                      />
+                    )}
+                    {each.id === 'images-to-pdf' && (
+                      <ImagesToPdfTool tool={each} active={active} onBusy={setImagesBusy} />
+                    )}
+                  </div>
+                );
+              })}
+            </section>
+
+            <Features group={tool.group} />
+
+            <SeoContent group={tool.group} />
+          </main>
+
+          <footer className="footer">
+            <div className="footer__links">
+              <span>{t('footer.license')}</span>
+              <span>{t('footer.version', { version: SITE.version })}</span>
+              <a href={SITE.repo} target="_blank" rel="noopener noreferrer">
+                {t('footer.source')}
+              </a>
+              <a href={SITE.issues} target="_blank" rel="noopener noreferrer">
+                {t('footer.issues')}
+              </a>
             </div>
-          </section>
+            <span className="footer__built">{t('footer.builtWith')}</span>
+          </footer>
 
-          <Features />
-
-          <SeoContent />
-        </main>
-
-        <footer className="footer">
-          <div className="footer__links">
-            <span>{t('footer.license')}</span>
-            <span>{t('footer.version', { version: SITE.version })}</span>
-            <a href={SITE.repo} target="_blank" rel="noopener noreferrer">
-              {t('footer.source')}
-            </a>
-            <a href={SITE.issues} target="_blank" rel="noopener noreferrer">
-              {t('footer.issues')}
-            </a>
-          </div>
-          <span className="footer__built">{t('footer.builtWith')}</span>
-        </footer>
-
-        {dragging && (
-          <div className="drop-overlay" aria-hidden="true">
-            <div className="drop-overlay__box">{t('drop.overlay')}</div>
-          </div>
-        )}
-        {toast !== null && (
-          <div className="toast" role="status" aria-live="polite">
-            {toast}
-          </div>
-        )}
-      </div>
+          {dragging && (
+            <div className="drop-overlay" aria-hidden="true">
+              <div className="drop-overlay__box">
+                {t(tool.id === 'images-to-pdf' ? 'drop.overlay.images' : 'drop.overlay')}
+              </div>
+            </div>
+          )}
+          {toast !== null && (
+            <div className="toast" role="status" aria-live="polite">
+              {toast}
+            </div>
+          )}
+        </div>
+      </ShellContext.Provider>
     </CompatGate>
-  );
-}
-
-function SlidersIcon() {
-  return (
-    <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
-      <g fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-        <path d="M3 5h7M14 5h3M3 10h2M9 10h8M3 15h9M16 15h1" />
-        <circle cx="12" cy="5" r="1.8" />
-        <circle cx="7" cy="10" r="1.8" />
-        <circle cx="14" cy="15" r="1.8" />
-      </g>
-    </svg>
   );
 }
 

@@ -3,6 +3,8 @@ import { useI18n } from '../i18n/index.tsx';
 
 interface ReportViewProps {
   readonly report: ConversionReport;
+  /** 图片模式：没有文字、表格这些统计，只看页数、用时和提示 */
+  readonly imagesOnly?: boolean;
 }
 
 function confidenceClass(value: number): string {
@@ -11,7 +13,7 @@ function confidenceClass(value: number): string {
   return 'pill pill--bad';
 }
 
-export function ReportView({ report }: ReportViewProps) {
+export function ReportView({ report, imagesOnly = false }: ReportViewProps) {
   const { t, warningText } = useI18n();
   const pageWarnings = report.pages.flatMap((p) => p.warnings);
   // 少见的提示排前面：几百条"旋转文字"不该把唯一一条"图片超限"挤到看不见的地方
@@ -31,12 +33,16 @@ export function ReportView({ report }: ReportViewProps) {
     <div className="report">
       <div className="report__stats">
         <Stat label={t('report.pages')} value={String(report.pageCount)} />
-        <Stat label={t('report.characters')} value={totalChars.toLocaleString()} />
-        <Stat label={t('report.tables')} value={String(totalTables)} />
-        <Stat label={t('report.images')} value={String(totalImages)} />
-        <Stat label={t('report.ocrPages')} value={String(ocrPages)} />
-        {report.ocrEngine !== undefined && (
-          <Stat label={t('report.ocrEngine')} value={report.ocrEngine} />
+        {!imagesOnly && (
+          <>
+            <Stat label={t('report.characters')} value={totalChars.toLocaleString()} />
+            <Stat label={t('report.tables')} value={String(totalTables)} />
+            <Stat label={t('report.images')} value={String(totalImages)} />
+            <Stat label={t('report.ocrPages')} value={String(ocrPages)} />
+            {report.ocrEngine !== undefined && (
+              <Stat label={t('report.ocrEngine')} value={report.ocrEngine} />
+            )}
+          </>
         )}
         <Stat
           label={t('report.duration')}
@@ -60,45 +66,47 @@ export function ReportView({ report }: ReportViewProps) {
         </details>
       )}
 
-      <details className="report__pages">
-        <summary>{t('report.pageDetails')}</summary>
-        <div className="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>{t('report.col.page')}</th>
-                <th>{t('report.col.confidence')}</th>
-                <th>{t('report.col.columns')}</th>
-                <th>{t('report.col.paragraphs')}</th>
-                <th>{t('report.col.headings')}</th>
-                <th>{t('report.col.lists')}</th>
-                <th>{t('report.col.tables')}</th>
-                <th>{t('report.col.images')}</th>
-                <th>{t('report.col.characters')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {report.pages.map((page) => (
-                <tr key={page.index}>
-                  <td>{page.index + 1}</td>
-                  <td>
-                    <span className={confidenceClass(page.confidence)}>
-                      {(page.confidence * 100).toFixed(0)}%
-                    </span>
-                  </td>
-                  <td>{page.columnCount}</td>
-                  <td>{page.paragraphs}</td>
-                  <td>{page.headings}</td>
-                  <td>{page.listItems}</td>
-                  <td>{page.tables}</td>
-                  <td>{page.images}</td>
-                  <td>{page.characters}</td>
+      {!imagesOnly && (
+        <details className="report__pages">
+          <summary>{t('report.pageDetails')}</summary>
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>{t('report.col.page')}</th>
+                  <th>{t('report.col.confidence')}</th>
+                  <th>{t('report.col.columns')}</th>
+                  <th>{t('report.col.paragraphs')}</th>
+                  <th>{t('report.col.headings')}</th>
+                  <th>{t('report.col.lists')}</th>
+                  <th>{t('report.col.tables')}</th>
+                  <th>{t('report.col.images')}</th>
+                  <th>{t('report.col.characters')}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </details>
+              </thead>
+              <tbody>
+                {report.pages.map((page) => (
+                  <tr key={page.index}>
+                    <td>{page.index + 1}</td>
+                    <td>
+                      <span className={confidenceClass(page.confidence)}>
+                        {(page.confidence * 100).toFixed(0)}%
+                      </span>
+                    </td>
+                    <td>{page.columnCount}</td>
+                    <td>{page.paragraphs}</td>
+                    <td>{page.headings}</td>
+                    <td>{page.listItems}</td>
+                    <td>{page.tables}</td>
+                    <td>{page.images}</td>
+                    <td>{page.characters}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      )}
     </div>
   );
 }

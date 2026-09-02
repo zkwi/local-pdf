@@ -32,6 +32,9 @@
   browser, per page, in Chinese, English, Japanese and 50+ other languages. Tall "long image" PDFs are handled too.
 - **Markdown as well.** The same recognition result can be exported as Markdown, zipped with images and a
   manifest of coordinates and confidence.
+- **The other direction too.** Word, Markdown and images become PDFs in the same tab: the browser lays the
+  document out, Local PDF writes a small vector PDF with selectable text. Six tools, each with its own URL:
+  `/` (PDF → Word), `/pdf-to-markdown`, `/pdf-to-images`, `/word-to-pdf`, `/markdown-to-pdf`, `/images-to-pdf`.
 - **Honest about quality.** Every file comes with a conversion report: confidence per page, element counts,
   and warnings that tell you which pages deserve a second look.
 - **No install, works offline.** Static site, four interface languages, model files cached after first use.
@@ -44,6 +47,10 @@
 | ------------------------------------ | --------------------------------------------------------------------------- |
 | PDF → Word (.docx)                   | Paragraphs, headings, lists, ruled tables (incl. rules-only tables), images |
 | PDF → Markdown                       | Same recognition result; zipped with images and a `manifest.json`           |
+| PDF → Images (PNG / JPEG)            | Every page rendered at 96, 150 or 300 DPI; zipped when there is more than one page |
+| Word → PDF                           | The .docx is laid out in the browser and written as a vector PDF: selectable text, headers/footers, numbering, tables, images; no embedded fonts |
+| Markdown → PDF                       | GFM tables, task lists, code blocks, quotes; drop the referenced images alongside the .md, or paste text |
+| Images → PDF                         | Drag thumbnails to reorder, rotate, pick paper / margins / quality; JPEG originals embedded as-is  |
 | Multi-column reading order           | XY-cut page segmentation, cross-column headings handled                     |
 | CJK-aware text joining               | No stray spaces between Chinese characters; hyphenated Latin words rejoined |
 | Headers, footers, page numbers       | Detected across pages; page numbers become a Word `PAGE` field              |

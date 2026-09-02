@@ -5,6 +5,7 @@ import type { Job } from '../hooks/useConversionQueue.ts';
 import { useI18n } from '../i18n/index.tsx';
 import type { I18n, MessageKey } from '../i18n/index.tsx';
 import { estimateRemainingMs, formatClock } from './eta.ts';
+import { formatSize } from './format.ts';
 import { ReportView } from './ReportView.tsx';
 
 interface JobCardProps {
@@ -20,12 +21,6 @@ const LARGE_FILE_BYTES = 100 * 1024 * 1024;
 /** 估计剩余时间超过这个值也提示 */
 const SLOW_ETA_MS = 90_000;
 
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-}
-
 export function JobCard({ job, onCancel, onRetry, onRemove }: JobCardProps) {
   const { t, tn, stageLabel, progressText, errorText } = useI18n();
   const [password, setPassword] = useState('');
@@ -38,7 +33,8 @@ export function JobCard({ job, onCancel, onRetry, onRemove }: JobCardProps) {
   const memoryError = job.error?.code === 'out-of-memory' || job.error?.code === 'worker-crashed';
   const outputSize = job.result?.outputs.reduce((s, o) => s + o.size, 0) ?? 0;
   const statusText = job.error !== undefined ? errorText(job.error) : progressText(job.progress);
-  const summary = job.result === undefined ? null : summarize(job.result.report, tn);
+  const imagesOnly = job.options.output === 'images';
+  const summary = job.result === undefined ? null : summarize(job.result.report, job.options, tn);
 
   // 运行中每秒刷新一次已用时间和剩余估计
   useEffect(() => {
@@ -78,7 +74,9 @@ export function JobCard({ job, onCancel, onRetry, onRemove }: JobCardProps) {
   if (running && pages !== undefined && documentPages !== undefined && documentPages > pages) {
     notices.push(t('job.pageLimit', { total: documentPages, limit: pages }));
   }
-  const canRetryPlain = job.options.mode !== 'plain-text' || job.options.extractImages;
+  // 图片模式没有"只要文字"可退：内存不够只能降清晰度或拆文件
+  const canRetryPlain =
+    !imagesOnly && (job.options.mode !== 'plain-text' || job.options.extractImages);
 
   return (
     <article className={`job job--${job.status}`}>
@@ -221,7 +219,7 @@ export function JobCard({ job, onCancel, onRetry, onRemove }: JobCardProps) {
           >
             {showReport ? t('job.report.hide') : t('job.report.show')}
           </button>
-          {showReport && <ReportView report={job.result.report} />}
+          {showReport && <ReportView report={job.result.report} imagesOnly={imagesOnly} />}
         </>
       )}
     </article>
@@ -239,8 +237,19 @@ function etaText(ms: number, t: I18n['t']): string {
 /** 完成后一行摘要，不用打开报告就知道大概转出了什么、哪几页要留神 */
 function summarize(
   report: ConversionReport,
+  options: ConvertOptions,
   tn: I18n['tn'],
 ): { parts: string[]; lowConfidence: number; imageBudget: MessageParams | null } {
+  if (options.output === 'images') {
+    return {
+      parts: [
+        tn('summary.pages', report.pageCount),
+        `${options.pageImageFormat.toUpperCase()} · ${options.pageImageDpi} DPI`,
+      ],
+      lowConfidence: 0,
+      imageBudget: null,
+    };
+  }
   const chars = report.pages.reduce((s, p) => s + p.characters, 0);
   const tables = report.pages.reduce((s, p) => s + p.tables, 0);
   const images = report.pages.reduce((s, p) => s + p.images, 0);
