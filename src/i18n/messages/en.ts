@@ -30,6 +30,7 @@ export const en: Messages = {
   'summary.lowConfidence.one': '1 page worth checking',
   'summary.lowConfidence.other': '{count} pages worth checking',
   'app.github': 'GitHub repository',
+  'drop.more': 'Add more PDFs: drop them here, or click to choose',
   'drop.paste': 'You can also paste a file with Ctrl+V',
   'drop.sample': 'No file at hand? Try a sample PDF',
   'drop.sampleFailed': 'The sample could not be loaded, please try again later',

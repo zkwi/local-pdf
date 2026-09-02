@@ -30,6 +30,7 @@ export const zhTW: Messages = {
   'summary.lowConfidence.one': '1 頁把握不高，建議核對',
   'summary.lowConfidence.other': '{count} 頁把握不高，建議核對',
   'app.github': 'GitHub 儲存庫',
+  'drop.more': '繼續加入 PDF：拖到這裡，或點擊選擇',
   'drop.paste': '也可以按 Ctrl+V 直接貼上檔案',
   'drop.sample': '手邊沒有檔案？試試示例 PDF',
   'drop.sampleFailed': '示例檔案載入失敗，請稍後再試',

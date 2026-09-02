@@ -29,9 +29,18 @@ export function App() {
   const [dragging, setDragging] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [sampleLoading, setSampleLoading] = useState(false);
-  const queueRef = useRef<HTMLElement>(null);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const queueRef = useRef<HTMLDivElement>(null);
   const { jobs, enqueue, cancel, retry, remove, clearFinished, warmUp } = useConversionQueue();
   const ocrAvailable = caps.wasmSimd;
+
+  // 输出格式之外还改过设置时，"更多选项"按钮上亮一个点，收起也看得见
+  const settingsChanged = useMemo(
+    () =>
+      JSON.stringify({ ...options, output: DEFAULT_OPTIONS.output }) !==
+      JSON.stringify(DEFAULT_OPTIONS),
+    [options],
+  );
 
   /** 界面语言和能力限制在提交时合并进去，用户设置本身不被改写 */
   const effective = useCallback(
@@ -214,76 +223,100 @@ export function App() {
               {t('app.feature')}
             </h1>
             <p className="hero__lede">{t('app.tagline')}</p>
-            <DropZone onFiles={handleFiles} onSample={loadSample} />
+
+            {/* 主面板：顶栏是设置，中间按有没有任务切换拖放区 / 队列，所有操作不出首屏 */}
+            <div className="panel">
+              <div className="panel__bar">
+                <div className="panel__output">
+                  <span className="eyebrow">{t('output.label')}</span>
+                  <div
+                    className="segmented segmented--large"
+                    role="radiogroup"
+                    aria-label={t('output.label')}
+                    // 滑块位置交给 CSS 算：改哪个选中就把序号写进变量
+                    style={
+                      {
+                        '--count': OUTPUTS.length,
+                        '--index': OUTPUTS.indexOf(options.output),
+                      } as CSSProperties
+                    }
+                  >
+                    {OUTPUTS.map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        role="radio"
+                        aria-checked={options.output === value}
+                        className={`segmented__item${options.output === value ? ' segmented__item--on' : ''}`}
+                        onClick={() => setOptions((o) => ({ ...o, output: value }))}
+                      >
+                        {t(`output.${value}` as MessageKey)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className={`panel__more${advancedOpen ? ' panel__more--open' : ''}`}
+                  aria-expanded={advancedOpen}
+                  aria-controls="advanced-panel"
+                  onClick={() => setAdvancedOpen((v) => !v)}
+                >
+                  <SlidersIcon />
+                  <span>{t('advanced.toggle')}</span>
+                  {settingsChanged && <span className="panel__dot" aria-hidden="true" />}
+                  <span className="panel__chevron" aria-hidden="true">
+                    ›
+                  </span>
+                </button>
+              </div>
+              <p className="panel__hint" key={options.output}>
+                {t(`output.${options.output}.hint` as MessageKey)}
+              </p>
+
+              {advancedOpen && (
+                <OptionsPanel options={options} onChange={setOptions} ocrAvailable={ocrAvailable} />
+              )}
+
+              <div className="panel__body" ref={queueRef}>
+                {jobs.length === 0 ? (
+                  <DropZone onFiles={handleFiles} onSample={loadSample} />
+                ) : (
+                  <>
+                    <div className="queue__head">
+                      <h2>{t('queue.title', { count: jobs.length })}</h2>
+                      <div className="queue__actions">
+                        {finished.length > 1 && (
+                          <button className="btn btn--ghost" type="button" onClick={downloadAll}>
+                            {t('queue.downloadAll', { count: finished.length })}
+                          </button>
+                        )}
+                        {!busy && (
+                          <button className="btn btn--ghost" type="button" onClick={clearFinished}>
+                            {t('queue.clear')}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="queue__list">
+                      {jobs.map((job) => (
+                        <JobCard
+                          key={job.id}
+                          job={job}
+                          onCancel={cancel}
+                          onRetry={handleRetry}
+                          onRemove={remove}
+                        />
+                      ))}
+                    </div>
+                    <DropZone onFiles={handleFiles} compact />
+                  </>
+                )}
+              </div>
+            </div>
           </section>
 
           <Features />
-
-          <section className="settings reveal" style={reveal(3)} aria-label={t('output.label')}>
-            <div className="output">
-              <span className="eyebrow">{t('output.label')}</span>
-              <div
-                className="segmented segmented--large"
-                role="radiogroup"
-                // 滑块位置交给 CSS 算：改哪个选中就把序号写进变量
-                style={
-                  {
-                    '--count': OUTPUTS.length,
-                    '--index': OUTPUTS.indexOf(options.output),
-                  } as CSSProperties
-                }
-              >
-                {OUTPUTS.map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    role="radio"
-                    aria-checked={options.output === value}
-                    className={`segmented__item${options.output === value ? ' segmented__item--on' : ''}`}
-                    onClick={() => setOptions((o) => ({ ...o, output: value }))}
-                  >
-                    {t(`output.${value}` as MessageKey)}
-                  </button>
-                ))}
-              </div>
-              <p className="output__hint" key={options.output}>
-                {t(`output.${options.output}.hint` as MessageKey)}
-              </p>
-            </div>
-
-            <OptionsPanel options={options} onChange={setOptions} ocrAvailable={ocrAvailable} />
-          </section>
-
-          {jobs.length > 0 && (
-            <section className="queue" ref={queueRef}>
-              <div className="queue__head">
-                <h2>{t('queue.title', { count: jobs.length })}</h2>
-                <div className="queue__actions">
-                  {finished.length > 1 && (
-                    <button className="btn btn--ghost" type="button" onClick={downloadAll}>
-                      {t('queue.downloadAll', { count: finished.length })}
-                    </button>
-                  )}
-                  {!busy && (
-                    <button className="btn btn--ghost" type="button" onClick={clearFinished}>
-                      {t('queue.clear')}
-                    </button>
-                  )}
-                </div>
-              </div>
-              <div className="queue__list">
-                {jobs.map((job) => (
-                  <JobCard
-                    key={job.id}
-                    job={job}
-                    onCancel={cancel}
-                    onRetry={handleRetry}
-                    onRemove={remove}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
 
           <SeoContent />
         </main>
@@ -314,6 +347,19 @@ export function App() {
         )}
       </div>
     </CompatGate>
+  );
+}
+
+function SlidersIcon() {
+  return (
+    <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
+      <g fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+        <path d="M3 5h7M14 5h3M3 10h2M9 10h8M3 15h9M16 15h1" />
+        <circle cx="12" cy="5" r="1.8" />
+        <circle cx="7" cy="10" r="1.8" />
+        <circle cx="14" cy="15" r="1.8" />
+      </g>
+    </svg>
   );
 }
 

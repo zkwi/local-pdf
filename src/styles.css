@@ -10,6 +10,7 @@
   --surface-2: #f7f2ea;
   --border: #e5ded1;
   --border-strong: #cec5b4;
+  --dot: color-mix(in srgb, var(--border-strong) 55%, transparent);
   --text: #1e1b16;
   --text-dim: #6c6558;
   --text-faint: #9c9385;
@@ -46,6 +47,7 @@
     --surface-2: #25211b;
     --border: #322e27;
     --border-strong: #4a4439;
+    --dot: color-mix(in srgb, var(--border-strong) 45%, transparent);
     --text: #ece6da;
     --text-dim: #a59d8e;
     --text-faint: #7a7365;
@@ -73,24 +75,20 @@ body {
   padding: 0;
 }
 
-html {
-  scroll-behavior: smooth;
-}
-
 body {
-  position: relative;
   min-height: 100vh;
+  /*
+   * 底色四层：顶部主色光晕、把点阵压回底色的渐变、点阵纹理、底色。
+   * 点阵靠渐变盖住，不用 position: fixed + mask 的独立图层——那种做法快速滚动时会画花。
+   */
   background:
     radial-gradient(
       1000px 520px at 50% -180px,
       color-mix(in srgb, var(--accent) 14%, transparent),
       transparent 70%
     ),
-    radial-gradient(
-      720px 480px at 100% 12%,
-      color-mix(in srgb, #d9a066 9%, transparent),
-      transparent 70%
-    ),
+    linear-gradient(to bottom, transparent, var(--bg) 640px),
+    radial-gradient(var(--dot) 1px, transparent 1.2px) 0 0 / 22px 22px,
     var(--bg);
   color: var(--text);
   font-family:
@@ -106,19 +104,6 @@ body {
   font-size: 15px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
-}
-
-/* 首屏铺一层淡点阵，往下渐隐；只是纹理，不参与交互 */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background-image: radial-gradient(var(--border-strong) 1px, transparent 1.2px);
-  background-size: 22px 22px;
-  opacity: 0.38;
-  mask-image: linear-gradient(to bottom, #000 0, transparent 70vh);
 }
 
 h1,
@@ -325,34 +310,165 @@ h3 {
   text-wrap: balance;
 }
 
+/* ---------- 主面板：设置 + 拖放区 / 队列 ---------- */
+
+.panel {
+  width: 100%;
+  margin-top: var(--s-4);
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.panel__bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  padding: 14px 18px 0;
+}
+
+.panel__output {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.panel__output .segmented--large {
+  flex: 1 1 260px;
+  max-width: 440px;
+}
+
+.panel__more {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  padding: 8px 12px 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+
+.panel__more:hover,
+.panel__more--open {
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.panel__more svg {
+  flex: none;
+}
+
+/* 改过默认设置时亮一个点，收起也看得见 */
+.panel__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.panel__chevron {
+  display: inline-block;
+  font-size: 17px;
+  line-height: 1;
+  color: var(--text-faint);
+  transform: rotate(90deg);
+  transition: transform 0.3s var(--ease);
+}
+
+.panel__more--open .panel__chevron {
+  transform: rotate(-90deg);
+}
+
+.panel__hint {
+  margin: 0;
+  padding: 8px 18px 14px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.panel__body {
+  display: grid;
+  gap: 12px;
+  padding: 14px 18px 18px;
+  border-top: 1px solid var(--border);
+}
+
 .dropzone {
   position: relative;
   width: 100%;
-  margin-top: var(--s-4);
   border: 1.5px dashed var(--border-strong);
-  border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
-  padding: var(--s-7) var(--s-5) 40px;
+  border-radius: 16px;
+  background: var(--surface-2);
+  padding: 40px var(--s-5) 34px;
   text-align: center;
   cursor: pointer;
-  box-shadow: var(--shadow);
   transition:
     border-color 0.2s,
     background 0.2s,
-    box-shadow 0.35s var(--ease),
-    transform 0.35s var(--ease);
+    box-shadow 0.3s var(--ease);
 }
 
 .dropzone:hover,
 .dropzone:focus-visible,
 .app[data-dragging] .dropzone {
   border-color: var(--accent);
-  background: var(--surface);
-  box-shadow:
-    var(--shadow-lg),
-    0 0 0 6px var(--accent-glow);
-  transform: translateY(-2px);
+  background: color-mix(in srgb, var(--accent-soft) 55%, var(--surface));
+  box-shadow: 0 0 0 4px var(--accent-glow);
   outline: none;
+}
+
+/* 队列下面的"继续添加"：一行横排，图标小一号 */
+.dropzone--compact {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  padding: 12px 16px;
+  text-align: left;
+}
+
+.dropzone--compact .dropzone__orb {
+  width: 36px;
+  height: 36px;
+  margin: 0;
+  box-shadow: none;
+  animation: none;
+}
+
+.dropzone--compact .dropzone__icon {
+  width: 18px;
+  height: 18px;
+}
+
+.dropzone--compact .dropzone__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.dropzone--compact .dropzone__button {
+  margin: 0;
+  padding: 6px 12px;
+  font-size: 13px;
 }
 
 .dropzone--disabled {
@@ -365,13 +481,13 @@ h3 {
   position: relative;
   display: grid;
   place-items: center;
-  width: 84px;
-  height: 84px;
+  width: 72px;
+  height: 72px;
   margin: 0 auto;
   border-radius: 50%;
   background: var(--accent-soft);
   color: var(--accent);
-  box-shadow: 0 0 0 10px color-mix(in srgb, var(--accent) 6%, transparent);
+  box-shadow: 0 0 0 8px color-mix(in srgb, var(--accent) 6%, transparent);
   transition:
     transform 0.35s var(--ease),
     box-shadow 0.35s var(--ease),
@@ -379,8 +495,8 @@ h3 {
 }
 
 .dropzone__icon {
-  width: 38px;
-  height: 38px;
+  width: 32px;
+  height: 32px;
   transition: transform 0.35s var(--ease);
 }
 
@@ -397,9 +513,9 @@ h3 {
 }
 
 .dropzone__title {
-  margin: var(--s-5) 0 var(--s-2);
+  margin: 18px 0 6px;
   font-weight: 700;
-  font-size: 20px;
+  font-size: 19px;
   letter-spacing: -0.015em;
 }
 
@@ -416,15 +532,15 @@ h3 {
 
 .dropzone__button {
   display: inline-block;
-  margin-top: var(--s-5);
-  padding: 11px 24px;
+  margin-top: 18px;
+  padding: 10px 22px;
   font-size: 15px;
   pointer-events: none;
 }
 
 .dropzone__sample {
   display: block;
-  margin: var(--s-4) auto 0;
+  margin: 12px auto 0;
   font-size: 13.5px;
 }
 
@@ -510,28 +626,7 @@ h3 {
   color: var(--text-dim);
 }
 
-/* ---------- 设置：输出格式 + 更多选项 ---------- */
-
-.settings {
-  display: grid;
-  gap: var(--s-3);
-}
-
-.output {
-  display: grid;
-  gap: 14px;
-  padding: 22px 24px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-sm);
-}
-
-.output__hint {
-  margin: 0;
-  font-size: 13.5px;
-  color: var(--text-dim);
-}
+/* ---------- 分段选择器与"更多选项" ---------- */
 
 /* 分段选择器：普通尺寸给"更多选项"里用，大号带滑块的给输出格式用 */
 .segmented {
@@ -608,74 +703,17 @@ h3 {
   color: var(--accent-deep);
 }
 
+/* "更多选项"展开后夹在面板顶栏和主体之间，用浅一档的底色区分 */
 .advanced {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
-  box-shadow: var(--shadow-sm);
-  transition: box-shadow 0.35s var(--ease);
-}
-
-.advanced[open] {
-  box-shadow: var(--shadow);
-}
-
-.advanced__summary {
-  list-style: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s-3);
-  padding: 16px 24px;
-  font-size: 14.5px;
-  font-weight: 600;
-  color: var(--text);
-  border-radius: var(--radius);
-  transition: background 0.15s;
-}
-
-.advanced__summary:hover {
   background: var(--surface-2);
-}
-
-.advanced[open] .advanced__summary {
-  border-radius: var(--radius) var(--radius) 0 0;
-}
-
-.advanced__summary::-webkit-details-marker {
-  display: none;
-}
-
-.panel__chevron {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  color: var(--text-dim);
-  font-size: 17px;
-  line-height: 1;
-  transform: rotate(90deg);
-  transition:
-    transform 0.3s var(--ease),
-    background 0.15s;
-}
-
-.advanced[open] .panel__chevron {
-  transform: rotate(-90deg);
-  background: var(--accent-soft);
-  color: var(--accent);
+  border-top: 1px solid var(--border);
 }
 
 .advanced__body {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--s-5) var(--s-6);
-  padding: var(--s-2) 24px 24px;
-  border-top: 1px solid var(--border);
+  gap: var(--s-4) var(--s-6);
+  padding: 4px 18px 20px;
 }
 
 /* OCR 那组内容最多，占满一整行；内容、版面细节并排 */
@@ -764,7 +802,7 @@ h3 {
   padding: 14px;
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: var(--surface-2);
+  background: var(--surface);
 }
 
 .segmented-wrap {
@@ -922,23 +960,19 @@ h3 {
   box-shadow: none;
 }
 
-/* ---------- 转换队列 ---------- */
-
-.queue {
-  display: grid;
-  gap: var(--s-3);
-}
+/* ---------- 转换队列（在主面板主体里） ---------- */
 
 .queue__head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--s-3);
+  min-height: 32px;
 }
 
 .queue__head h2 {
   margin: 0;
-  font-size: 16px;
+  font-size: 15px;
 }
 
 .queue__actions {
@@ -957,8 +991,7 @@ h3 {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 18px 20px;
-  box-shadow: var(--shadow-sm);
+  padding: 16px 18px;
   display: grid;
   gap: 12px;
   transition:
@@ -972,8 +1005,8 @@ h3 {
 }
 
 .job--running {
-  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
-  box-shadow: var(--shadow);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
 .job--error {
@@ -1547,8 +1580,7 @@ h3 {
   display: grid;
   place-items: center;
   padding: 24px;
-  background: color-mix(in srgb, var(--bg) 80%, transparent);
-  backdrop-filter: blur(4px);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
   pointer-events: none;
 }
 
@@ -1647,10 +1679,10 @@ h3 {
       glow 1.6s ease-in-out infinite;
   }
 
-  .advanced[open] .advanced__body,
+  .advanced,
   .faq__item[open] p,
   .report,
-  .output__hint {
+  .panel__hint {
     animation: fade-down 0.25s var(--ease) both;
   }
 
@@ -1670,10 +1702,6 @@ h3 {
   *::after {
     animation: none !important;
     transition: none !important;
-  }
-
-  html {
-    scroll-behavior: auto;
   }
 }
 
@@ -1858,16 +1886,27 @@ h3 {
     font-size: 14px;
   }
 
-  .output,
-  .advanced__summary,
   .seo {
     padding-left: 18px;
     padding-right: 18px;
   }
 
+  .panel__bar,
+  .panel__hint,
+  .panel__body,
   .advanced__body {
-    padding-left: 18px;
-    padding-right: 18px;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .panel__more {
+    margin-left: 0;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .panel__output .segmented--large {
+    max-width: none;
   }
 
   .job__head {

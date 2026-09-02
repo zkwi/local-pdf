@@ -31,7 +31,7 @@ const MODE_KEY: Record<ConversionMode, 'editable' | 'plain'> = {
 };
 
 /**
- * 折叠的"更多选项"。默认设置已经是普通用户想要的，
+ * "更多选项"展开后的内容，开关按钮在 App 主面板的顶栏里。默认设置已经是普通用户想要的，
  * 这里只放"结果不对时可能想调"的开关，用大白话标注，不提技术名词。
  */
 export function OptionsPanel({ options, onChange, ocrAvailable }: OptionsPanelProps) {
@@ -46,14 +46,7 @@ export function OptionsPanel({ options, onChange, ocrAvailable }: OptionsPanelPr
   const isDefault = JSON.stringify(options) === JSON.stringify(DEFAULT_OPTIONS);
 
   return (
-    <details className="advanced">
-      <summary className="advanced__summary">
-        <span>{t('advanced.toggle')}</span>
-        <span className="panel__chevron" aria-hidden="true">
-          ›
-        </span>
-      </summary>
-
+    <div className="advanced" id="advanced-panel">
       <div className="advanced__body">
         <fieldset className="field">
           <legend className="field__label">{t('ocr.label')}</legend>
@@ -162,7 +155,7 @@ export function OptionsPanel({ options, onChange, ocrAvailable }: OptionsPanelPr
           </button>
         )}
       </div>
-    </details>
+    </div>
   );
 }
 

@@ -32,6 +32,7 @@ export const zhCN = {
   'summary.lowConfidence.one': '1 页把握不高，建议核对',
   'summary.lowConfidence.other': '{count} 页把握不高，建议核对',
   'app.github': 'GitHub 仓库',
+  'drop.more': '继续添加 PDF：拖到这里，或点击选择',
   'drop.paste': '也可以按 Ctrl+V 直接粘贴文件',
   'drop.sample': '手边没有文件？试试示例 PDF',
   'drop.sampleFailed': '示例文件加载失败，请稍后再试',

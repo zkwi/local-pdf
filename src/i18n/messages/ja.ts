@@ -30,6 +30,7 @@ export const ja: Messages = {
   'summary.lowConfidence.one': '要確認 1 ページ',
   'summary.lowConfidence.other': '要確認 {count} ページ',
   'app.github': 'GitHub リポジトリ',
+  'drop.more': 'PDF を追加：ここにドロップするか、クリックして選択',
   'drop.paste': 'Ctrl+V でファイルを貼り付けることもできます',
   'drop.sample': '手元にファイルがなければサンプル PDF をお試しください',
   'drop.sampleFailed': 'サンプルを読み込めませんでした。しばらくしてからお試しください',
