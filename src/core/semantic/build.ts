@@ -202,7 +202,7 @@ function buildPageBlocks(
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i];
     const next = blocks[i + 1];
-    const spaceAfter = estimateSpaceAfter(block, next, bodyFontSize);
+    const spaceAfter = estimateSpaceAfter(block, next, bodyFontSize, pagePitch);
 
     if (options.mode === 'plain-text') {
       const flattened = flattenToParagraph(block, spaceAfter);
@@ -510,16 +510,41 @@ export function lineSpacingFor(
   return { lineSpacing, lineRule: safe ? 'exact' : 'atLeast' };
 }
 
-function estimateSpaceAfter(
+/**
+ * 段后距。两个文字块之间按基线算：下一块首行基线减本块末行基线，再减去一个行距，
+ * 剩下的才是真正的段间空白——公文里段与段之间和段内一样是 28 磅的行距，
+ * 按框间空白减字高来估会给每段多算 6 磅，一页十段就多出两行，页数跟着涨。
+ * 表格、图片没有基线，仍按框间空白估。
+ */
+export function estimateSpaceAfter(
   block: LayoutBlock,
   next: LayoutBlock | undefined,
   bodyFontSize: number,
+  pagePitch = 0,
 ): number {
   if (next === undefined) return 0;
+  const lastLine = 'lines' in block ? block.lines[block.lines.length - 1] : undefined;
+  const firstLine = 'lines' in next ? next.lines[0] : undefined;
+  if (lastLine !== undefined && firstLine !== undefined) {
+    const pitch = blockPitch(block) || pagePitch || lastLine.fontSize * 1.2;
+    const extra = firstLine.baseline - lastLine.baseline - pitch;
+    return Math.min(MAX_SPACE_AFTER_PT, Math.max(0, Math.round(extra)));
+  }
   const gap = next.meta.bbox.y - bottom(block.meta.bbox);
   if (!Number.isFinite(gap) || gap <= 0) return 0;
   const lineHeight = bodyFontSize * 0.35;
   return Math.min(MAX_SPACE_AFTER_PT, Math.max(0, Math.round(gap - lineHeight)));
+}
+
+/** 块内量到的基线间距（多行块才有），单行块为 0 */
+function blockPitch(block: LayoutBlock): number {
+  if (!('lines' in block) || block.lines.length < 2) return 0;
+  const gaps: number[] = [];
+  for (let i = 1; i < block.lines.length; i++) {
+    const gap = block.lines[i].baseline - block.lines[i - 1].baseline;
+    if (gap > 0) gaps.push(gap);
+  }
+  return median(gaps);
 }
 
 function originOf(block: LayoutBlock): BlockOrigin {

@@ -199,3 +199,27 @@ describe('lineSpacingFor', () => {
     expect(lineSpacingFor(big, 17)).toEqual({ lineSpacing: 1.15, lineRule: 'atLeast' });
   });
 });
+
+describe('estimateSpaceAfter', () => {
+  it('段间和段内行距相同时段后距为 0；多出来的空白才是段后距', async () => {
+    const { estimateSpaceAfter } = await import('../src/core/semantic/build.ts');
+    const { buildLines } = await import('../src/core/layout/lines.ts');
+    const { buildBlocksForRegion } = await import('../src/core/layout/blocks.ts');
+    const { segmentRegions } = await import('../src/core/layout/regions.ts');
+    const { lines } = buildLines([
+      line('第一段第一行第一段第一行第一段第一行第一段第一行', 72, 100, 400, { fontSize: 16 }),
+      line('第一段第二行。', 72, 128, 120, { fontSize: 16 }),
+      line('第二段第一行第二段第一行第二段第一行第二段第一行', 72, 156, 400, { fontSize: 16 }),
+      line('第二段第二行。', 72, 184, 120, { fontSize: 16 }),
+      line('第三段第一行第三段第一行第三段第一行第三段第一行', 72, 232, 400, { fontSize: 16 }),
+    ]);
+    const ctx = { pageIndex: 0, bodyFontSize: 16, order: 0 };
+    const blocks = segmentRegions(lines, 595, Number.POSITIVE_INFINITY).regions.flatMap((r) =>
+      buildBlocksForRegion(r, ctx),
+    );
+    expect(blocks).toHaveLength(3);
+    expect(estimateSpaceAfter(blocks[0], blocks[1], 16, 28)).toBe(0);
+    expect(estimateSpaceAfter(blocks[1], blocks[2], 16, 28)).toBe(20);
+    expect(estimateSpaceAfter(blocks[2], undefined, 16, 28)).toBe(0);
+  });
+});
