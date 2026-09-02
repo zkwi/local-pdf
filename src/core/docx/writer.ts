@@ -238,6 +238,8 @@ function renderParagraph(block: SemanticParagraph, breakBefore = false): Paragra
   return new Paragraph({
     alignment: ALIGNMENT[block.alignment],
     pageBreakBefore: breakBefore || undefined,
+    // 行距量准了的段落按原文分页，不让 Word 为了避免孤行把整行挪到下一页
+    widowControl: block.lineRule === 'exact' ? false : undefined,
     indent:
       block.firstLineIndentPt > 0 ? { firstLine: ptToTwip(block.firstLineIndentPt) } : undefined,
     spacing: {

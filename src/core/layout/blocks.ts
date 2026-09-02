@@ -97,15 +97,22 @@ function shouldBreak(prev: TextLine, line: TextLine, ctx: BreakContext): boolean
   if (Math.abs(prev.fontSize - line.fontSize) > em * 0.15) return true;
   if (prev.bold !== line.bold) return true;
   if (matchListMarker(line.text) !== null) return true;
-  // 列表项的续行只会缩进到项目文字处，不会比符号还靠左；比符号靠左的是下一段
-  if (matchListMarker(prev.text) !== null && line.bbox.x < prev.bbox.x - em * INDENT_RATIO)
+
+  const slack = ctx.noisy ? SHORT_LINE_SLACK_NOISY : SHORT_LINE_SLACK;
+  const prevIsShort = right(prev.bbox) < ctx.regionRight - em * slack;
+  const lineIsShort = right(line.bbox) < ctx.regionRight - em * slack;
+  // 悬挂缩进的列表里，续行只会缩进到项目文字处，不会比符号还靠左；比符号靠左的是下一段。
+  // 但公文里"1.项目对象。……"首行缩进两字、续行顶格：符号行排满、下一行也排满的还是同一段
+  if (
+    matchListMarker(prev.text) !== null &&
+    line.bbox.x < prev.bbox.x - em * INDENT_RATIO &&
+    (prevIsShort || lineIsShort)
+  )
     return true;
   // OCR 来的页面："1.3.1 农业农村现代化"、"2.项目文件"这类编号短行字号和正文一样，
   // 只能靠编号和长度认出来，前后都要断开，不然会和下一行正文粘成一段
   if (ctx.noisy && (isNumberedShortLine(prev, ctx) || isNumberedShortLine(line, ctx))) return true;
 
-  const slack = ctx.noisy ? SHORT_LINE_SLACK_NOISY : SHORT_LINE_SLACK;
-  const prevIsShort = right(prev.bbox) < ctx.regionRight - em * slack;
   // OCR 框的左边界能抖一两个字宽，缩进不可信：只看上一行是否提前收尾。
   // 中文两端对齐，段内每一行都排满，提前收尾的行就是段末，不必等句号——
   // "接口名称：无"、"公司名称：××公司" 这类一行一项的内容不然会粘成一段

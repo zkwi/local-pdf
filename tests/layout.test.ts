@@ -431,6 +431,27 @@ describe('段落与标题的新规则', () => {
     ]);
   });
 
+  it('公文里首行缩进、续行顶格的编号段落是同一个列表项', () => {
+    const blocks = analyze(
+      [
+        line('1.项目对象。该项目以本市全日制在校博士、硕士研究生及', 104, 100, 368, {
+          fontSize: 16,
+        }),
+        line('三年级及以上本科生为主体。组织化选聘信念坚定、品学兼优、', 72, 128, 400, {
+          fontSize: 16,
+        }),
+        line('乐于奉献的优秀学生到各领域兼职开展岗位锻炼或兼任基层团干部。', 72, 156, 380, {
+          fontSize: 16,
+        }),
+        line('2.项目周期。该项目周期为1年。', 104, 184, 200, { fontSize: 16 }),
+      ],
+      false,
+      16,
+    );
+    expect(blocks.map((b) => b.kind)).toEqual(['list-item', 'list-item']);
+    expect(blocks[0].kind === 'list-item' ? blocks[0].lines.length : 0).toBe(3);
+  });
+
   it('项目符号后面紧跟中文也算列表项', () => {
     const blocks = analyze([
       line('•若中考该科目成绩达到140分及以上，甲方收取全额预付费用', 72, 100, 330),
