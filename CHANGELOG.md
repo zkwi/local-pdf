@@ -39,10 +39,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
   section. Warmer palette with a single accent, a dark theme that keeps its contrast, sections that
   fade in on load, and hover/drag feedback on the drop zone and cards; all motion respects
   `prefers-reduced-motion`.
-- Everything you operate now lives in one panel on the first screen: output format and "More options"
-  sit in its top bar, and the body switches from the drop zone to the queue with progress once files
-  are added, with a slim "add more" strip underneath. The queue and settings used to be separate
-  sections further down the page. The dotted background no longer uses a fixed masked layer, which
+- Everything you operate now lives in one panel on the first screen: the body switches from the drop
+  zone to the queue with progress once files are added (with a slim "add more" strip underneath), and
+  output format plus "More options" sit in a bar below it, so expanding the options never pushes the
+  drop zone down. The queue and settings used to be separate sections further down the page. The dotted background no longer uses a fixed masked layer, which
   could paint garbage during fast scrolling.
 - Default page limit raised from 500 to 1000.
 - Scanned pages whose only text layer is a watermark, header/footer or page number are now recognised

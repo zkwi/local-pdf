@@ -224,8 +224,47 @@ export function App() {
             </h1>
             <p className="hero__lede">{t('app.tagline')}</p>
 
-            {/* 主面板：顶栏是设置，中间按有没有任务切换拖放区 / 队列，所有操作不出首屏 */}
+            {/*
+             * 主面板：主体按有没有任务切换拖放区 / 队列，设置行在下面，
+             * "更多选项"展开时只往下伸，不会把拖放区推下去；所有操作不出首屏。
+             */}
             <div className="panel">
+              <div className="panel__body" ref={queueRef}>
+                {jobs.length === 0 ? (
+                  <DropZone onFiles={handleFiles} onSample={loadSample} />
+                ) : (
+                  <>
+                    <div className="queue__head">
+                      <h2>{t('queue.title', { count: jobs.length })}</h2>
+                      <div className="queue__actions">
+                        {finished.length > 1 && (
+                          <button className="btn btn--ghost" type="button" onClick={downloadAll}>
+                            {t('queue.downloadAll', { count: finished.length })}
+                          </button>
+                        )}
+                        {!busy && (
+                          <button className="btn btn--ghost" type="button" onClick={clearFinished}>
+                            {t('queue.clear')}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="queue__list">
+                      {jobs.map((job) => (
+                        <JobCard
+                          key={job.id}
+                          job={job}
+                          onCancel={cancel}
+                          onRetry={handleRetry}
+                          onRemove={remove}
+                        />
+                      ))}
+                    </div>
+                    <DropZone onFiles={handleFiles} compact />
+                  </>
+                )}
+              </div>
+
               <div className="panel__bar">
                 <div className="panel__output">
                   <span className="eyebrow">{t('output.label')}</span>
@@ -277,42 +316,6 @@ export function App() {
               {advancedOpen && (
                 <OptionsPanel options={options} onChange={setOptions} ocrAvailable={ocrAvailable} />
               )}
-
-              <div className="panel__body" ref={queueRef}>
-                {jobs.length === 0 ? (
-                  <DropZone onFiles={handleFiles} onSample={loadSample} />
-                ) : (
-                  <>
-                    <div className="queue__head">
-                      <h2>{t('queue.title', { count: jobs.length })}</h2>
-                      <div className="queue__actions">
-                        {finished.length > 1 && (
-                          <button className="btn btn--ghost" type="button" onClick={downloadAll}>
-                            {t('queue.downloadAll', { count: finished.length })}
-                          </button>
-                        )}
-                        {!busy && (
-                          <button className="btn btn--ghost" type="button" onClick={clearFinished}>
-                            {t('queue.clear')}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    <div className="queue__list">
-                      {jobs.map((job) => (
-                        <JobCard
-                          key={job.id}
-                          job={job}
-                          onCancel={cancel}
-                          onRetry={handleRetry}
-                          onRemove={remove}
-                        />
-                      ))}
-                    </div>
-                    <DropZone onFiles={handleFiles} compact />
-                  </>
-                )}
-              </div>
             </div>
           </section>
 

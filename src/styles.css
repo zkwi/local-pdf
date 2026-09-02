@@ -323,12 +323,14 @@ h3 {
   overflow: hidden;
 }
 
+/* 设置行在主体下面：展开"更多选项"只往下伸，拖放区和队列的位置不动 */
 .panel__bar {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 12px 16px;
   padding: 14px 18px 0;
+  border-top: 1px solid var(--border);
 }
 
 .panel__output {
@@ -407,8 +409,7 @@ h3 {
 .panel__body {
   display: grid;
   gap: 12px;
-  padding: 14px 18px 18px;
-  border-top: 1px solid var(--border);
+  padding: 18px 18px 16px;
 }
 
 .dropzone {
