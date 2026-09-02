@@ -5,7 +5,7 @@
 Your PDF stays local: parsing, OCR, layout analysis and file generation all run inside the browser.
 There is no upload endpoint in the code base at all.
 
-[简体中文](README.zh-CN.md) · Live: <https://locapdfconverter.com>
+[简体中文](README.zh-CN.md) · Live: <https://localpdfconverter.com>
 
 ![Screenshot](docs/screenshot.png)
 

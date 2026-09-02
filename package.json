@@ -15,7 +15,7 @@
     "pdf-to-word",
     "paddleocr"
   ],
-  "homepage": "https://locapdfconverter.com",
+  "homepage": "https://localpdfconverter.com",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/zkwi/local-pdf.git"
