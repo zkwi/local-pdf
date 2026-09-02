@@ -1,7 +1,12 @@
 import type { ConversionWarning } from '../contracts/layout.ts';
 import type { ConvertOptions } from '../contracts/options.ts';
-import type { PrimitiveDocument, PrimitivePage } from '../contracts/primitives.ts';
 import type {
+  PrimitiveDocument,
+  PrimitivePage,
+  PrimitiveTextSpan,
+} from '../contracts/primitives.ts';
+import type {
+  ConversionOutput,
   ConversionProgress,
   ConversionReport,
   ConversionResult,
@@ -9,10 +14,12 @@ import type {
 } from '../contracts/report.ts';
 import { writeDocx } from '../docx/writer.ts';
 import type { ExtractedImage } from '../layout/analyze.ts';
-import { analyzeDocument } from '../layout/analyze.ts';
-import { createTesseractEngine } from '../ocr/tesseract.ts';
+import { analyzeDocument, MIN_IMAGE_SIDE } from '../layout/analyze.ts';
+import { createOcrEngine } from '../ocr/create.ts';
 import type { OcrEngine } from '../ocr/engine.ts';
 import { mergeOcrSpans, shouldRunOcr } from '../ocr/engine.ts';
+import { mergeStripSpans, planStrips, STRIP_THRESHOLD_PT } from '../ocr/strips.ts';
+import type { StripResult } from '../ocr/strips.ts';
 import { computeTextHealth, describeError, PdfSession } from '../pdf/extractor.ts';
 import { cropToPng } from '../pdf/images.ts';
 import { buildSemanticDocument } from '../semantic/build.ts';
@@ -20,9 +27,18 @@ import { buildSemanticDocument } from '../semantic/build.ts';
 /** 单份文档累计的图片字节上限，超过就停止抽图 */
 const MAX_TOTAL_IMAGE_BYTES = 80 * 1024 * 1024;
 
+/** OCR 至少按这个倍率渲染（72 pt × 3 ≈ 216 DPI），低于这个小字号识别率掉得厉害 */
+const MIN_OCR_SCALE = 3;
+
+/**
+ * 自动模式下 OCR 出来的字少于这个数，就当这页是整版图表/插图而不是扫描的文字页：
+ * 把几十个坐标轴刻度当正文塞进 Word、再把原图丢掉，比保留原图差得多。
+ */
+const MIN_OCR_CHARS_AUTO = 120;
+
 export class CancelledError extends Error {
   constructor() {
-    super('转换已取消');
+    super('cancelled');
     this.name = 'CancelledError';
   }
 }
@@ -56,7 +72,7 @@ export async function convert(
     callbacks.onProgress?.(progress);
   };
 
-  report({ stage: 'loading', fraction: 0.01, message: '正在解析 PDF…' });
+  report({ stage: 'loading', fraction: 0.01, key: 'loading' });
   let stageStart = now();
 
   const session = await PdfSession.open(input.data, input.fileName, {
@@ -65,21 +81,48 @@ export async function convert(
   });
   durations.loading = now() - stageStart;
 
-  let ocrEngine: OcrEngine | null = null;
+  // 放在对象里而不是 let：赋值发生在闭包内，TS 的流程分析会把裸变量一直当成 null
+  const ocr: { engine: OcrEngine | null } = { engine: null };
   try {
     check();
     const totalPages = Math.min(session.pageCount, Math.max(1, options.maxPages));
     if (session.pageCount > totalPages) {
       warnings.push({
         code: 'page-limit-exceeded',
-        message: `文档共 ${session.pageCount} 页，按设置只转换前 ${totalPages} 页`,
+        params: { total: session.pageCount, limit: totalPages },
       });
     }
+
+    /** 第一次需要 OCR 时才创建引擎；模型下载进度挂在当前页的进度区间里 */
+    const obtainOcrEngine = async (pageIndex: number): Promise<OcrEngine> => {
+      if (ocr.engine !== null) return ocr.engine;
+      const modelStart = now();
+      const created = await createOcrEngine(options, {
+        assetBase: input.assetBase,
+        signal: callbacks.signal,
+        onProgress: (p) => {
+          report({
+            stage: 'ocr-model',
+            pageIndex,
+            totalPages,
+            fraction:
+              0.05 + (0.65 * (pageIndex + 0.15 + Math.max(0, p.progress) * 0.25)) / totalPages,
+            key: p.key,
+            params: p.params,
+          });
+        },
+      });
+      durations['ocr-model'] = now() - modelStart;
+      warnings.push(...created.warnings);
+      ocr.engine = created.engine;
+      return ocr.engine;
+    };
 
     stageStart = now();
     const pages: PrimitivePage[] = [];
     const images = new Map<string, ExtractedImage>();
     let imageBytes = 0;
+    let ocrTotal = 0;
 
     for (let i = 0; i < totalPages; i++) {
       check();
@@ -88,7 +131,8 @@ export async function convert(
         pageIndex: i,
         totalPages,
         fraction: 0.05 + (0.65 * i) / totalPages,
-        message: `正在读取第 ${i + 1} / ${totalPages} 页`,
+        key: 'extracting',
+        params: { page: i + 1, total: totalPages },
       });
 
       let page: PrimitivePage;
@@ -98,51 +142,68 @@ export async function convert(
         warnings.push({
           code: 'page-extract-failed',
           pageIndex: i,
-          message: `第 ${i + 1} 页解析失败，已跳过：${describeError(error)}`,
+          params: { page: i + 1, reason: describeError(error) },
         });
         continue;
       }
 
       const needsOcr = shouldRunOcr(page, options.ocr);
-      const needsRender =
-        needsOcr || (options.extractImages && options.mode !== 'plain-text' && page.images.length > 0);
+      const wantImages =
+        options.extractImages && options.mode !== 'plain-text' && page.images.length > 0;
 
-      if (needsRender) {
-        const rendered = await session.renderPage(i, options.renderScale);
+      if (needsOcr || wantImages) {
+        const scale = needsOcr ? Math.max(options.renderScale, MIN_OCR_SCALE) : options.renderScale;
+        const rendered = await session.renderPage(i, scale);
         if (rendered !== null) {
           if (needsOcr) {
-            report({
-              stage: 'ocr',
-              pageIndex: i,
-              totalPages,
-              fraction: 0.05 + (0.65 * (i + 0.4)) / totalPages,
-              message: `第 ${i + 1} 页看起来是扫描件，正在 OCR…`,
-            });
             try {
-              ocrEngine ??= await createTesseractEngine({
-                languages: options.ocrLanguages,
-                assetBase: options.ocrAssetBase,
+              const engine = await obtainOcrEngine(i);
+              check();
+              report({
+                stage: 'ocr',
+                pageIndex: i,
+                totalPages,
+                fraction: 0.05 + (0.65 * (i + 0.45)) / totalPages,
+                key: 'ocr',
+                params: { page: i + 1 },
               });
-              const ocrSpans = await ocrEngine.recognize(rendered.canvas, rendered.scale, i);
-              const merged = mergeOcrSpans(page.spans, ocrSpans);
-              page = {
-                ...page,
-                spans: merged,
-                ocrApplied: true,
-                textHealth: computeTextHealth(merged, page.images, page.width, page.height),
-              };
+              const ocrStart = now();
+              const ocrSpans =
+                page.height > STRIP_THRESHOLD_PT
+                  ? await recognizeInStrips(session, engine, i, page.height, scale)
+                  : await engine.recognize(rendered.canvas, rendered.scale, i);
+              ocrTotal += now() - ocrStart;
+              const ocrChars = ocrSpans.reduce((s, sp) => s + sp.text.length, 0);
+              if (options.ocr === 'auto' && ocrChars < MIN_OCR_CHARS_AUTO) {
+                warnings.push({
+                  code: 'ocr-sparse-kept-image',
+                  pageIndex: i,
+                  params: { page: i + 1, count: ocrChars },
+                });
+              } else {
+                const merged = mergeOcrSpans(page.spans, ocrSpans);
+                page = {
+                  ...page,
+                  spans: merged,
+                  ocrApplied: true,
+                  textHealth: computeTextHealth(merged, page.images, page.width, page.height),
+                };
+              }
             } catch (error) {
+              if (error instanceof CancelledError || callbacks.signal?.aborted === true)
+                throw error;
               warnings.push({
                 code: 'ocr-failed',
                 pageIndex: i,
-                message: `第 ${i + 1} 页 OCR 失败：${describeError(error)}`,
+                params: { page: i + 1, reason: describeError(error) },
               });
             }
           }
 
-          if (options.extractImages && options.mode !== 'plain-text') {
+          if (wantImages) {
             for (const image of page.images) {
               if (imageBytes >= MAX_TOTAL_IMAGE_BYTES) break;
+              if (image.bbox.width < MIN_IMAGE_SIDE || image.bbox.height < MIN_IMAGE_SIDE) continue;
               try {
                 const cropped = await cropToPng(rendered.canvas, image.bbox, rendered.scale);
                 if (cropped !== null) {
@@ -153,7 +214,7 @@ export async function convert(
                 warnings.push({
                   code: 'image-extract-failed',
                   pageIndex: i,
-                  message: `第 ${i + 1} 页有图片抽取失败：${describeError(error)}`,
+                  params: { page: i + 1, reason: describeError(error) },
                 });
               }
             }
@@ -162,21 +223,18 @@ export async function convert(
           rendered.canvas.width = 0;
           rendered.canvas.height = 0;
         } else if (needsOcr) {
-          warnings.push({
-            code: 'ocr-skipped',
-            pageIndex: i,
-            message: `第 ${i + 1} 页需要 OCR，但页面渲染失败，已跳过`,
-          });
+          warnings.push({ code: 'ocr-skipped', pageIndex: i, params: { page: i + 1 } });
         }
       }
 
       pages.push(page);
       session.releasePage(i);
     }
-    durations.extracting = now() - stageStart;
+    durations.extracting = now() - stageStart - ocrTotal - (durations['ocr-model'] ?? 0);
+    if (ocrTotal > 0) durations.ocr = ocrTotal;
 
     check();
-    report({ stage: 'analyzing', fraction: 0.72, message: '正在分析版面…' });
+    report({ stage: 'analyzing', fraction: 0.72, key: 'analyzing' });
     stageStart = now();
 
     const primitive: PrimitiveDocument = {
@@ -188,34 +246,92 @@ export async function convert(
     durations.analyzing = now() - stageStart;
 
     check();
-    report({ stage: 'writing', fraction: 0.88, message: '正在生成 Word 文件…' });
     stageStart = now();
-    const blob = await writeDocx(semantic);
+    const outputs: ConversionOutput[] = [];
+    const baseName = safeBaseName(input.fileName);
+
+    if (options.output === 'docx' || options.output === 'both') {
+      report({ stage: 'writing', fraction: 0.86, key: 'writing-docx' });
+      outputs.push({ kind: 'docx', blob: await writeDocx(semantic), fileName: `${baseName}.docx` });
+    }
+    if (options.output === 'markdown' || options.output === 'both') {
+      check();
+      report({ stage: 'writing', fraction: 0.93, key: 'writing-markdown' });
+      const [{ writeMarkdown }, { packMarkdown }] = await Promise.all([
+        import('../markdown/writer.ts'),
+        import('../markdown/bundle.ts'),
+      ]);
+      const bundle = await writeMarkdown(semantic, options.locale);
+      warnings.push(...bundle.warnings);
+      outputs.push(packMarkdown(bundle, baseName));
+    }
     durations.writing = now() - stageStart;
 
     const allWarnings = [...warnings, ...session.warnings, ...semantic.warnings];
     const result: ConversionResult = {
-      blob,
-      fileName: toDocxName(input.fileName),
-      report: buildReport(input.fileName, layout, allWarnings, durations, now() - started),
+      outputs,
+      report: buildReport(
+        input.fileName,
+        layout,
+        allWarnings,
+        durations,
+        now() - started,
+        ocr.engine?.name,
+      ),
     };
 
-    report({ stage: 'completed', fraction: 1, message: '转换完成' });
+    report({ stage: 'completed', fraction: 1, key: 'completed' });
     return result;
   } finally {
-    await ocrEngine?.terminate().catch(() => undefined);
+    await ocr.engine?.terminate().catch(() => undefined);
     await session.destroy().catch(() => undefined);
   }
 }
 
+/**
+ * 长图页分条 OCR：整页按 3× 渲染会撞像素上限被缩小，文字就认不出了。
+ * 每条单独渲染、识别，再换算回页面坐标并去重。
+ */
+async function recognizeInStrips(
+  session: PdfSession,
+  engine: OcrEngine,
+  pageIndex: number,
+  pageHeight: number,
+  scale: number,
+): Promise<PrimitiveTextSpan[]> {
+  const results: StripResult[] = [];
+  for (const plan of planStrips(pageHeight)) {
+    const strip = await session.renderStrip(pageIndex, scale, plan.top, plan.height);
+    if (strip === null) continue;
+    const spans = await engine.recognize(strip.canvas, strip.scale, pageIndex);
+    strip.canvas.width = 0;
+    strip.canvas.height = 0;
+    results.push({ plan, spans });
+  }
+  return mergeStripSpans(results, pageHeight, pageIndex);
+}
+
+/**
+ * 汇总报告。输入是转换期、pdf 会话、版面/语义三处的全部警告，
+ * 按页归到 PageReport，没有页码的留在文档级；同一条不重复出现。
+ */
 function buildReport(
   fileName: string,
   layout: ReturnType<typeof analyzeDocument>,
-  warnings: readonly ConversionWarning[],
+  rawWarnings: readonly ConversionWarning[],
   durations: Record<string, number>,
   total: number,
+  ocrEngine: string | undefined,
 ): ConversionReport {
+  const seen = new Set<string>();
+  const warnings = rawWarnings.filter((w) => {
+    const key = `${w.code}|${w.pageIndex ?? ''}|${JSON.stringify(w.params ?? {})}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
   const pages: PageReport[] = layout.pages.map((page) => {
+    const pageWarnings = warnings.filter((w) => w.pageIndex === page.index);
     let paragraphs = 0;
     let headings = 0;
     let listItems = 0;
@@ -263,8 +379,8 @@ function buildReport(
       tables,
       images: imagesCount,
       characters,
-      ocrApplied: page.warnings.some((w) => w.code === 'ocr-applied'),
-      warnings: page.warnings,
+      ocrApplied: pageWarnings.some((w) => w.code === 'ocr-applied'),
+      warnings: pageWarnings,
     };
   });
 
@@ -272,15 +388,23 @@ function buildReport(
     fileName,
     pageCount: layout.pages.length,
     pages,
-    warnings: warnings.filter((w) => w.pageIndex === undefined),
+    warnings: warnings.filter(
+      (w) => w.pageIndex === undefined || !layout.pages.some((p) => p.index === w.pageIndex),
+    ),
     durationByStage: durations,
     totalDurationMs: total,
+    ocrEngine,
   };
 }
 
-export function toDocxName(fileName: string): string {
+/** 去掉扩展名和文件系统不接受的字符 */
+export function safeBaseName(fileName: string): string {
   const base = fileName.replace(/\.[^.]+$/, '').replace(/[\\/:*?"<>|]/g, '_');
-  return `${base || 'document'}.docx`;
+  return base || 'document';
+}
+
+export function toDocxName(fileName: string): string {
+  return `${safeBaseName(fileName)}.docx`;
 }
 
 function now(): number {

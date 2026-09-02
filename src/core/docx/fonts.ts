@@ -30,9 +30,15 @@ const RULES: readonly Rule[] = [
   { test: /dengxian|等线/i, font: make('Calibri', '等线') },
   { test: /pingfang|苹方/i, font: make('Helvetica', '微软雅黑') },
   { test: /noto\s*sans\s*(sc|cjk)|source\s*han\s*sans/i, font: make('Arial', '思源黑体') },
-  { test: /noto\s*serif\s*(sc|cjk)|source\s*han\s*serif/i, font: make('Times New Roman', '思源宋体') },
+  {
+    test: /noto\s*serif\s*(sc|cjk)|source\s*han\s*serif/i,
+    font: make('Times New Roman', '思源宋体'),
+  },
   { test: /times|georgia|garamond|minion|cambria/i, font: make('Times New Roman', '宋体') },
-  { test: /arial|helvetica|verdana|tahoma|roboto|open\s*sans|lato/i, font: make('Arial', '微软雅黑') },
+  {
+    test: /arial|helvetica|verdana|tahoma|roboto|open\s*sans|lato/i,
+    font: make('Arial', '微软雅黑'),
+  },
   { test: /calibri|segoe/i, font: make('Calibri', '等线') },
   { test: /courier|consol|mono|menlo/i, font: make('Consolas', '宋体') },
 ];

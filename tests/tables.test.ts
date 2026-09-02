@@ -53,7 +53,11 @@ describe('detectTables', () => {
       vRule(200, 130, 160),
       vRule(300, 100, 160),
     ];
-    const spans = [cellSpan('合并表头', 110, 120), cellSpan('A2', 110, 150), cellSpan('B2', 210, 150)];
+    const spans = [
+      cellSpan('合并表头', 110, 120),
+      cellSpan('A2', 110, 150),
+      cellSpan('B2', 210, 150),
+    ];
     const { tables } = detectTables(segments, spans, 0, () => order++);
 
     expect(tables).toHaveLength(1);

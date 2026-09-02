@@ -9,10 +9,14 @@ coverage/
 !.vscode/extensions.json
 tmp/
 outputs/
-public/tessdata/*
-!public/tessdata/.gitkeep
+# npm install 时从 node_modules 复制，不入库
 public/pdfjs/
+public/ort/
+# npm run ocr-models 下载，6～36 MB，不入库
+public/ocr-models/
 .playwright-mcp/
+# 本机工具配置
+.claude/
 
 # 6.5 MB 的扫描件夹具不入库，用 tests/fixtures/make_fixtures.py 现生成
 tests/fixtures/scanned-no-text.pdf

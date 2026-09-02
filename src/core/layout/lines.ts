@@ -59,7 +59,10 @@ export function buildLines(spans: readonly PrimitiveTextSpan[]): LineBuildResult
       continue;
     }
     // 容差按较大的字号算：上下标的字号小、基线偏移却是按正文字号来的
-    const tolerance = Math.max(1, Math.max(currentFontSize, span.fontSize) * BASELINE_TOLERANCE_RATIO);
+    const tolerance = Math.max(
+      1,
+      Math.max(currentFontSize, span.fontSize) * BASELINE_TOLERANCE_RATIO,
+    );
     const vertical = overlapRatio1D(
       currentTop,
       currentBottom,
@@ -84,9 +87,7 @@ export function buildLines(spans: readonly PrimitiveTextSpan[]): LineBuildResult
   }
   if (current.length > 0) groups.push(current);
 
-  const lines = groups
-    .flatMap(splitOnWideGaps)
-    .map((group, i) => makeLine(group, i));
+  const lines = groups.flatMap(splitOnWideGaps).map((group, i) => makeLine(group, i));
   for (const span of others) {
     lines.push(makeLine([span], lines.length));
   }

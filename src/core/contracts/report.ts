@@ -4,6 +4,7 @@ export type ConversionStage =
   | 'queued'
   | 'loading'
   | 'extracting'
+  | 'ocr-model'
   | 'ocr'
   | 'analyzing'
   | 'writing'
@@ -11,13 +12,35 @@ export type ConversionStage =
   | 'failed'
   | 'cancelled';
 
+/**
+ * 进度文案的键。核心层不拼任何自然语言，界面按当前语言渲染。
+ * params 里的页码从 1 起，方便直接显示。
+ */
+export type ProgressKey =
+  | 'queued'
+  | 'loading'
+  | 'extracting'
+  | 'ocr-model-download'
+  | 'ocr-model-init'
+  | 'ocr-model-ready'
+  | 'ocr'
+  | 'analyzing'
+  | 'writing-docx'
+  | 'writing-markdown'
+  | 'completed'
+  | 'failed'
+  | 'cancelled';
+
+export type MessageParams = Readonly<Record<string, string | number>>;
+
 export interface ConversionProgress {
   readonly stage: ConversionStage;
   readonly pageIndex?: number;
   readonly totalPages?: number;
   /** 0~1 */
   readonly fraction: number;
-  readonly message: string;
+  readonly key: ProgressKey;
+  readonly params?: MessageParams;
 }
 
 export interface PageReport {
@@ -41,10 +64,20 @@ export interface ConversionReport {
   readonly warnings: readonly ConversionWarning[];
   readonly durationByStage: Readonly<Record<string, number>>;
   readonly totalDurationMs: number;
+  /** 实际用到的 OCR 引擎描述，没做 OCR 时为空 */
+  readonly ocrEngine?: string;
+}
+
+/** markdown：单个 .md；markdown-bundle：带图片和 manifest 的 zip */
+export type OutputKind = 'docx' | 'markdown' | 'markdown-bundle';
+
+export interface ConversionOutput {
+  readonly kind: OutputKind;
+  readonly blob: Blob;
+  readonly fileName: string;
 }
 
 export interface ConversionResult {
-  readonly blob: Blob;
-  readonly fileName: string;
+  readonly outputs: readonly ConversionOutput[];
   readonly report: ConversionReport;
 }

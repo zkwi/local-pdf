@@ -57,3 +57,37 @@ export function overlapRatio1D(a0: number, a1: number, b0: number, b1: number): 
   const shorter = Math.min(a1 - a0, b1 - b0);
   return shorter <= 0 ? 0 : overlap / shorter;
 }
+
+/**
+ * 把相交或间距不超过 gap 的框聚成组（并查集），返回每组的下标。
+ * 用于把 PDF 里被切成许多小块的图表合并成一张图。
+ */
+export function clusterBoxes(boxes: readonly BBox[], gap: number): number[][] {
+  const parent = boxes.map((_, i) => i);
+  const find = (i: number): number => {
+    while (parent[i] !== i) {
+      parent[i] = parent[parent[i]];
+      i = parent[i];
+    }
+    return i;
+  };
+  const near = (a: BBox, b: BBox): boolean =>
+    a.x <= b.x + b.width + gap &&
+    b.x <= a.x + a.width + gap &&
+    a.y <= b.y + b.height + gap &&
+    b.y <= a.y + a.height + gap;
+
+  for (let i = 0; i < boxes.length; i++) {
+    for (let j = i + 1; j < boxes.length; j++) {
+      if (near(boxes[i], boxes[j])) parent[find(i)] = find(j);
+    }
+  }
+  const groups = new Map<number, number[]>();
+  boxes.forEach((_, i) => {
+    const root = find(i);
+    const list = groups.get(root);
+    if (list) list.push(i);
+    else groups.set(root, [i]);
+  });
+  return [...groups.values()];
+}

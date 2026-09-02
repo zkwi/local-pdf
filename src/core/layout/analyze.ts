@@ -1,6 +1,7 @@
 import type {
   ConversionWarning,
   ImageBlock,
+  ImageFormat,
   LayoutBlock,
   LayoutDocument,
   LayoutPage,
@@ -14,13 +15,18 @@ import { buildBlocksForRegion } from './blocks.ts';
 import { detectHeadersFooters } from './header-footer.ts';
 import { buildLines } from './lines.ts';
 import { segmentRegions } from './regions.ts';
+import { detectRowRuledTables } from './row-tables.ts';
 import { detectTables } from './tables.ts';
 
 export interface ExtractedImage {
   readonly data: Uint8Array;
+  readonly format: ImageFormat;
   readonly widthPt: number;
   readonly heightPt: number;
 }
+
+/** 短边小于这个值（pt）的图当作装饰性碎片，不裁不输出 */
+export const MIN_IMAGE_SIDE = 12;
 
 /** imageId -> PNG 数据；由抽取阶段渲染裁剪得到 */
 export type ImageStore = ReadonlyMap<string, ExtractedImage>;
@@ -42,14 +48,15 @@ export function analyzeDocument(
       warnings.push({
         code: 'rotated-text-flattened',
         pageIndex: page.index,
-        message: `第 ${page.index + 1} 页有 ${built.rotatedSpanCount} 段旋转文字，已按普通段落输出`,
+        params: { page: page.index + 1, count: built.rotatedSpanCount },
       });
     }
-    if (built.verticalSpanCount > 0) {
+    // 一两个竖排片段多半是水印、二维码旁的装饰字，不值得打扰用户
+    if (built.verticalSpanCount >= 3) {
       warnings.push({
         code: 'vertical-text-flattened',
         pageIndex: page.index,
-        message: `第 ${page.index + 1} 页有竖排文字，已按横排输出`,
+        params: { page: page.index + 1 },
       });
     }
     return { index: page.index, height: page.height, lines: built.lines };
@@ -107,14 +114,23 @@ function analyzePage(
   let consumed: ReadonlySet<string> = new Set<string>();
   if (options.detectTables && options.mode !== 'plain-text') {
     const result = detectTables(page.segments, page.spans, page.index, nextOrder);
-    tables = result.tables;
-    consumed = result.consumedSpanIds;
-    for (const table of result.tables) {
+    // 有框线的先认；剩下的文字再看有没有"只有横线"的表（三线表、对账单）
+    const consumedSet = new Set(result.consumedSpanIds);
+    const rowTables = detectRowRuledTables(
+      page.segments,
+      page.spans,
+      page.index,
+      nextOrder,
+      consumedSet,
+    );
+    tables = [...result.tables, ...rowTables];
+    consumed = consumedSet;
+    for (const table of tables) {
       if (table.kind === 'table' && table.meta.confidence < 0.6) {
         warnings.push({
           code: 'low-confidence-table',
           pageIndex: page.index,
-          message: `第 ${page.index + 1} 页有一张表格框线不完整（完整度 ${(table.meta.confidence * 100).toFixed(0)}%），行列可能不准`,
+          params: { page: page.index + 1, percent: (table.meta.confidence * 100).toFixed(0) },
         });
       }
     }
@@ -146,21 +162,21 @@ function analyzePage(
     warnings.push({
       code: 'low-confidence-reading-order',
       pageIndex: page.index,
-      message: `第 ${page.index + 1} 页分栏判断把握不大（栏数 ${columnCount}），建议核对阅读顺序`,
+      params: { page: page.index + 1, columns: columnCount },
     });
   }
   if (page.ocrApplied) {
     warnings.push({
       code: 'ocr-applied',
       pageIndex: page.index,
-      message: `第 ${page.index + 1} 页文字来自 OCR，存在识别误差`,
+      params: { page: page.index + 1 },
     });
   }
   if (blocks.length === 0 && page.spans.length === 0) {
     warnings.push({
       code: 'no-text-found',
       pageIndex: page.index,
-      message: `第 ${page.index + 1} 页没有提取到任何文字`,
+      params: { page: page.index + 1 },
     });
   }
 
@@ -223,7 +239,7 @@ function buildImageBlocks(
   for (const image of page.images) {
     const stored = images.get(image.id);
     if (!stored) continue;
-    if (image.bbox.width < 8 || image.bbox.height < 8) continue;
+    if (image.bbox.width < MIN_IMAGE_SIDE || image.bbox.height < MIN_IMAGE_SIDE) continue;
     // 扫描页整页图已经被 OCR 成文字，再插一张原图只会重复
     if (page.ocrApplied && image.bbox.width > page.width * 0.85) continue;
     if (tables.some((t) => contains(t.meta.bbox, image.bbox, 2))) continue;
@@ -238,6 +254,7 @@ function buildImageBlocks(
         sourceElementIds: [image.id],
       },
       data: stored.data,
+      format: stored.format,
       widthPt: stored.widthPt,
       heightPt: stored.heightPt,
     });

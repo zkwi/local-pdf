@@ -12,7 +12,7 @@ const COVER_TOLERANCE = 3;
 /** 单元格内文字判定的内缩（pt），避免贴边文字被判到隔壁 */
 const CELL_INSET = 1;
 
-interface Rule {
+export interface Rule {
   readonly position: number;
   readonly start: number;
   readonly end: number;
@@ -24,7 +24,7 @@ export interface TableDetectionResult {
 }
 
 /** 把同一位置的线段合并成尽量少的连续区间 */
-function mergeRules(segments: readonly PrimitiveSegment[]): Rule[] {
+export function mergeRules(segments: readonly PrimitiveSegment[]): Rule[] {
   if (segments.length === 0) return [];
   const clusters = cluster1D(
     segments.map((s) => s.position),
@@ -32,9 +32,7 @@ function mergeRules(segments: readonly PrimitiveSegment[]): Rule[] {
   );
   const rules: Rule[] = [];
   for (const cluster of clusters) {
-    const members = cluster.indices
-      .map((i) => segments[i])
-      .sort((a, b) => a.start - b.start);
+    const members = cluster.indices.map((i) => segments[i]).sort((a, b) => a.start - b.start);
     let start = members[0].start;
     let end = members[0].end;
     for (const m of members.slice(1)) {
@@ -56,7 +54,9 @@ function covers(rule: Rule, from: number, to: number): boolean {
 }
 
 function hasRuleAt(rules: readonly Rule[], position: number, from: number, to: number): boolean {
-  return rules.some((r) => Math.abs(r.position - position) <= RULE_TOLERANCE && covers(r, from, to));
+  return rules.some(
+    (r) => Math.abs(r.position - position) <= RULE_TOLERANCE && covers(r, from, to),
+  );
 }
 
 function intersects(h: Rule, v: Rule): boolean {
@@ -141,10 +141,16 @@ function buildTable(
   nextOrder: () => number,
   consumed: Set<string>,
 ): TableBlock | null {
-  const rowLines = cluster1D(hRules.map((r) => r.position), RULE_TOLERANCE)
+  const rowLines = cluster1D(
+    hRules.map((r) => r.position),
+    RULE_TOLERANCE,
+  )
     .map((c) => c.value)
     .sort((a, b) => a - b);
-  const colLines = cluster1D(vRules.map((r) => r.position), RULE_TOLERANCE)
+  const colLines = cluster1D(
+    vRules.map((r) => r.position),
+    RULE_TOLERANCE,
+  )
     .map((c) => c.value)
     .sort((a, b) => a - b);
   if (rowLines.length < 2 || colLines.length < 2) return null;
@@ -157,7 +163,9 @@ function buildTable(
   const bbox = makeBBox(colLines[0], rowLines[0], colLines[nCols], rowLines[nRows]);
   if (bbox.width < 20 || bbox.height < 12) return null;
 
-  const occupied: boolean[][] = Array.from({ length: nRows }, () => new Array<boolean>(nCols).fill(false));
+  const occupied: boolean[][] = Array.from({ length: nRows }, () =>
+    new Array<boolean>(nCols).fill(false),
+  );
   const cells: TableCell[] = [];
   let borderedEdges = 0;
   let totalEdges = 0;
@@ -193,9 +201,11 @@ function buildTable(
       );
       totalEdges += 4;
       if (hasRuleAt(hRules, rowLines[r], colLines[c], colLines[c + colSpan])) borderedEdges++;
-      if (hasRuleAt(hRules, rowLines[r + rowSpan], colLines[c], colLines[c + colSpan])) borderedEdges++;
+      if (hasRuleAt(hRules, rowLines[r + rowSpan], colLines[c], colLines[c + colSpan]))
+        borderedEdges++;
       if (hasRuleAt(vRules, colLines[c], rowLines[r], rowLines[r + rowSpan])) borderedEdges++;
-      if (hasRuleAt(vRules, colLines[c + colSpan], rowLines[r], rowLines[r + rowSpan])) borderedEdges++;
+      if (hasRuleAt(vRules, colLines[c + colSpan], rowLines[r], rowLines[r + rowSpan]))
+        borderedEdges++;
 
       cells.push({
         row: r,
@@ -210,7 +220,8 @@ function buildTable(
 
   const hasText = cells.some((cell) => cell.lines.length > 0);
   if (!hasText) {
-    for (const cell of cells) for (const line of cell.lines) for (const id of line.spanIds) consumed.delete(id);
+    for (const cell of cells)
+      for (const line of cell.lines) for (const id of line.spanIds) consumed.delete(id);
     return null;
   }
 

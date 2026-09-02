@@ -1,15 +1,36 @@
 {
-  "name": "pdf2word",
-  "private": true,
+  "name": "local-pdf",
   "version": "0.1.0",
-  "type": "module",
-  "description": "纯前端 PDF 转 Word（DOCX）工具，文件不离开浏览器",
+  "private": true,
+  "description": "Local PDF — convert PDF to Word and Markdown entirely in your browser. Private, free, open source.",
+  "keywords": [
+    "pdf",
+    "docx",
+    "word",
+    "markdown",
+    "ocr",
+    "browser",
+    "offline",
+    "privacy",
+    "pdf-to-word",
+    "paddleocr"
+  ],
+  "homepage": "https://locapdfconverter.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zkwi/local-pdf.git"
+  },
+  "bugs": {
+    "url": "https://github.com/zkwi/local-pdf/issues"
+  },
   "license": "MIT",
+  "type": "module",
   "engines": {
     "node": ">=20.19"
   },
   "scripts": {
-    "assets": "node scripts/copy-pdfjs-assets.mjs",
+    "assets": "node scripts/copy-runtime-assets.mjs",
+    "ocr-models": "node scripts/download-ocr-models.mjs",
     "predev": "npm run assets",
     "dev": "vite",
     "prebuild": "npm run assets",
@@ -17,21 +38,29 @@
     "preview": "vite preview --port 4173",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "postinstall": "node scripts/copy-pdfjs-assets.mjs"
+    "postinstall": "node scripts/copy-runtime-assets.mjs"
   },
   "dependencies": {
+    "@paddleocr/paddleocr-js": "^0.4.2",
     "docx": "^9.7.1",
+    "fflate": "^0.8.3",
     "pdfjs-dist": "^6.3.289",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "tesseract.js": "^7.0.0"
+    "remark-gfm": "^4.0.1",
+    "remark-stringify": "^11.0.0",
+    "unified": "^11.0.5"
   },
   "devDependencies": {
+    "@types/mdast": "^4.0.4",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.2.0",
+    "prettier": "^3.9.6",
     "typescript": "^5.9.3",
     "vite": "^7.3.6",
     "vitest": "^4.1.11"

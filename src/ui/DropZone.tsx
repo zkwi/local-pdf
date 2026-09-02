@@ -1,31 +1,31 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef } from 'react';
+import { useI18n } from '../i18n/index.tsx';
 
 interface DropZoneProps {
-  readonly onFiles: (files: File[]) => void;
+  readonly onFiles: (files: readonly File[]) => void;
   readonly disabled?: boolean;
 }
 
-function pickPdfs(list: FileList | null): File[] {
-  if (list === null) return [];
-  return [...list].filter(
-    (file) => file.type === 'application/pdf' || /\.pdf$/i.test(file.name),
-  );
+export interface SplitFiles {
+  readonly pdfs: File[];
+  readonly rejected: number;
 }
 
-export function DropZone({ onFiles, disabled = false }: DropZoneProps) {
-  const [dragging, setDragging] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+/** 只收 PDF；别的文件数一下，让界面告诉用户被忽略了几个，而不是悄无声息 */
+export function splitPdfs(list: FileList | readonly File[] | null): SplitFiles {
+  if (list === null) return { pdfs: [], rejected: 0 };
+  const files = [...list];
+  const pdfs = files.filter((file) => file.type === 'application/pdf' || /\.pdf$/i.test(file.name));
+  return { pdfs, rejected: files.length - pdfs.length };
+}
 
-  const handleDrop = useCallback(
-    (event: React.DragEvent<HTMLDivElement>) => {
-      event.preventDefault();
-      setDragging(false);
-      if (disabled) return;
-      const files = pickPdfs(event.dataTransfer.files);
-      if (files.length > 0) onFiles(files);
-    },
-    [disabled, onFiles],
-  );
+/**
+ * 点击/键盘触发文件选择。拖放由 App 在 window 上统一接管（整页都是投放区，
+ * 拖动时有全屏提示），这里不再单独处理 drop。
+ */
+export function DropZone({ onFiles, disabled = false }: DropZoneProps) {
+  const { t } = useI18n();
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const open = useCallback(() => {
     if (!disabled) inputRef.current?.click();
@@ -33,13 +33,7 @@ export function DropZone({ onFiles, disabled = false }: DropZoneProps) {
 
   return (
     <div
-      className={`dropzone${dragging ? ' dropzone--active' : ''}${disabled ? ' dropzone--disabled' : ''}`}
-      onDragOver={(e) => {
-        e.preventDefault();
-        if (!disabled) setDragging(true);
-      }}
-      onDragLeave={() => setDragging(false)}
-      onDrop={handleDrop}
+      className={`dropzone${disabled ? ' dropzone--disabled' : ''}`}
       onClick={open}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -49,7 +43,7 @@ export function DropZone({ onFiles, disabled = false }: DropZoneProps) {
       }}
       role="button"
       tabIndex={0}
-      aria-label="选择或拖入 PDF 文件"
+      aria-label={t('drop.choose')}
     >
       <svg className="dropzone__icon" viewBox="0 0 48 48" aria-hidden="true">
         <path
@@ -68,20 +62,23 @@ export function DropZone({ onFiles, disabled = false }: DropZoneProps) {
           strokeLinecap="round"
         />
       </svg>
-      <p className="dropzone__title">把 PDF 拖到这里，或点击选择</p>
-      <p className="dropzone__hint">支持多选 · 文件不会离开这台电脑</p>
+      <p className="dropzone__title">{t('drop.title')}</p>
+      <p className="dropzone__hint">{t('drop.hint')}</p>
+      <span className="btn btn--primary dropzone__button" aria-hidden="true">
+        {t('drop.choose')}
+      </span>
       <input
         ref={inputRef}
         className="visually-hidden"
         type="file"
         accept="application/pdf,.pdf"
         multiple
+        tabIndex={-1}
         // 不阻止冒泡的话，input.click() 会再次触发外层 div 的 onClick，
         // 文件选择器被打开两次，第一个会被第二个顶掉
         onClick={(e) => e.stopPropagation()}
         onChange={(e) => {
-          const files = pickPdfs(e.target.files);
-          if (files.length > 0) onFiles(files);
+          onFiles([...(e.target.files ?? [])]);
           e.target.value = '';
         }}
       />

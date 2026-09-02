@@ -4,7 +4,6 @@
  */
 import type { ListMarkerStyle } from '../contracts/layout.ts';
 
-
 const CJK_RANGES: readonly (readonly [number, number])[] = [
   [0x1100, 0x11ff], // 韩文字母
   [0x2e80, 0x2eff], // 康熙部首补充
@@ -60,11 +59,7 @@ export interface SpanLike {
  * 行内 span 拼接：只有西文之间的明显间距才补空格；
  * 任一侧是 CJK 时不补，除非间距大到接近一个全角字符宽（多为制表位）。
  */
-export function needsSpaceBetween(
-  leftText: string,
-  prev: SpanLike,
-  next: SpanLike,
-): boolean {
+export function needsSpaceBetween(leftText: string, prev: SpanLike, next: SpanLike): boolean {
   if (leftText === '' || next.text === '') return false;
   if (/\s$/.test(leftText) || /^\s/.test(next.text)) return false;
 

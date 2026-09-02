@@ -1,5 +1,14 @@
-import type { ConversionWarning } from './layout.ts';
+import type { BBox } from './geometry.ts';
+import type { ConversionWarning, ImageFormat } from './layout.ts';
 import type { DocumentMetadata } from './primitives.ts';
+
+/** 块在原 PDF 里的出处，供 Markdown manifest 和后续诊断预览回溯用 */
+export interface BlockOrigin {
+  readonly pageIndex: number;
+  readonly bbox: BBox;
+  readonly confidence: number;
+  readonly ocr: boolean;
+}
 
 export interface SemanticRun {
   readonly text: string;
@@ -23,6 +32,7 @@ export interface SemanticParagraph {
   readonly spaceAfterPt: number;
   readonly lineSpacing: number;
   readonly sourceElementIds: readonly string[];
+  readonly origin?: BlockOrigin;
 }
 
 export interface SemanticHeading {
@@ -30,6 +40,7 @@ export interface SemanticHeading {
   readonly level: 1 | 2 | 3 | 4;
   readonly runs: readonly SemanticRun[];
   readonly sourceElementIds: readonly string[];
+  readonly origin?: BlockOrigin;
 }
 
 export interface SemanticListItem {
@@ -40,6 +51,7 @@ export interface SemanticListItem {
   /** 有值时不用 Word 自动编号，直接把原标记写进正文 */
   readonly literalMarker?: string;
   readonly sourceElementIds: readonly string[];
+  readonly origin?: BlockOrigin;
 }
 
 export interface SemanticTableCell {
@@ -58,14 +70,17 @@ export interface SemanticTable {
   readonly columnWidthsPt: readonly number[];
   readonly bordered: boolean;
   readonly sourceElementIds: readonly string[];
+  readonly origin?: BlockOrigin;
 }
 
 export interface SemanticImage {
   readonly kind: 'image';
   readonly data: Uint8Array;
+  readonly format: ImageFormat;
   readonly widthPt: number;
   readonly heightPt: number;
   readonly sourceElementIds: readonly string[];
+  readonly origin?: BlockOrigin;
 }
 
 export interface SemanticPageBreak {
@@ -83,7 +98,12 @@ export type SemanticBlock =
 export interface SemanticSection {
   readonly pageWidthPt: number;
   readonly pageHeightPt: number;
-  readonly margins: { readonly top: number; readonly right: number; readonly bottom: number; readonly left: number };
+  readonly margins: {
+    readonly top: number;
+    readonly right: number;
+    readonly bottom: number;
+    readonly left: number;
+  };
   readonly header: readonly SemanticParagraph[];
   readonly footer: readonly SemanticParagraph[];
   readonly blocks: readonly SemanticBlock[];

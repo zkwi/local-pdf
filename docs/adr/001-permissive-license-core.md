@@ -16,7 +16,7 @@
 ## 决定
 
 - 运行时依赖只允许宽松许可：pdf.js（Apache-2.0）、docx（MIT）、
-  Tesseract.js（Apache-2.0）、React（MIT）。
+  PaddleOCR.js（Apache-2.0，见 ADR 006）、React（MIT）。
 - BentoPDF / PDFCraft / pdf2docx 只作为**参考实现和测试基线**，不复制代码。
 - 需要 MuPDF.js 这类能力时，放独立包、独立构建、默认不分发。
 - 测试夹具生成脚本用了 PyMuPDF，但它不在 `package.json` 里，不进产品链路。

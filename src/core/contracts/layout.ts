@@ -11,6 +11,7 @@ export type WarningCode =
   | 'encrypted-pdf'
   | 'page-extract-failed'
   | 'page-render-failed'
+  | 'page-render-downscaled'
   | 'image-extract-failed'
   | 'operator-list-failed'
   | 'low-confidence-reading-order'
@@ -19,16 +20,24 @@ export type WarningCode =
   | 'ocr-applied'
   | 'ocr-failed'
   | 'ocr-skipped'
+  | 'ocr-sparse-kept-image'
+  | 'ocr-model-unverified'
+  | 'markdown-table-html'
   | 'rotated-text-flattened'
   | 'vertical-text-flattened'
   | 'font-substituted'
   | 'page-limit-exceeded'
+  | 'page-size-clamped'
   | 'no-text-found';
 
+/**
+ * 警告只带 code 和插值参数，不带自然语言，由界面按当前语言渲染。
+ * params 里的 page 从 1 起；reason 是原始错误文本（不翻译）。
+ */
 export interface ConversionWarning {
   readonly code: WarningCode;
   readonly pageIndex?: number;
-  readonly message: string;
+  readonly params?: Readonly<Record<string, string | number>>;
 }
 
 /** 一行文本：由若干 span 在同一基线上聚合而成 */
@@ -102,11 +111,13 @@ export interface TableBlock {
   readonly bordered: boolean;
 }
 
+export type ImageFormat = 'png' | 'jpeg';
+
 export interface ImageBlock {
   readonly kind: 'image';
   readonly meta: LayoutMetadata;
-  /** PNG 字节 */
   readonly data: Uint8Array;
+  readonly format: ImageFormat;
   readonly widthPt: number;
   readonly heightPt: number;
 }
@@ -118,18 +129,18 @@ export interface HeaderFooterBlock {
 }
 
 export type LayoutBlock =
-  | ParagraphBlock
-  | HeadingBlock
-  | ListItemBlock
-  | TableBlock
-  | ImageBlock
-  | HeaderFooterBlock;
+  ParagraphBlock | HeadingBlock | ListItemBlock | TableBlock | ImageBlock | HeaderFooterBlock;
 
 export interface LayoutPage {
   readonly index: number;
   readonly width: number;
   readonly height: number;
-  readonly margins: { readonly top: number; readonly right: number; readonly bottom: number; readonly left: number };
+  readonly margins: {
+    readonly top: number;
+    readonly right: number;
+    readonly bottom: number;
+    readonly left: number;
+  };
   readonly columnCount: number;
   readonly blocks: readonly LayoutBlock[];
   readonly header: HeaderFooterBlock | null;

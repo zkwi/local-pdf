@@ -45,10 +45,12 @@ export function cluster1D(
       current.indices.push(i);
       current.last = v;
     } else {
-      if (current !== null) out.push({ value: current.sum / current.indices.length, indices: current.indices });
+      if (current !== null)
+        out.push({ value: current.sum / current.indices.length, indices: current.indices });
       current = { sum: v, indices: [i], last: v };
     }
   }
-  if (current !== null) out.push({ value: current.sum / current.indices.length, indices: current.indices });
+  if (current !== null)
+    out.push({ value: current.sum / current.indices.length, indices: current.indices });
   return out;
 }

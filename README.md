@@ -1,118 +1,130 @@
-# pdf2word
+# Local PDF
 
-纯前端的 PDF → Word（DOCX）转换工具。PDF 解析、版面分析、DOCX 生成、OCR 全部在浏览器里完成，
-文件不会上传到任何服务器——代码里根本没有上传接口。
+**Convert PDF to Word and Markdown entirely in your browser. Private. Free. Open source.**
 
-![界面](docs/screenshot.png)
+Your PDF stays local: parsing, OCR, layout analysis and file generation all run inside the browser.
+There is no upload endpoint in the code base at all.
 
-## 快速开始
+[简体中文](README.zh-CN.md) · Live: <https://locapdfconverter.com>
+
+![Screenshot](docs/screenshot.png)
+
+## Features
+
+| Capability                           | Notes                                                                       |
+| ------------------------------------ | --------------------------------------------------------------------------- |
+| PDF → Word (.docx)                   | Paragraphs, headings, lists, ruled tables (incl. rules-only tables), images |
+| PDF → Markdown                       | Same recognition result; zipped with images and a `manifest.json`           |
+| Multi-column reading order           | XY-cut page segmentation, cross-column headings handled                     |
+| CJK-aware text joining               | No stray spaces between Chinese characters; hyphenated Latin words rejoined |
+| Headers, footers, page numbers       | Detected across pages; page numbers become a Word `PAGE` field              |
+| Scanned pages (OCR)                  | PaddleOCR PP-OCRv6, decided per page; native text always wins               |
+| Interface languages                  | 简体中文 · 繁體中文 · English · 日本語                                      |
+| Password-protected PDFs, batch queue | Progress, cancellation, per-file conversion report                          |
+
+What it deliberately does **not** do: tables with no ruling lines at all (misdetection costs more than it helps),
+font embedding, editable formulas, vertical text (flattened with a warning), text colour.
+Page counts are not preserved either: every PDF page ends with a page break, so text that overflows after font
+substitution spills onto an extra page.
+
+## Quick start
 
 ```bash
 npm install
 npm run dev
 ```
 
-打开 <http://localhost:5173>，把 PDF 拖进去即可。
+Open <http://localhost:5173> and drop a PDF in.
 
 ```bash
-npm run build     # 类型检查 + 打包到 dist/
-npm run preview   # 本地预览打包结果
-npm test          # 版面算法单测
+npm run build       # typecheck + bundle into dist/
+npm run preview     # serve dist/ locally
+npm test            # unit tests (layout engine, OCR mapping, Markdown, i18n)
+npm run ocr-models  # optional: download OCR models into public/ocr-models/ for self-hosting
 ```
 
-`dist/` 是纯静态目录，扔到任意静态服务器（或对象存储）即可，不需要后端。
-`base` 用的是相对路径，放在子目录下也能跑。
+`dist/` is a static site. Put it on any static host (Cloudflare Pages, GitHub Pages, S3, nginx…);
+`base` is relative, so subdirectories work. It must be served over **http(s)**; OCR does not start from `file://`.
 
-## 它能做什么
+## OCR
 
-| 能力 | 状态 |
-| --- | --- |
-| 段落、标题、列表识别 | ✅ |
-| 中英文混排的空格处理 | ✅ 中文之间不补空格，西文按字距补 |
-| 西文行尾断词合并 | ✅ `con-` + `tains` → `contains` |
-| 多栏（含跨栏标题）阅读顺序 | ✅ XY-Cut 版面切分 |
-| 有框线表格、合并单元格 | ✅ 从矢量框线还原网格 |
-| 图片 | ✅ 按页面坐标裁剪渲染结果 |
-| 跨页页眉页脚、页码 | ✅ 页码写成 Word 的 PAGE 域 |
-| 扫描件 OCR | ✅ 逐页判断，只对没有文字层的页面做 |
-| 加密 PDF | ✅ 界面上补密码后重试 |
-| 批量转换、进度、取消 | ✅ |
+The engine is [PaddleOCR.js](https://github.com/PaddlePaddle/PaddleOCR/tree/main/paddleocr-js)
+(official browser SDK, Apache-2.0) with PP-OCRv6, one model covering Chinese, English, Japanese and ~50 other languages.
 
-## 它做不到什么
+| Setting            | Model          | First-time download                | Use for                   |
+| ------------------ | -------------- | ---------------------------------- | ------------------------- |
+| Standard (default) | PP-OCRv6 tiny  | 6 MB model + ~11 MB runtime (gzip) | ordinary scans            |
+| High               | PP-OCRv6 small | 31 MB model + ~11 MB runtime       | small print, blurry pages |
 
-这些是设计上的取舍，不是"还没做"：
+- OCR runs only on pages that need it: no text layer, almost no text over a large image, or a garbled text layer.
+- Models are downloaded on first use, verified against SHA-256 and kept in Cache Storage; they work offline afterwards.
+  The UI shows what is cached and can clear it.
+- To avoid any third-party request, run `npm run ocr-models` (or `npm run ocr-models small` / `all`) before building:
+  the app prefers `public/ocr-models/` when present.
+- Multi-threaded inference needs cross-origin isolation. It is off by default; add
+  `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp` to enable it
+  (`public/_headers` has the lines commented out). With COEP the models must be self-hosted.
 
-- **无框线表格默认不识别。** 靠对齐推断表格的误判率很高，一旦判错，输出会比不识别更难修。需要时可以在代码里打开 `detectBorderlessTables`（当前实现为占位，见 ROADMAP）。
-- **不嵌入字体。** DOCX 里只写字体名，换机器后换行位置会变。这是可编辑模式的固有代价。
-- **公式、复杂矢量图不可编辑。** 按图片处理。
-- **竖排、旋转文字会被压平**成普通段落，并在报告里给出警告。
-- **OCR 一定有误差。** 重要文件请对照原件核对。
-- **文字颜色不提取。** pdf.js 的文本接口不带颜色，要拿到得把 `showText` 和颜色算子对齐，代价大于收益。
+## Deploy
 
-每份文件转换完都有一份「转换报告」，逐页给出把握度、栏数、各类元素数量和警告。**把握度低的页面建议人工核对**，这比让算法硬猜更省事。
+The site is static. On Cloudflare Pages: connect the GitHub repo, build command `npm run build`,
+output directory `dist`, Node 22 (read from `.node-version`). `public/_headers` sets cache headers and has the
+optional COOP/COEP lines for multi-threaded OCR commented out. Any other static host works the same way.
 
-## 隐私
+## Privacy
 
-- 没有任何上传代码，可以在浏览器网络面板里自行确认。
-- pdf.js 的 CMap、标准字体、WASM 都自托管在 `public/pdfjs/`（`npm install` 时自动复制）。
-- 唯一的对外请求是 **OCR 语言包**：默认从 tesseract.js 的 CDN 下载（只下载，不上传）。
-  想彻底离线，见下方自托管说明。
+- No upload code exists. Check the network panel: the only external request is the optional OCR model download.
+- pdf.js CMaps, standard fonts and WASM, plus the ONNX Runtime WASM, are self-hosted (copied into `public/` on `npm install`).
+- Nothing about the document (name, text, page count) is sent anywhere. There is no analytics.
 
-### 自托管 OCR 资源
+## Browser support
 
-1. 把 tesseract.js 的 `worker.min.js`、`tesseract-core*` 和需要的 `*.traineddata.gz`
-   放到 `public/` 下，形成：
+Chrome / Edge 94+, Firefox 105+, Safari 16.4+. The app checks for Web Workers, WebAssembly (with SIMD) and
+OffscreenCanvas on start-up: unsupported browsers get a notice, phones get a "better on a computer" page they can
+dismiss, and browsers without WASM SIMD keep working with OCR disabled.
 
-   ```text
-   public/
-     worker.min.js
-     tesseract-core/…
-     tessdata/eng.traineddata.gz
-     tessdata/chi_sim.traineddata.gz
-   ```
+## How it works
 
-2. 把 `DEFAULT_OPTIONS.ocrAssetBase` 改成你的静态资源根（以 `/` 结尾），
-   或在界面上加一个输入项透传给 `ConvertOptions.ocrAssetBase`。
+```text
+PDF ──pdf.js──▶ PrimitiveDocument ──layout engine──▶ LayoutDocument ──▶ SemanticDocument ──┬─▶ docx.js ──▶ .docx
+                     ▲                                                                       └─▶ remark  ──▶ .md
+        scanned page ─┘ PaddleOCR.js
+```
 
-设置之后 OCR 全程无外网请求。
-
-## 目录结构
+Three intermediate models with strict boundaries; the layout engine is pure functions and is unit-tested
+without real PDFs. The core never produces natural language: progress, warnings and errors are keys with
+parameters, rendered by the UI in the current language.
 
 ```text
 src/
-├─ core/                 # 转换引擎，不依赖 React，可独立复用
-│  ├─ contracts/         # 三层中间模型的类型定义（唯一的跨层契约）
-│  ├─ geometry/          # 坐标、单位换算、统计
-│  ├─ pdf/               # pdf.js 适配：文本、矢量线段、图像、渲染
-│  ├─ layout/            # 自研版面引擎：行、分栏、段落、表格、页眉页脚
-│  ├─ semantic/          # 版面结果 → Word 语义模型
-│  ├─ docx/              # docx.js 适配：样式、字体映射、写出
-│  ├─ ocr/               # OCR 触发判断 + Tesseract 适配器
-│  └─ converter/         # 串起整条流水线，负责进度、取消、报告
-├─ worker/               # Web Worker 与消息协议
-├─ ui/ hooks/            # React 界面
-tests/                   # 版面算法单测 + PDF 夹具
-docs/                    # 架构、中间模型、质量分级、ADR
+├─ core/            # conversion engine, no React dependency
+│  ├─ contracts/    # the three intermediate models
+│  ├─ pdf/          # pdf.js adapter: text, vector segments, images, rendering
+│  ├─ layout/       # lines, columns, paragraphs, tables, headers/footers
+│  ├─ semantic/     # layout → document semantics
+│  ├─ docx/ markdown/ ocr/ converter/
+├─ worker/          # Web Worker and message protocol
+├─ i18n/            # locale detection and the four message tables
+├─ ui/ hooks/       # React UI, capability detection
+scripts/            # asset copying, model download
+tests/              # unit tests + PDF fixtures
+docs/               # architecture, intermediate model, ADRs (in Chinese)
 ```
 
-详细设计见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) 和 [docs/DOCUMENT_IR.md](docs/DOCUMENT_IR.md)。
+Design notes: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DOCUMENT_IR.md](docs/DOCUMENT_IR.md),
+decisions in [docs/adr/](docs/adr/). Roadmap: [docs/ROADMAP.md](docs/ROADMAP.md).
 
-## 测试
+## Development
 
-```bash
-npm test
-```
+- TypeScript strict; `npm run typecheck` doubles as the linter. Prettier: `npm run format`.
+- Tests: `npm test`. Layout algorithms take hand-built spans, so no PDF is needed.
+  The PDF fixtures in `tests/fixtures/` are generated by `make_fixtures.py` (needs PyMuPDF locally; not a project dependency).
+- Adding a warning or progress message means adding it to all four tables in `src/i18n/messages/`; the type checker enforces it.
+- CI runs format check, typecheck, tests and build on every push.
 
-版面算法都是纯函数，单测直接构造 span 输入，不依赖真实 PDF。
+Issues and pull requests are welcome. Please keep changes small and focused; this is a personal project and
+simplicity is a feature.
 
-端到端夹具在 `tests/fixtures/`，用 `make_fixtures.py` 生成（需要本机装 PyMuPDF，
-**不是项目依赖**——PyMuPDF 是 AGPL/商业双许可，不能进产品链路）：
+## License
 
-```bash
-python tests/fixtures/make_fixtures.py
-```
-
-## 许可
-
-MIT。第三方依赖许可见 [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md)，
-运行时依赖全部是宽松许可，没有 AGPL/GPL/SSPL。
+MIT. Third-party licenses: [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).

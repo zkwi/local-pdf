@@ -1,10 +1,15 @@
 import type { BBox } from '../contracts/geometry.ts';
+import type { ImageFormat } from '../contracts/layout.ts';
 
 /** 单张图裁剪后的最大像素数，超过就等比缩小，避免几十兆的 DOCX */
 const MAX_IMAGE_PIXELS = 4_000_000;
+/** PNG 超过这个大小就试试 JPEG；照片、渐变类图 PNG 体积会是 JPEG 的五到十倍 */
+const JPEG_THRESHOLD_BYTES = 300 * 1024;
+const JPEG_QUALITY = 0.86;
 
 export interface CroppedImage {
   readonly data: Uint8Array;
+  readonly format: ImageFormat;
   readonly widthPt: number;
   readonly heightPt: number;
 }
@@ -36,14 +41,26 @@ export async function cropToPng(
   ctx.fillRect(0, 0, dw, dh);
   ctx.drawImage(canvas, sx, sy, sw, sh, 0, 0, dw, dh);
 
-  const blob = await target.convertToBlob({ type: 'image/png' });
-  const buffer = await blob.arrayBuffer();
+  let data = new Uint8Array(
+    await (await target.convertToBlob({ type: 'image/png' })).arrayBuffer(),
+  );
+  let format: ImageFormat = 'png';
+  if (data.byteLength > JPEG_THRESHOLD_BYTES) {
+    const jpeg = new Uint8Array(
+      await (
+        await target.convertToBlob({ type: 'image/jpeg', quality: JPEG_QUALITY })
+      ).arrayBuffer(),
+    );
+    // 线条图 PNG 本来就小，JPEG 省不了多少还会糊；只有明显省的时候才换。
+    // 超过 1 MB 的基本是照片或大幅渐变图，JPEG 只要更小就换
+    const ratio = data.byteLength > 1024 * 1024 ? 1 : 0.75;
+    if (jpeg.byteLength < data.byteLength * ratio) {
+      data = jpeg;
+      format = 'jpeg';
+    }
+  }
   target.width = 0;
   target.height = 0;
 
-  return {
-    data: new Uint8Array(buffer),
-    widthPt: bbox.width,
-    heightPt: bbox.height,
-  };
+  return { data, format, widthPt: bbox.width, heightPt: bbox.height };
 }

@@ -1,12 +1,18 @@
 import type { ConvertOptions } from '../core/contracts/options.ts';
-import type { ConversionProgress, ConversionReport } from '../core/contracts/report.ts';
+import type {
+  ConversionOutput,
+  ConversionProgress,
+  ConversionReport,
+} from '../core/contracts/report.ts';
 
 export type WorkerErrorCode =
-  | 'cancelled'
-  | 'password-required'
-  | 'password-incorrect'
-  | 'invalid-pdf'
-  | 'unknown';
+  'cancelled' | 'password-required' | 'password-incorrect' | 'invalid-pdf' | 'unknown';
+
+export interface WorkerError {
+  readonly code: WorkerErrorCode;
+  /** 原始错误文本，只在 unknown 时有意义，界面原样附在译文后面 */
+  readonly detail?: string;
+}
 
 export type WorkerRequest =
   | {
@@ -24,13 +30,7 @@ export type WorkerResponse =
   | {
       readonly type: 'done';
       readonly jobId: string;
-      readonly blob: Blob;
-      readonly fileName: string;
+      readonly outputs: readonly ConversionOutput[];
       readonly report: ConversionReport;
     }
-  | {
-      readonly type: 'error';
-      readonly jobId: string;
-      readonly code: WorkerErrorCode;
-      readonly message: string;
-    };
+  | { readonly type: 'error'; readonly jobId: string; readonly error: WorkerError };

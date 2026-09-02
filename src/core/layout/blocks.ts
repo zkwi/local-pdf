@@ -128,7 +128,10 @@ function estimateListLevel(x: number, regionLeft: number, fontSize: number): num
 
 function detectHeading(group: readonly TextLine[], bodyFontSize: number): 1 | 2 | 3 | 4 | null {
   if (group.length > 3) return null;
-  const text = group.map((l) => l.text).join(' ').trim();
+  const text = group
+    .map((l) => l.text)
+    .join(' ')
+    .trim();
   if (text.length === 0 || text.length > 120) return null;
 
   const size = median(group.map((l) => l.fontSize));
@@ -164,7 +167,9 @@ function detectAlignment(
   if (avgLeft > width * 0.25 && avgRight < width * 0.05) return 'right';
 
   if (group.length >= 3) {
-    const fullLines = group.slice(0, -1).filter((l) => regionRight - right(l.bbox) < l.fontSize * 0.6);
+    const fullLines = group
+      .slice(0, -1)
+      .filter((l) => regionRight - right(l.bbox) < l.fontSize * 0.6);
     if (fullLines.length === group.length - 1) return 'justify';
   }
   return 'left';

@@ -19,11 +19,7 @@ export interface HeaderFooterResult {
 
 /** 数字替换成 #，让"第 3 页"和"第 12 页"能聚到一起 */
 function normalize(text: string): string {
-  return text
-    .replace(/\d+/g, '#')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toLowerCase();
+  return text.replace(/\d+/g, '#').replace(/\s+/g, ' ').trim().toLowerCase();
 }
 
 function isPureNumber(text: string): boolean {
@@ -39,7 +35,10 @@ export function detectHeadersFooters(pages: readonly PageLines[]): HeaderFooterR
   const footerLineIds = new Map<number, Set<string>>();
   if (pages.length < 3) return { headerLineIds, footerLineIds };
 
-  const counters = new Map<string, { pages: Set<number>; entries: { page: number; id: string }[] }>();
+  const counters = new Map<
+    string,
+    { pages: Set<number>; entries: { page: number; id: string }[] }
+  >();
 
   for (const page of pages) {
     const headerLimit = page.height * BAND_RATIO;

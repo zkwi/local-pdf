@@ -1,18 +1,32 @@
 import type { PrimitivePage, PrimitiveTextSpan, TextHealth } from '../contracts/primitives.ts';
 import type { OcrPolicy } from '../contracts/options.ts';
+import type { MessageParams } from '../contracts/report.ts';
+
+export type OcrProgressKey = 'ocr-model-download' | 'ocr-model-init' | 'ocr-model-ready';
 
 export interface OcrProgress {
-  readonly status: string;
+  readonly key: OcrProgressKey;
+  /** 0~1；不知道进度时为 -1 */
   readonly progress: number;
+  readonly params?: MessageParams;
 }
 
 export interface OcrEngine {
+  /** 报告里显示的引擎描述，如 "PaddleOCR PP-OCRv6 tiny" */
+  readonly name: string;
   recognize(
     canvas: OffscreenCanvas,
     scale: number,
     pageIndex: number,
   ): Promise<PrimitiveTextSpan[]>;
   terminate(): Promise<void>;
+}
+
+export interface OcrEngineContext {
+  /** 应用静态资源根（以 / 结尾），用来找自托管的 ORT wasm 与模型 */
+  readonly assetBase: string;
+  readonly onProgress?: (progress: OcrProgress) => void;
+  readonly signal?: AbortSignal;
 }
 
 /**

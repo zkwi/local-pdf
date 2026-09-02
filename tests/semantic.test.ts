@@ -122,3 +122,26 @@ describe('mergeOcrSpans', () => {
     expect(merged.map((s) => s.text)).toEqual(['原生', '新增']);
   });
 });
+
+describe('pageNumberAware', () => {
+  it('跨页变化的数字换成页码域，不变的数字保留', async () => {
+    const { pageNumberAware } = await import('../src/core/semantic/build.ts');
+    const page = (n: number) => buildLines([line(`白皮书 2025 - ${n} -`, 72, 20, 150)]).lines;
+    const paragraph = pageNumberAware([page(85), page(86), page(87)], 'center');
+    const fields = paragraph.runs.filter((r) => r.field === 'page-number');
+    expect(fields).toHaveLength(1);
+    expect(paragraph.runs.map((r) => r.text).join('')).toBe('白皮书 2025 -  -');
+  });
+
+  it('只有一页可比时，整条是数字才算页码', async () => {
+    const { pageNumberAware } = await import('../src/core/semantic/build.ts');
+    const only = buildLines([line('- 3 -', 72, 20, 30)]).lines;
+    expect(pageNumberAware([only], 'center').runs.some((r) => r.field === 'page-number')).toBe(
+      true,
+    );
+    const title = buildLines([line('2025 年报', 72, 20, 60)]).lines;
+    expect(pageNumberAware([title], 'center').runs.some((r) => r.field === 'page-number')).toBe(
+      false,
+    );
+  });
+});

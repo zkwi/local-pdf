@@ -4,13 +4,16 @@ import type { PDFDocumentLoadingTask } from 'pdfjs-dist/types/src/display/api.js
 import type { BBox } from '../contracts/geometry.ts';
 import type {
   DocumentMetadata,
+  PrimitiveImage,
   PrimitiveLink,
   PrimitivePage,
   PrimitiveTextSpan,
   TextHealth,
 } from '../contracts/primitives.ts';
 import type { ConversionWarning } from '../contracts/layout.ts';
-import { makeBBox } from '../geometry/bbox.ts';
+import { clusterBoxes, makeBBox, unionBBox } from '../geometry/bbox.ts';
+import { sanitizeText } from '../util/sanitize.ts';
+import { isSymbolFont, mapSymbolFontText } from './symbols.ts';
 import { walkOperatorList } from './operators.ts';
 import {
   NoopFilterFactory,
@@ -45,6 +48,9 @@ interface FontInfo {
 
 const BOLD_NAME = /(bold|black|heavy|semibold|demibold|[-_]bd\b)/i;
 const ITALIC_NAME = /(italic|oblique|[-_]it\b)/i;
+
+/** 整页渲染的像素上限，超过就按面积回退倍率 */
+const MAX_PAGE_PIXELS = 20_000_000;
 
 export interface RenderedPage {
   readonly canvas: OffscreenCanvas;
@@ -156,7 +162,7 @@ export class PdfSession {
       this.warnings.push({
         code: 'operator-list-failed',
         pageIndex: index,
-        message: `第 ${index + 1} 页矢量信息读取失败，表格与图片可能缺失：${describeError(error)}`,
+        params: { page: index + 1, reason: describeError(error) },
       });
     }
 
@@ -164,16 +170,32 @@ export class PdfSession {
     const textContent = await page.getTextContent();
     const styles = textContent.styles as unknown as Record<string, PdfTextStyle>;
     const spans: PrimitiveTextSpan[] = [];
+    // 健康度要看清洗前的原文：控制符、替换字符正是"文字层坏了"的信号
+    let rawText = '';
 
     for (const raw of textContent.items) {
       const item = raw as unknown as PdfTextItem;
       if (typeof item.str !== 'string') continue;
       if (item.str === '') continue;
-      const span = buildSpan(item, styles[item.fontName], fonts, transform, index, spans.length);
+      rawText += item.str;
+      let clean = sanitizeText(item.str);
+      const fontName = fonts.get(item.fontName)?.name;
+      // Wingdings/Symbol 的项目符号在私用区，Word 里没字体就是方框
+      if (isSymbolFont(fontName)) clean = mapSymbolFontText(fontName ?? '', clean);
+      if (clean === '') continue;
+      const span = buildSpan(
+        { ...item, str: clean },
+        styles[item.fontName],
+        fonts,
+        transform,
+        index,
+        spans.length,
+      );
       if (span !== null) spans.push(span);
     }
 
     const links = await this.#extractLinks(page, index, transform);
+    const images = mergeImageTiles(graphics.images);
 
     return {
       index,
@@ -181,10 +203,10 @@ export class PdfSession {
       height,
       rotation: page.rotate,
       spans,
-      images: graphics.images,
+      images,
       segments: graphics.segments,
       links,
-      textHealth: computeTextHealth(spans, graphics.images, width, height),
+      textHealth: computeTextHealth(spans, images, width, height, rawText),
       ocrApplied: false,
     };
   }
@@ -248,10 +270,61 @@ export class PdfSession {
     }
   }
 
-  /** 把整页渲染到 OffscreenCanvas，用于图片裁剪与 OCR。失败返回 null，不阻断转换。 */
-  async renderPage(index: number, scale: number): Promise<RenderedPage | null> {
+  /**
+   * 只渲染页面的一段（纵向 [topPt, topPt+heightPt)）。
+   * 微信里的"长图"PDF 一页能有上万 pt 高，整页按 OCR 倍率渲染会撞像素上限被迫缩小，
+   * 文字小到认不出；分条渲染就没这个问题。
+   */
+  async renderStrip(
+    index: number,
+    scale: number,
+    topPt: number,
+    heightPt: number,
+  ): Promise<RenderedPage | null> {
     try {
       const page = await this.#getPage(index);
+      const viewport = page.getViewport({ scale, offsetY: -topPt * scale });
+      const canvas = new OffscreenCanvas(
+        Math.max(1, Math.round(viewport.width)),
+        Math.max(1, Math.round(heightPt * scale)),
+      );
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+      if (context === null) return null;
+      context.fillStyle = '#ffffff';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      await page.render({
+        canvas: canvas as unknown as HTMLCanvasElement,
+        canvasContext: context as unknown as CanvasRenderingContext2D,
+        viewport,
+        background: '#ffffff',
+      }).promise;
+      return { canvas, scale };
+    } catch (error) {
+      this.warnings.push({
+        code: 'page-render-failed',
+        pageIndex: index,
+        params: { page: index + 1, reason: describeError(error) },
+      });
+      return null;
+    }
+  }
+
+  /** 把整页渲染到 OffscreenCanvas，用于图片裁剪与 OCR。失败返回 null，不阻断转换。 */
+  async renderPage(index: number, requestedScale: number): Promise<RenderedPage | null> {
+    try {
+      const page = await this.#getPage(index);
+      const base = page.getViewport({ scale: 1 });
+      // A0 海报按 2× 渲染就有三千多万像素，会超浏览器的 canvas 面积上限。
+      // 这里按面积回退倍率，而不是直接去创建一张超大 canvas。
+      const maxScale = Math.sqrt(MAX_PAGE_PIXELS / Math.max(1, base.width * base.height));
+      const scale = Math.max(0.5, Math.min(requestedScale, maxScale));
+      if (scale < requestedScale - 0.01) {
+        this.warnings.push({
+          code: 'page-render-downscaled',
+          pageIndex: index,
+          params: { page: index + 1, from: requestedScale, to: scale.toFixed(2) },
+        });
+      }
       const viewport = page.getViewport({ scale });
       const canvas = new OffscreenCanvas(
         Math.max(1, Math.round(viewport.width)),
@@ -272,7 +345,7 @@ export class PdfSession {
       this.warnings.push({
         code: 'page-render-failed',
         pageIndex: index,
-        message: `第 ${index + 1} 页渲染失败，图片与 OCR 不可用：${describeError(error)}`,
+        params: { page: index + 1, reason: describeError(error) },
       });
       return null;
     }
@@ -306,7 +379,8 @@ function buildSpan(
   const ey = { x: tx[2] / fontSize, y: tx[3] / fontSize };
 
   const rawAscent = style?.ascent;
-  const ascentRatio = typeof rawAscent === 'number' && rawAscent > 0 && rawAscent < 1.5 ? rawAscent : 0.8;
+  const ascentRatio =
+    typeof rawAscent === 'number' && rawAscent > 0 && rawAscent < 1.5 ? rawAscent : 0.8;
   const ascent = fontSize * ascentRatio;
   const descent = fontSize - ascent;
   const vertical = style?.vertical === true;
@@ -358,13 +432,40 @@ function isBrokenChar(code: number): boolean {
   return code < 0x20;
 }
 
+/** 图块间距不超过这个值（pt）就当同一张图 */
+const IMAGE_MERGE_GAP = 3;
+
+/**
+ * PPT / Excel 导出的 PDF 常把一张图表切成几十上百个小图块。
+ * 相交或贴着的图块合并成一个区域，裁剪一次即可；否则 Word 里会出现上百张碎图。
+ * 裁剪发生在版面分析之前，所以合并只能放在抽取这一层。
+ */
+export function mergeImageTiles(images: readonly PrimitiveImage[]): PrimitiveImage[] {
+  if (images.length < 2) return [...images];
+  const groups = clusterBoxes(
+    images.map((i) => i.bbox),
+    IMAGE_MERGE_GAP,
+  );
+  return groups.map((group) => {
+    if (group.length === 1) return images[group[0]];
+    const members = group.map((i) => images[i]);
+    return {
+      id: members[0].id,
+      pageIndex: members[0].pageIndex,
+      bbox: unionBBox(members.map((m) => m.bbox)),
+      isMask: members.every((m) => m.isMask),
+    };
+  });
+}
+
 export function computeTextHealth(
   spans: readonly PrimitiveTextSpan[],
   images: readonly { bbox: BBox }[],
   width: number,
   height: number,
+  rawText?: string,
 ): TextHealth {
-  const text = spans.map((s) => s.text).join('');
+  const text = rawText ?? spans.map((s) => s.text).join('');
   let broken = 0;
   let charCount = 0;
   for (const ch of text) {

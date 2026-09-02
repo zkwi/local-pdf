@@ -1,14 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ConvertOptions } from '../core/contracts/options.ts';
-import type { ConversionProgress, ConversionReport } from '../core/contracts/report.ts';
-import type { WorkerErrorCode, WorkerRequest, WorkerResponse } from '../worker/protocol.ts';
+import type { ConversionProgress, ConversionReport, OutputKind } from '../core/contracts/report.ts';
+import type { WorkerError, WorkerRequest, WorkerResponse } from '../worker/protocol.ts';
 
 export type JobStatus = 'queued' | 'running' | 'done' | 'error' | 'cancelled';
 
-export interface JobResult {
+export interface JobOutput {
+  readonly kind: OutputKind;
   readonly url: string;
   readonly fileName: string;
   readonly size: number;
+}
+
+export interface JobResult {
+  readonly outputs: readonly JobOutput[];
   readonly report: ConversionReport;
 }
 
@@ -18,14 +23,11 @@ export interface Job {
   readonly status: JobStatus;
   readonly progress: ConversionProgress;
   readonly result?: JobResult;
-  readonly error?: { code: WorkerErrorCode; message: string };
+  readonly error?: WorkerError;
 }
 
-const INITIAL_PROGRESS: ConversionProgress = {
-  stage: 'queued',
-  fraction: 0,
-  message: '排队中',
-};
+const INITIAL_PROGRESS: ConversionProgress = { stage: 'queued', fraction: 0, key: 'queued' };
+const FAILED_PROGRESS: ConversionProgress = { stage: 'failed', fraction: 0, key: 'failed' };
 
 function assetBase(): string {
   const base = new URL(import.meta.env.BASE_URL, location.href).href;
@@ -44,48 +46,57 @@ export function useConversionQueue() {
     setJobs((prev) => prev.map((job) => (job.id === id ? updater(job) : job)));
   }, []);
 
+  const fail = useCallback(
+    (id: string, error: WorkerError): void => {
+      patch(id, (job) => ({
+        ...job,
+        status: error.code === 'cancelled' ? 'cancelled' : 'error',
+        progress:
+          error.code === 'cancelled'
+            ? { stage: 'cancelled', fraction: 0, key: 'cancelled' }
+            : FAILED_PROGRESS,
+        error,
+      }));
+    },
+    [patch],
+  );
+
   const ensureWorker = useCallback((): Worker => {
     if (workerRef.current !== null) return workerRef.current;
     const worker = new Worker(new URL('../worker/conversion.worker.ts', import.meta.url), {
       type: 'module',
-      name: 'pdf2word-conversion',
+      name: 'local-pdf-conversion',
     });
     worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
       const message = event.data;
+      // pdf.js 的 worker 模块在 Worker 上下文里会自己往主线程发一条 ready 握手，跳过
+      if (message.type !== 'progress' && message.type !== 'done' && message.type !== 'error')
+        return;
       if (message.type === 'progress') {
         patch(message.jobId, (job) => ({ ...job, status: 'running', progress: message.progress }));
         return;
       }
       if (message.type === 'done') {
-        const url = URL.createObjectURL(message.blob);
+        const outputs: JobOutput[] = message.outputs.map((o) => ({
+          kind: o.kind,
+          url: URL.createObjectURL(o.blob),
+          fileName: o.fileName,
+          size: o.blob.size,
+        }));
         patch(message.jobId, (job) => ({
           ...job,
           status: 'done',
-          progress: { stage: 'completed', fraction: 1, message: '转换完成' },
-          result: {
-            url,
-            fileName: message.fileName,
-            size: message.blob.size,
-            report: message.report,
-          },
+          progress: { stage: 'completed', fraction: 1, key: 'completed' },
+          result: { outputs, report: message.report },
         }));
         filesRef.current.delete(message.jobId);
         return;
       }
-      patch(message.jobId, (job) => ({
-        ...job,
-        status: message.code === 'cancelled' ? 'cancelled' : 'error',
-        progress: {
-          stage: message.code === 'cancelled' ? 'cancelled' : 'failed',
-          fraction: 0,
-          message: message.message,
-        },
-        error: { code: message.code, message: message.message },
-      }));
+      fail(message.jobId, message.error);
     };
     workerRef.current = worker;
     return worker;
-  }, [patch]);
+  }, [fail, patch]);
 
   const submit = useCallback(
     async (id: string, file: File, options: ConvertOptions): Promise<void> => {
@@ -114,16 +125,14 @@ export function useConversionQueue() {
       setJobs((prev) => [...created, ...prev]);
       for (const job of created) {
         void submit(job.id, job.file, options).catch((error: unknown) => {
-          patch(job.id, (j) => ({
-            ...j,
-            status: 'error',
-            error: { code: 'unknown', message: error instanceof Error ? error.message : '读取文件失败' },
-            progress: { stage: 'failed', fraction: 0, message: '读取文件失败' },
-          }));
+          fail(job.id, {
+            code: 'unknown',
+            detail: error instanceof Error ? error.message : 'read-file',
+          });
         });
       }
     },
-    [patch, submit],
+    [fail, submit],
   );
 
   const cancel = useCallback((id: string): void => {
@@ -135,22 +144,17 @@ export function useConversionQueue() {
       const job = jobs.find((j) => j.id === id);
       if (job === undefined) return;
       patch(id, (j) => ({ ...j, status: 'queued', progress: INITIAL_PROGRESS, error: undefined }));
-      void submit(id, job.file, options).catch(() => {
-        patch(id, (j) => ({
-          ...j,
-          status: 'error',
-          error: { code: 'unknown', message: '读取文件失败' },
-          progress: { stage: 'failed', fraction: 0, message: '读取文件失败' },
-        }));
+      void submit(id, job.file, options).catch((error: unknown) => {
+        fail(id, { code: 'unknown', detail: error instanceof Error ? error.message : 'read-file' });
       });
     },
-    [jobs, patch, submit],
+    [fail, jobs, patch, submit],
   );
 
   const remove = useCallback((id: string): void => {
     setJobs((prev) => {
       const target = prev.find((job) => job.id === id);
-      if (target?.result) URL.revokeObjectURL(target.result.url);
+      for (const o of target?.result?.outputs ?? []) URL.revokeObjectURL(o.url);
       return prev.filter((job) => job.id !== id);
     });
     filesRef.current.delete(id);
@@ -160,7 +164,7 @@ export function useConversionQueue() {
     setJobs((prev) => {
       for (const job of prev) {
         if (job.status !== 'running' && job.status !== 'queued' && job.result) {
-          URL.revokeObjectURL(job.result.url);
+          for (const o of job.result.outputs) URL.revokeObjectURL(o.url);
         }
       }
       return prev.filter((job) => job.status === 'running' || job.status === 'queued');
@@ -175,7 +179,7 @@ export function useConversionQueue() {
   }, []);
 
   useEffect(() => {
-    const urls = jobs.map((job) => job.result?.url).filter((u): u is string => u !== undefined);
+    const urls = jobs.flatMap((job) => job.result?.outputs.map((o) => o.url) ?? []);
     return () => {
       // 组件卸载时统一回收，避免 Blob 一直挂在内存里
       if (workerRef.current === null) for (const url of urls) URL.revokeObjectURL(url);

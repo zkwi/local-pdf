@@ -8,6 +8,7 @@ import type {
 import type { ConvertOptions } from '../contracts/options.ts';
 import type { DocumentMetadata } from '../contracts/primitives.ts';
 import type {
+  BlockOrigin,
   SemanticBlock,
   SemanticDocument,
   SemanticParagraph,
@@ -57,10 +58,18 @@ export function buildSemanticDocument(
   }
   if (current !== null) sections.push(finishSection(current.pages, current.blocks, options));
 
+  const clampedPages = layout.pages
+    .filter((p) => wordPageSize(p.width, p.height).clamped)
+    .map((p) => ({
+      code: 'page-size-clamped' as const,
+      pageIndex: p.index,
+      params: { page: p.index + 1 },
+    }));
+
   return {
     metadata,
     sections,
-    warnings: [...layout.warnings, ...layout.pages.flatMap((p) => p.warnings)],
+    warnings: [...layout.warnings, ...layout.pages.flatMap((p) => p.warnings), ...clampedPages],
     defaultFontSizePt: layout.bodyFontSize,
   };
 }
@@ -84,26 +93,94 @@ function finishSection(
     bottom: Math.min(...pages.map((p) => p.margins.bottom)),
     left: Math.min(...pages.map((p) => p.margins.left)),
   };
-  const header = keep ? pages.find((p) => p.header !== null)?.header ?? null : null;
-  const footer = keep ? pages.find((p) => p.footer !== null)?.footer ?? null : null;
+  const headers = keep ? pages.flatMap((p) => (p.header ? [p.header.lines] : [])) : [];
+  const footers = keep ? pages.flatMap((p) => (p.footer ? [p.footer.lines] : [])) : [];
 
+  const size = wordPageSize(first.width, first.height);
   return {
-    pageWidthPt: first.width,
-    pageHeightPt: first.height,
-    margins,
-    header: header ? [linesToParagraph(header.lines, 'center')] : [],
-    footer: footer ? [pageNumberAware(footer.lines)] : [],
+    pageWidthPt: size.width,
+    pageHeightPt: size.height,
+    margins: size.clamped ? { top: 56, right: 56, bottom: 56, left: 56 } : margins,
+    header: headers.length > 0 ? [pageNumberAware(headers, 'center')] : [],
+    footer: footers.length > 0 ? [pageNumberAware(footers, 'center')] : [],
     blocks,
   };
 }
 
-/** 页脚里的纯数字换成 Word 的页码域，否则每一页都会印上第一页的页码 */
-function pageNumberAware(lines: readonly TextLine[]): SemanticParagraph {
-  const paragraph = linesToParagraph(lines, 'center');
-  const runs = paragraph.runs.map((run) =>
-    /^\s*\d{1,4}\s*$/.test(run.text) ? { ...run, text: '', field: 'page-number' as const } : run,
+/** Word 页面尺寸上限 22 英寸 */
+const MAX_WORD_PAGE_PT = 1584;
+const A4 = { width: 595.28, height: 841.89 };
+
+/**
+ * 微信里的"长图"PDF 一页几千上万 pt 高，超出 Word 上限后 Word 会自己乱分页。
+ * 窄长页按 A4 排版让内容顺着流；宽高都超的按比例缩到上限。
+ */
+export function wordPageSize(
+  width: number,
+  height: number,
+): { width: number; height: number; clamped: boolean } {
+  if (width <= MAX_WORD_PAGE_PT && height <= MAX_WORD_PAGE_PT)
+    return { width, height, clamped: false };
+  if (height > MAX_WORD_PAGE_PT && width <= A4.width * 1.05) return { ...A4, clamped: true };
+  const k = MAX_WORD_PAGE_PT / Math.max(width, height);
+  return { width: width * k, height: height * k, clamped: true };
+}
+
+const DIGITS = /\d{1,4}/g;
+const PURE_NUMBER = /^[-—–\s]*\d{1,4}[-—–\s]*$/;
+
+/**
+ * 页眉页脚里的页码换成 Word 的页码域，否则每一页都会印上第一页的数字。
+ * 第一页的行是模板；"哪一段数字是页码"看它在其他页上是否变化——
+ * "白皮书 2025 - 85 -" 里 2025 各页相同、85 各页不同，只换后者。
+ * 只有一页可比时退回"整条就是个数字"的判断。
+ */
+export function pageNumberAware(
+  variants: readonly (readonly TextLine[])[],
+  alignment: 'left' | 'center' | 'right' | 'justify',
+): SemanticParagraph {
+  const paragraph = linesToParagraph(variants[0], alignment);
+  const full = paragraph.runs.map((r) => r.text).join('');
+  const groups = [...full.matchAll(DIGITS)].map((m) => ({
+    start: m.index ?? 0,
+    end: (m.index ?? 0) + m[0].length,
+    value: m[0],
+  }));
+  if (groups.length === 0) return paragraph;
+
+  const others = variants.slice(1).map((lines) =>
+    [
+      ...linesToRuns(lines)
+        .map((r) => r.text)
+        .join('')
+        .matchAll(DIGITS),
+    ].map((m) => m[0]),
   );
-  return { ...paragraph, runs };
+  const flagged = groups.map((g, k) =>
+    others.length === 0
+      ? PURE_NUMBER.test(full)
+      : others.some((o) => o.length === groups.length && o[k] !== g.value),
+  );
+  if (!flagged.some(Boolean)) return paragraph;
+
+  const runs: SemanticRun[] = [];
+  let offset = 0;
+  for (const run of paragraph.runs) {
+    const runStart = offset;
+    const runEnd = offset + run.text.length;
+    let cursor = runStart;
+    groups.forEach((g, k) => {
+      if (!flagged[k] || g.end <= runStart || g.start >= runEnd) return;
+      const s = Math.max(g.start, runStart);
+      const e = Math.min(g.end, runEnd);
+      if (s > cursor) runs.push({ ...run, text: run.text.slice(cursor - runStart, s - runStart) });
+      runs.push({ ...run, text: '', field: 'page-number' });
+      cursor = e;
+    });
+    if (cursor < runEnd) runs.push({ ...run, text: run.text.slice(cursor - runStart) });
+    offset = runEnd;
+  }
+  return { ...paragraph, runs: runs.filter((r) => r.field !== undefined || r.text !== '') };
 }
 
 function buildPageBlocks(
@@ -133,11 +210,15 @@ function buildPageBlocks(
           kind: 'paragraph',
           runs,
           alignment: block.alignment,
-          firstLineIndentPt: clampIndent(block.firstLineIndent, block.lines[0]?.fontSize ?? bodyFontSize),
+          firstLineIndentPt: clampIndent(
+            block.firstLineIndent,
+            block.lines[0]?.fontSize ?? bodyFontSize,
+          ),
           spaceBeforePt: 0,
           spaceAfterPt: spaceAfter,
           lineSpacing: estimateLineSpacing(block.lines),
           sourceElementIds: block.meta.sourceElementIds,
+          origin: originOf(block),
         });
         break;
       }
@@ -149,6 +230,7 @@ function buildPageBlocks(
           level: block.level,
           runs,
           sourceElementIds: block.meta.sourceElementIds,
+          origin: originOf(block),
         });
         break;
       }
@@ -163,6 +245,7 @@ function buildPageBlocks(
           runs: literal ? runs : stripMarker(runs),
           literalMarker: literal ? block.marker : undefined,
           sourceElementIds: block.meta.sourceElementIds,
+          origin: originOf(block),
         });
         break;
       }
@@ -174,9 +257,11 @@ function buildPageBlocks(
         out.push({
           kind: 'image',
           data: block.data,
+          format: block.format,
           widthPt: block.widthPt,
           heightPt: block.heightPt,
           sourceElementIds: block.meta.sourceElementIds,
+          origin: originOf(block),
         });
         break;
       }
@@ -202,6 +287,7 @@ function flattenToParagraph(block: LayoutBlock, spaceAfter: number): SemanticPar
     spaceAfterPt: spaceAfter,
     lineSpacing: 1.15,
     sourceElementIds: block.meta.sourceElementIds,
+    origin: originOf(block),
   };
 }
 
@@ -243,6 +329,7 @@ function buildTable(block: TableBlock): SemanticBlock {
     columnWidthsPt: block.columnWidths,
     bordered: block.bordered,
     sourceElementIds: block.meta.sourceElementIds,
+    origin: originOf(block),
   };
 }
 
@@ -258,9 +345,7 @@ function groupCellLines(lines: readonly TextLine[]): SemanticParagraph[] {
     if (lines[i].baseline - lines[i - 1].baseline > base * 1.6 + 1) groups.push([lines[i]]);
     else groups[groups.length - 1].push(lines[i]);
   }
-  return groups
-    .map((group) => linesToParagraph(group, 'left'))
-    .filter((p) => p.runs.length > 0);
+  return groups.map((group) => linesToParagraph(group, 'left')).filter((p) => p.runs.length > 0);
 }
 
 function linesToParagraph(
@@ -392,4 +477,19 @@ function estimateSpaceAfter(
   if (!Number.isFinite(gap) || gap <= 0) return 0;
   const lineHeight = bodyFontSize * 0.35;
   return Math.min(MAX_SPACE_AFTER_PT, Math.max(0, Math.round(gap - lineHeight)));
+}
+
+function originOf(block: LayoutBlock): BlockOrigin {
+  const lines =
+    block.kind === 'table'
+      ? block.cells.flatMap((c) => c.lines)
+      : block.kind === 'image'
+        ? []
+        : block.lines;
+  return {
+    pageIndex: block.meta.pageIndex,
+    bbox: block.meta.bbox,
+    confidence: block.meta.confidence,
+    ocr: lines.length > 0 && lines.every((l) => l.spans.every((sp) => sp.source === 'ocr')),
+  };
 }

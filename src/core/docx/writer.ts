@@ -27,11 +27,12 @@ import type {
   SemanticRun,
   SemanticTable,
 } from '../contracts/semantic.ts';
+import { sanitizeText } from '../util/sanitize.ts';
 import { ptToHalfPoint, ptToPx96, ptToTwip } from '../geometry/units.ts';
 import { cleanFontName, mapFont } from './fonts.ts';
 
-const BULLET_REF = 'pdf2word-bullet';
-const ORDERED_REF = 'pdf2word-ordered';
+const BULLET_REF = 'local-pdf-bullet';
+const ORDERED_REF = 'local-pdf-ordered';
 const LIST_INDENT_TWIP = 360;
 
 const HEADING_BY_LEVEL = {
@@ -50,6 +51,9 @@ const ALIGNMENT = {
 
 export async function writeDocx(doc: SemanticDocument): Promise<Blob> {
   const defaultSize = doc.defaultFontSizePt > 0 ? doc.defaultFontSizePt : 10.5;
+  // docx.js 9.7 给每个 ImageRun 都新建一个编号器，所有图片的 docPr id 全是 1；
+  // Word 对重复 id 时好时坏，自己编号最稳
+  const imageIds = { next: 1 };
 
   const sections: ISectionOptions[] = doc.sections.map((section) => ({
     properties: {
@@ -74,13 +78,13 @@ export async function writeDocx(doc: SemanticDocument): Promise<Blob> {
       section.footer.length > 0
         ? { default: new Footer({ children: section.footer.map((p) => renderParagraph(p)) }) }
         : undefined,
-    children: section.blocks.flatMap(renderBlock),
+    children: section.blocks.flatMap((block) => renderBlock(block, imageIds)),
   }));
 
   const file = new Document({
     title: doc.metadata.title,
-    creator: doc.metadata.author ?? 'pdf2word',
-    description: `由 ${doc.metadata.sourceFileName} 本地转换生成`,
+    creator: doc.metadata.author ?? 'Local PDF',
+    description: `Local PDF · ${doc.metadata.sourceFileName}`,
     styles: {
       default: {
         document: {
@@ -128,7 +132,7 @@ function levelsFor(kind: 'bullet' | 'ordered') {
   }));
 }
 
-function renderBlock(block: SemanticBlock): (Paragraph | Table)[] {
+function renderBlock(block: SemanticBlock, imageIds: { next: number }): (Paragraph | Table)[] {
   switch (block.kind) {
     case 'paragraph':
       return [renderParagraph(block)];
@@ -139,14 +143,16 @@ function renderBlock(block: SemanticBlock): (Paragraph | Table)[] {
     case 'table':
       // Word 里两张紧邻的表会被合并，中间垫一个空段落隔开
       return [renderTable(block), new Paragraph({ children: [] })];
-    case 'image':
+    case 'image': {
+      const id = imageIds.next++;
       return [
         new Paragraph({
           alignment: AlignmentType.CENTER,
           children: [
             new ImageRun({
-              type: 'png',
+              type: block.format === 'jpeg' ? 'jpg' : 'png',
               data: block.data,
+              altText: { name: `image${id}`, description: '', title: '', id: String(id) },
               transformation: {
                 width: Math.max(1, Math.round(ptToPx96(block.widthPt))),
                 height: Math.max(1, Math.round(ptToPx96(block.heightPt))),
@@ -155,6 +161,7 @@ function renderBlock(block: SemanticBlock): (Paragraph | Table)[] {
           ],
         }),
       ];
+    }
     case 'page-break':
       return [new Paragraph({ children: [new PageBreak()] })];
   }
@@ -176,7 +183,7 @@ function renderRuns(runs: readonly SemanticRun[], fallbackSize: number): Paragra
     if (run.field === 'page-number') {
       return new TextRun({ ...style, children: [PageNumber.CURRENT] });
     }
-    return new TextRun({ ...style, text: run.text });
+    return new TextRun({ ...style, text: sanitizeText(run.text) });
   });
 }
 
@@ -184,7 +191,8 @@ function renderParagraph(block: SemanticParagraph): Paragraph {
   const size = block.runs[0]?.fontSize ?? 10.5;
   return new Paragraph({
     alignment: ALIGNMENT[block.alignment],
-    indent: block.firstLineIndentPt > 0 ? { firstLine: ptToTwip(block.firstLineIndentPt) } : undefined,
+    indent:
+      block.firstLineIndentPt > 0 ? { firstLine: ptToTwip(block.firstLineIndentPt) } : undefined,
     spacing: {
       after: ptToTwip(block.spaceAfterPt),
       before: ptToTwip(block.spaceBeforePt),

@@ -54,7 +54,7 @@ export function decodeDrawOps(data: ArrayLike<number>): Subpath[] {
     return current;
   };
 
-  for (let i = 0; i < data.length; ) {
+  for (let i = 0; i < data.length;) {
     const op = data[i++];
     switch (op) {
       case DRAW_MOVE_TO: {

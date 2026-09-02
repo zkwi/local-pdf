@@ -1,0 +1,18 @@
+# Cloudflare Pages / Netlify 风格的响应头。其他托管方式忽略这个文件即可。
+
+# 带内容哈希的产物可以永久缓存
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# 这些不带哈希，升级依赖后文件名不变，缓存一天
+/pdfjs/*
+  Cache-Control: public, max-age=86400
+/ort/*
+  Cache-Control: public, max-age=86400
+/ocr-models/*
+  Cache-Control: public, max-age=86400
+
+# 想开启多线程 OCR 推理时取消下面两行的注释（见 README「多线程推理」，模型必须同源自托管）
+# /*
+#   Cross-Origin-Opener-Policy: same-origin
+#   Cross-Origin-Embedder-Policy: require-corp

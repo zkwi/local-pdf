@@ -41,7 +41,9 @@ describe('joinLineTexts', () => {
   });
 
   it('中文换行直接相接', () => {
-    expect(joinLineTexts('这是一个很长的中文', '段落需要合并')).toBe('这是一个很长的中文段落需要合并');
+    expect(joinLineTexts('这是一个很长的中文', '段落需要合并')).toBe(
+      '这是一个很长的中文段落需要合并',
+    );
   });
 
   it('行尾连字符 + 小写开头视为断词', () => {
@@ -53,7 +55,9 @@ describe('joinLineTexts', () => {
   });
 
   it('中英混排边界不补空格', () => {
-    expect(joinLineTexts('使用 PDF.js 解析，', 'docx.js 生成')).toBe('使用 PDF.js 解析，docx.js 生成');
+    expect(joinLineTexts('使用 PDF.js 解析，', 'docx.js 生成')).toBe(
+      '使用 PDF.js 解析，docx.js 生成',
+    );
   });
 });
 

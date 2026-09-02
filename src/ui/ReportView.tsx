@@ -1,4 +1,5 @@
 import type { ConversionReport } from '../core/contracts/report.ts';
+import { useI18n } from '../i18n/index.tsx';
 
 interface ReportViewProps {
   readonly report: ConversionReport;
@@ -11,6 +12,7 @@ function confidenceClass(value: number): string {
 }
 
 export function ReportView({ report }: ReportViewProps) {
+  const { t, warningText } = useI18n();
   const pageWarnings = report.pages.flatMap((p) => p.warnings);
   const allWarnings = [...report.warnings, ...pageWarnings];
   const totalChars = report.pages.reduce((s, p) => s + p.characters, 0);
@@ -21,43 +23,51 @@ export function ReportView({ report }: ReportViewProps) {
   return (
     <div className="report">
       <div className="report__stats">
-        <Stat label="页数" value={String(report.pageCount)} />
-        <Stat label="字符" value={totalChars.toLocaleString('zh-CN')} />
-        <Stat label="表格" value={String(totalTables)} />
-        <Stat label="图片" value={String(totalImages)} />
-        <Stat label="OCR 页" value={String(ocrPages)} />
-        <Stat label="耗时" value={`${(report.totalDurationMs / 1000).toFixed(1)}s`} />
+        <Stat label={t('report.pages')} value={String(report.pageCount)} />
+        <Stat label={t('report.characters')} value={totalChars.toLocaleString()} />
+        <Stat label={t('report.tables')} value={String(totalTables)} />
+        <Stat label={t('report.images')} value={String(totalImages)} />
+        <Stat label={t('report.ocrPages')} value={String(ocrPages)} />
+        {report.ocrEngine !== undefined && (
+          <Stat label={t('report.ocrEngine')} value={report.ocrEngine} />
+        )}
+        <Stat
+          label={t('report.duration')}
+          value={`${(report.totalDurationMs / 1000).toFixed(1)}s`}
+        />
       </div>
 
       {allWarnings.length > 0 && (
         <details className="report__warnings">
-          <summary>{allWarnings.length} 条提示，建议核对</summary>
+          <summary>{t('report.warnings', { count: allWarnings.length })}</summary>
           <ul>
             {allWarnings.slice(0, 60).map((w, i) => (
               <li key={`${w.code}-${i}`}>
-                <code>{w.code}</code> {w.message}
+                <code>{w.code}</code> {warningText(w)}
               </li>
             ))}
-            {allWarnings.length > 60 && <li>… 其余 {allWarnings.length - 60} 条已省略</li>}
+            {allWarnings.length > 60 && (
+              <li>{t('report.more', { count: allWarnings.length - 60 })}</li>
+            )}
           </ul>
         </details>
       )}
 
       <details className="report__pages">
-        <summary>逐页明细</summary>
+        <summary>{t('report.pageDetails')}</summary>
         <div className="table-scroll">
           <table>
             <thead>
               <tr>
-                <th>页</th>
-                <th>把握</th>
-                <th>栏</th>
-                <th>段落</th>
-                <th>标题</th>
-                <th>列表</th>
-                <th>表格</th>
-                <th>图片</th>
-                <th>字符</th>
+                <th>{t('report.col.page')}</th>
+                <th>{t('report.col.confidence')}</th>
+                <th>{t('report.col.columns')}</th>
+                <th>{t('report.col.paragraphs')}</th>
+                <th>{t('report.col.headings')}</th>
+                <th>{t('report.col.lists')}</th>
+                <th>{t('report.col.tables')}</th>
+                <th>{t('report.col.images')}</th>
+                <th>{t('report.col.characters')}</th>
               </tr>
             </thead>
             <tbody>

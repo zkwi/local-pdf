@@ -33,15 +33,18 @@ PDF 描述的是「在某个坐标画什么」，Word 描述的是「段落、�
 
 ```text
 core/contracts   ← 谁都可以依赖，它谁都不依赖
+core/util        ← 同上；目前只有文本清洗（XML 非法字符）
 core/geometry    ← 只依赖 contracts
 core/pdf         ← contracts + geometry + pdfjs-dist
 core/layout      ← contracts + geometry           （不碰 pdf.js，纯函数，好测）
 core/semantic    ← contracts + geometry + layout/text
 core/docx        ← contracts + geometry + docx
-core/ocr         ← contracts + geometry (+ 动态 import tesseract.js)
+core/markdown    ← contracts (+ 动态 import unified/remark、fflate)
+core/ocr         ← contracts + geometry (+ 动态 import @paddleocr/paddleocr-js)
 core/converter   ← 以上全部，负责编排
 worker/          ← converter
-ui/ hooks/       ← contracts + worker 协议（不直接调 converter）
+i18n/            ← contracts（把 code / key + params 变成当前语言的文案）
+ui/ hooks/       ← contracts + worker 协议 + i18n（不直接调 converter）
 ```
 
 `core/layout` 不依赖 pdf.js 是刻意的：版面算法全是 `(输入数据) → (输出数据)` 的纯函数，
@@ -52,9 +55,11 @@ ui/ hooks/       ← contracts + worker 协议（不直接调 converter）
 ### 1. 在当前 Worker 里跑，而不是再开一个嵌套 Worker
 
 `src/core/pdf/pdfjs-runtime.ts` 里设置 `globalThis.pdfjsWorker`，pdf.js 检测到之后
-会直接在当前上下文运行 worker 逻辑。我们本来就已经在 Worker 里，没必要再套一层
-（嵌套 Worker 在部分浏览器/隐私模式下不可用）。代价是这个 chunk 会比较大，
-但它是懒加载的，首屏不受影响。
+会直接在当前上下文运行 worker 逻辑。我们本来就已经在 Worker 里，pdf.js 没必要再套一层。
+代价是这个 chunk 会比较大，但它是懒加载的，首屏不受影响。
+
+OCR 是例外：PaddleOCR.js 的直连模式依赖 `document`，只能用它的 `worker: true` 模式，
+于是转换 Worker 里会再起一个 OCR Worker。拓扑、模型下载与缓存见 ADR 006。
 
 ### 2. Worker 里没有 document，要替换两个工厂
 
@@ -66,6 +71,10 @@ ui/ hooks/       ← contracts + worker 协议（不直接调 converter）
 
 同理，Worker 里没有 `document.baseURI`，静态资源根必须由主线程算好通过消息传进来
 （`assetBase`），不能在 Worker 里推导。
+
+第三方包也会踩这个坑：remark 依赖的 `decode-named-character-reference` 的 browser 入口在模块顶层
+`document.createElement('i')`，打进 Worker 就是 `document is not defined`。`vite.config.ts` 里把它
+别名到 node 入口（纯 JS 查表）。以后往 Worker 里加依赖，先在生产构建里跑一遍，不要只看 dev。
 
 ## 抽取阶段做了什么
 
@@ -98,6 +107,11 @@ ui/ hooks/       ← contracts + worker 协议（不直接调 converter）
 4. **`blocks.ts`** 区域内切段落，并分类成段落 / 标题 / 列表项。
 5. **`header-footer.ts`** 跨页重复检测。数字归一成 `#`，所以「第 3 页」和「第 12 页」能聚到一起。
 6. **`analyze.ts`** 编排以上，把表格和图片按位置插回正文流，算页边距和置信度。
+
+## 文案
+
+核心层不产生自然语言：警告是 `{ code, params }`，进度是 `{ key, params }`，Worker 错误是 `{ code, detail }`。
+界面用 `src/i18n/` 里的文案表按当前语言渲染，四种语言由类型强制齐全。见 ADR 007。
 
 ## 置信度与警告
 
