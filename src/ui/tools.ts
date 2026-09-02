@@ -80,3 +80,28 @@ export function isImageFile(file: File): boolean {
 export function isMarkdownFile(file: File): boolean {
   return /\.(md|markdown|txt)$/i.test(file.name) || file.type === 'text/markdown';
 }
+
+/** 工具的"主要文件"：Markdown 页顺带也收图片（当作 .md 引用的素材），分流时不算它的票 */
+function primaryAccepts(tool: Tool, file: File): boolean {
+  return tool.id === 'markdown-to-pdf' ? isMarkdownFile(file) : acceptsFile(tool, file);
+}
+
+/**
+ * 当前工具收不下这些文件时该切到哪个工具：按各工具能收的文件数计票，
+ * 票多的赢，平票按工具顺序（PDF 归 PDF 转 Word）。一个都收不下返回 null。
+ * Markdown 页只有在真有 .md 时才参与计票，但一旦参与，跟着 .md 一起拖进来的图片也算它的票，
+ * 所以".md + 它引用的两张图"会去 Markdown 页而不是图片页。
+ */
+export function routeTool(files: readonly File[]): Tool | null {
+  let best: Tool | null = null;
+  let bestScore = 0;
+  for (const tool of TOOLS) {
+    const primary = files.filter((file) => primaryAccepts(tool, file)).length;
+    const score = primary === 0 ? 0 : files.filter((file) => acceptsFile(tool, file)).length;
+    if (score > bestScore) {
+      best = tool;
+      bestScore = score;
+    }
+  }
+  return best;
+}

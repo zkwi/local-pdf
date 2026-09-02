@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DEFAULT_OPTIONS } from '../../core/contracts/options.ts';
-import type { ConvertOptions } from '../../core/contracts/options.ts';
+import type {
+  ConversionMode,
+  ConvertOptions,
+  OcrLanguage,
+  OcrPolicy,
+  OcrQuality,
+  PageImageFormat,
+} from '../../core/contracts/options.ts';
+import { OCR_LANGUAGES } from '../../core/ocr/languages.ts';
+import { parsePageRange } from '../../core/util/page-range.ts';
 import type { useConversionQueue } from '../../hooks/useConversionQueue.ts';
 import { useI18n } from '../../i18n/index.tsx';
 import type { MessageKey } from '../../i18n/index.tsx';
@@ -9,8 +18,10 @@ import { DropZone, splitPdfs } from '../DropZone.tsx';
 import { JobCard } from '../JobCard.tsx';
 import { OptionsPanel } from '../OptionsPanel.tsx';
 import { PanelMore } from '../PanelMore.tsx';
+import { useStored } from '../persist.ts';
 import { useFileSink, useShell } from '../shell.tsx';
 import type { Tool } from '../tools.ts';
+import { downloadAsZip } from '../zip.ts';
 
 type Queue = ReturnType<typeof useConversionQueue>;
 
@@ -22,15 +33,55 @@ interface PdfConvertToolProps {
   readonly ocrAvailable: boolean;
 }
 
-/** PDF → Word / Markdown / 图片：输出格式由页面决定，其余设置在"更多选项"里 */
+const STORAGE_KEY = 'local-pdf.convert';
+/** 由页面或运行环境决定、不该跨会话记住的键 */
+const UNSTORED: readonly (keyof ConvertOptions)[] = [
+  'output',
+  'locale',
+  'password',
+  'renderScale',
+  'maxPages',
+  'detectBorderlessTables',
+];
+
+const oneOf = <T extends string | number>(list: readonly T[], value: T, fallback: T): T =>
+  list.includes(value) ? value : fallback;
+
+/** 存储里的枚举值过期了就退回默认，别让一个旧值把转换搞坏 */
+function fixOptions(o: ConvertOptions): ConvertOptions {
+  return {
+    ...o,
+    mode: oneOf<ConversionMode>(['editable', 'plain-text'], o.mode, DEFAULT_OPTIONS.mode),
+    ocr: oneOf<OcrPolicy>(['auto', 'off', 'force'], o.ocr, DEFAULT_OPTIONS.ocr),
+    ocrQuality: oneOf<OcrQuality>(['fast', 'balanced'], o.ocrQuality, DEFAULT_OPTIONS.ocrQuality),
+    ocrLanguage: oneOf<OcrLanguage | 'auto'>(
+      ['auto', ...OCR_LANGUAGES.map((l) => l.value)],
+      o.ocrLanguage,
+      'auto',
+    ),
+    pageImageFormat: oneOf<PageImageFormat>(
+      ['png', 'jpeg'],
+      o.pageImageFormat,
+      DEFAULT_OPTIONS.pageImageFormat,
+    ),
+    pageImageDpi: oneOf([96, 150, 300], o.pageImageDpi, DEFAULT_OPTIONS.pageImageDpi),
+  };
+}
+
+/** PDF → Word / Markdown / 图片：输出格式由页面决定，其余设置在"更多选项"里，改过的会记住 */
 export function PdfConvertTool({ tool, active, queue, ocrAvailable }: PdfConvertToolProps) {
   const { t, tn, locale } = useI18n();
   const { toast } = useShell();
   const output = tool.output ?? 'docx';
-  const [options, setOptions] = useState<ConvertOptions>(() => ({ ...DEFAULT_OPTIONS, output }));
+  const [options, setOptions] = useStored<ConvertOptions>(
+    STORAGE_KEY,
+    { ...DEFAULT_OPTIONS, output },
+    { omit: UNSTORED, fix: fixOptions },
+  );
   const [also, setAlso] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [sampleLoading, setSampleLoading] = useState(false);
+  const [zipping, setZipping] = useState(false);
   const queueRef = useRef<HTMLDivElement>(null);
 
   const jobs = useMemo(
@@ -57,6 +108,9 @@ export function PdfConvertTool({ tool, active, queue, ocrAvailable }: PdfConvert
       output: also && output !== 'images' ? 'both' : output,
       locale,
       ocr: ocrAvailable ? base.ocr : 'off',
+      // 看不懂的页码范围按全部页转，界面上已经标红提示过
+      pageRange:
+        parsePageRange(base.pageRange, Number.MAX_SAFE_INTEGER) === null ? '' : base.pageRange,
     }),
     [also, locale, ocrAvailable, output],
   );
@@ -107,18 +161,22 @@ export function PdfConvertTool({ tool, active, queue, ocrAvailable }: PdfConvert
     prevCount.current = jobs.length;
   }, [active, jobs.length]);
 
-  const downloadAll = useCallback(() => {
-    for (const job of finished) {
-      for (const out of job.result?.outputs ?? []) {
-        const link = document.createElement('a');
-        link.href = out.url;
-        link.download = out.fileName;
-        document.body.append(link);
-        link.click();
-        link.remove();
-      }
+  // 逐个触发下载会被浏览器拦成"允许多个下载？"，打成一个 zip 只下载一次
+  const downloadAll = useCallback(async () => {
+    if (zipping) return;
+    const entries = finished.flatMap((job) =>
+      (job.result?.outputs ?? []).map((o) => ({ name: o.fileName, blob: o.blob })),
+    );
+    if (entries.length === 0) return;
+    setZipping(true);
+    try {
+      await downloadAsZip(entries, `${tool.id}.zip`);
+    } catch {
+      toast(t('queue.zipFailed'));
+    } finally {
+      setZipping(false);
     }
-  }, [finished]);
+  }, [finished, t, toast, tool.id, zipping]);
 
   return (
     <div className="panel">
@@ -131,8 +189,15 @@ export function PdfConvertTool({ tool, active, queue, ocrAvailable }: PdfConvert
               <h2>{t('queue.title', { count: jobs.length })}</h2>
               <div className="queue__actions">
                 {finished.length > 1 && (
-                  <button className="btn btn--ghost" type="button" onClick={downloadAll}>
-                    {t('queue.downloadAll', { count: finished.length })}
+                  <button
+                    className="btn btn--ghost"
+                    type="button"
+                    disabled={zipping}
+                    onClick={() => void downloadAll()}
+                  >
+                    {zipping
+                      ? t('queue.zipping')
+                      : t('queue.downloadAll', { count: finished.length })}
                   </button>
                 )}
                 {!busy && (

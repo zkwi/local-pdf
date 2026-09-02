@@ -38,6 +38,11 @@ export interface ConvertOptions {
   /** 只在 output 为 images 时用：整页图片的格式与清晰度 */
   readonly pageImageFormat: PageImageFormat;
   readonly pageImageDpi: number;
+  /**
+   * 只转这些页，写法见 core/util/page-range.ts（"1-3, 5, 8-"）；空串表示全部页。
+   * 目前只有 images 输出用它，Word / Markdown 仍按整份文档转。
+   */
+  readonly pageRange: string;
   readonly password?: string;
 }
 
@@ -58,4 +63,5 @@ export const DEFAULT_OPTIONS: ConvertOptions = {
   maxPages: 1000,
   pageImageFormat: 'png',
   pageImageDpi: 150,
+  pageRange: '',
 };

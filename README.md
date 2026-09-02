@@ -47,7 +47,7 @@
 | ------------------------------------ | --------------------------------------------------------------------------- |
 | PDF → Word (.docx)                   | Paragraphs, headings, lists, ruled tables (incl. rules-only tables), images |
 | PDF → Markdown                       | Same recognition result; zipped with images and a `manifest.json`           |
-| PDF → Images (PNG / JPEG)            | Every page rendered at 96, 150 or 300 DPI; zipped when there is more than one page |
+| PDF → Images (PNG / JPEG)            | Every page, or a page range such as `1-3, 5, 8-`, rendered at 96, 150 or 300 DPI; zipped when there is more than one |
 | Word → PDF                           | The .docx is laid out in the browser and written as a vector PDF: selectable text, headers/footers, numbering, tables, images; no embedded fonts |
 | Markdown → PDF                       | GFM tables, task lists, code blocks, quotes; drop the referenced images alongside the .md, or paste text |
 | Images → PDF                         | Drag thumbnails to reorder, rotate, pick paper / margins / quality; JPEG originals embedded as-is  |
@@ -56,7 +56,8 @@
 | Headers, footers, page numbers       | Detected across pages; page numbers become a Word `PAGE` field              |
 | Scanned pages (OCR)                  | PaddleOCR PP-OCRv6, decided per page; native text always wins; ruled tables in scans are rebuilt; oversized scans and phone screenshots are scaled to A4 |
 | Interface languages                  | 简体中文 · 繁體中文 · English · 日本語                                      |
-| Password-protected PDFs, batch queue | Progress, cancellation, per-file conversion report                          |
+| Password-protected PDFs, batch queue | Progress, cancellation, per-file conversion report; "Download all" packs the results into one zip |
+| Drop anything anywhere               | A file dropped on the wrong tool page opens the right tool; settings are remembered between visits |
 
 What it deliberately does **not** do: tables with no ruling lines at all (misdetection costs more than it helps),
 font embedding, editable formulas, vertical text (flattened with a warning), text colour.

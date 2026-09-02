@@ -29,6 +29,12 @@ describe('PDF 转图片', () => {
     expect(new Uint8Array(await single.blob.arrayBuffer())).toEqual(bytes(1));
   });
 
+  it('多页文档里只挑了一页：直接给图片，文件名带页码', () => {
+    const one = packPageImages([{ index: 1, data: bytes(3) }], 3, 'doc', 'png');
+    expect(one.kind).toBe('image');
+    expect(one.fileName).toBe('doc-02.png');
+  });
+
   it('多页打成 zip，没渲染出来的页不占文件名', async () => {
     const multi = packPageImages(
       [

@@ -48,7 +48,7 @@ export const ja: Messages = {
   'output.both.hint': '同じ認識結果から Word と Markdown の両方を作成します。',
   'output.images': '画像',
   'output.images.hint':
-    '各ページを 1 枚の画像にします。複数ページは zip にまとめます。形式と解像度は「詳細オプション」で選べます。',
+    '各ページを 1 枚の画像にします。複数ページは zip にまとめます。形式、解像度、ページ範囲は「詳細オプション」で選べます。',
 
   'images.label': '画像の出力',
   'images.format.label': '形式',
@@ -250,7 +250,7 @@ export const ja: Messages = {
   'layout.keepHeaderFooter': 'Word のヘッダー / フッターとして書き出す',
 
   'queue.title': '変換キュー（{count}）',
-  'queue.downloadAll': 'すべてダウンロード（{count}）',
+  'queue.downloadAll': 'まとめて zip でダウンロード（{count}）',
   'queue.clear': 'リストを消去',
 
   'job.cancel': 'キャンセル',
@@ -430,4 +430,24 @@ export const ja: Messages = {
   'summary.imageBudget': '画像が上限 {limit} を超えたため {page} ページ以降は保持していません',
   'warning.scan-text-layer':
     '{count} ページはテキスト層付きのスキャンです。テキスト層を出力し、ページ全体のスキャン画像は保持していません',
+
+  'app.skip': '本文へ移動',
+  'app.titleDone': '✅ 変換完了',
+  'drop.switched': '「{tool}」に切り替えました',
+  'drop.sample.markdown': 'ファイルがない場合はサンプルの Markdown を入力',
+  'queue.zipping': 'まとめています…',
+  'queue.zipFailed': 'まとめられませんでした。1 つずつダウンロードしてください',
+  'job.copy': 'Markdown をコピー',
+  'job.copied': 'クリップボードにコピーしました',
+  'job.copyFailed': 'コピーできませんでした。ファイルをダウンロードしてください',
+  'topdf.editor.sample': 'サンプルを入力',
+  'topdf.editor.sampleText':
+    '# サンプル文書\n\nこれは **Markdown** の一例です。PDF にしても文字は選択・検索できます。\n\n## リスト\n\n- 箇条書き\n- 二つ目\n  1. 入れ子の番号付きリスト\n  2. 二番目の手順\n\n## タスク\n\n- [x] 完了\n- [ ] 未完了\n\n## 表\n\n| 品目 | 数量 | 備考 |\n| --- | ---: | --- |\n| りんご | 3 | 赤い |\n| みかん | 12 | 甘酸っぱい |\n\n## コード\n\n```js\nconsole.log("Hello, Local PDF");\n```\n\n> 引用：ファイルは端末から出ません。\n\n[詳しく見る](https://localpdfconverter.com)\n',
+  'images.range.label': 'ページ範囲',
+  'images.range.placeholder': '全ページ',
+  'images.range.hint':
+    '空欄なら全ページ。例：1-3, 5, 8- は 1〜3 ページ、5 ページ、8 ページ以降を指します。',
+  'images.range.invalid':
+    'ページ範囲を読み取れないため全ページを変換します。1-3, 5, 8- のように書いてください。',
+  'summary.pageRange': '{range} ページ',
 };

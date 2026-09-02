@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { useConversionQueue } from './hooks/useConversionQueue.ts';
 import { useToPdfQueue } from './hooks/useToPdfQueue.ts';
@@ -15,7 +15,7 @@ import { SeoContent } from './ui/SeoContent.tsx';
 import { ShellContext } from './ui/shell.tsx';
 import type { FileSink, Shell } from './ui/shell.tsx';
 import { ToolNav } from './ui/ToolNav.tsx';
-import { TOOLS } from './ui/tools.ts';
+import { acceptsFile, routeTool, TOOLS } from './ui/tools.ts';
 import { DocToPdfTool } from './ui/tools/DocToPdfTool.tsx';
 import { ImagesToPdfTool } from './ui/tools/ImagesToPdfTool.tsx';
 import { PdfConvertTool } from './ui/tools/PdfConvertTool.tsx';
@@ -34,6 +34,11 @@ function isEditable(target: EventTarget | null): boolean {
   );
 }
 
+interface Pending {
+  readonly files: readonly File[];
+  readonly text?: string;
+}
+
 /**
  * 页面外壳：顶栏、工具导航、当前工具的标题和面板、卖点和说明。
  * 六个工具页全部挂着、只显示当前这个，切换工具不丢队列和已选的图片。
@@ -45,7 +50,11 @@ export function App() {
   const [dragging, setDragging] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [imagesBusy, setImagesBusy] = useState(false);
+  /** 后台标签页里转完了：标题挂个 ✅，切回来就摘掉 */
+  const [attention, setAttention] = useState(false);
   const sinkRef = useRef<FileSink | null>(null);
+  /** 切换工具后要交给新工具的文件：新工具注册接收器时送过去 */
+  const pendingRef = useRef<Pending | null>(null);
   const pdfQueue = useConversionQueue();
   const docQueue = useToPdfQueue();
   const ocrAvailable = caps.wasmSimd;
@@ -54,11 +63,40 @@ export function App() {
     () => ({
       setSink: (sink) => {
         sinkRef.current = sink;
+        const pending = pendingRef.current;
+        if (sink !== null && pending !== null) {
+          pendingRef.current = null;
+          sink(pending.files, pending.text);
+        }
       },
       toast: (message) => setToast(message),
     }),
     [],
   );
+
+  const toolTitle = t(`tool.${tool.id}.title` as MessageKey);
+
+  /**
+   * 文件先问当前工具收不收；一个都收不下的话，找能收的工具切过去再交给它。
+   * 在 PDF 转 Word 页丢进一份 .docx，就直接跳到 Word 转 PDF 开始转，而不是只说"已忽略"。
+   */
+  const deliver = useCallback(
+    (files: readonly File[], text?: string): boolean => {
+      if (files.length > 0 && !files.some((file) => acceptsFile(tool, file))) {
+        const target = routeTool(files);
+        if (target !== null && target.id !== tool.id) {
+          pendingRef.current = { files, text };
+          navigate(target);
+          setToast(t('drop.switched', { tool: t(`tool.${target.id}.title` as MessageKey) }));
+          return true;
+        }
+      }
+      return sinkRef.current?.(files, text) ?? false;
+    },
+    [navigate, t, tool],
+  );
+  const deliverRef = useRef(deliver);
+  deliverRef.current = deliver;
 
   const pdfJobs = pdfQueue.jobs;
   const pdfSettled = pdfJobs.filter((j) => j.status !== 'running' && j.status !== 'queued').length;
@@ -102,14 +140,14 @@ export function App() {
       e.preventDefault();
       depth = 0;
       setDragging(false);
-      sinkRef.current?.([...(e.dataTransfer?.files ?? [])]);
+      deliverRef.current([...(e.dataTransfer?.files ?? [])]);
     };
     const onPaste = (e: ClipboardEvent): void => {
       if (isEditable(e.target)) return;
       const files = [...(e.clipboardData?.files ?? [])];
       const text = files.length === 0 ? e.clipboardData?.getData('text/plain') : undefined;
       if (files.length === 0 && (text === undefined || text === '')) return;
-      if (sinkRef.current?.(files, text) === true) e.preventDefault();
+      if (deliverRef.current(files, text)) e.preventDefault();
     };
     window.addEventListener('dragenter', onEnter);
     window.addEventListener('dragleave', onLeave);
@@ -132,16 +170,47 @@ export function App() {
     return () => clearTimeout(timer);
   }, [toast]);
 
+  // 用户切去别的标签页时转完的，标题挂上 ✅，回到本页（或又开始新任务）就摘掉
+  const wasBusy = useRef(false);
+  useEffect(() => {
+    if (busy) setAttention(false);
+    else if (wasBusy.current && document.visibilityState === 'hidden') setAttention(true);
+    wasBusy.current = busy;
+  }, [busy]);
+  useEffect(() => {
+    if (!attention) return;
+    const seen = (): void => {
+      if (document.visibilityState === 'visible') setAttention(false);
+    };
+    document.addEventListener('visibilitychange', seen);
+    window.addEventListener('focus', seen);
+    return () => {
+      document.removeEventListener('visibilitychange', seen);
+      window.removeEventListener('focus', seen);
+    };
+  }, [attention]);
+
   // 标签页标题跟着工具走；转换中带进度，关页面前拦一下
-  const toolTitle = t(`tool.${tool.id}.title` as MessageKey);
   useEffect(() => {
     const base =
       tool.id === 'pdf-to-word' ? t('app.docTitle') : t('tool.docTitle', { tool: toolTitle });
     const total = pdfJobs.length + docJobs.length;
     const settled = pdfSettled + docSettled;
-    document.title =
-      busy && total > 0 ? `⏳ ${settled}/${total} · ${base}` : busy ? `⏳ ${base}` : base;
-  }, [busy, docJobs.length, docSettled, pdfJobs.length, pdfSettled, t, tool.id, toolTitle]);
+    if (busy && total > 0) document.title = `⏳ ${settled}/${total} · ${base}`;
+    else if (busy) document.title = `⏳ ${base}`;
+    else if (attention) document.title = `${t('app.titleDone')} · ${base}`;
+    else document.title = base;
+  }, [
+    attention,
+    busy,
+    docJobs.length,
+    docSettled,
+    pdfJobs.length,
+    pdfSettled,
+    t,
+    tool.id,
+    toolTitle,
+  ]);
 
   useEffect(() => {
     if (!busy) return;
@@ -156,6 +225,9 @@ export function App() {
     <CompatGate caps={caps}>
       <ShellContext.Provider value={shell}>
         <div className="app" data-dragging={dragging || undefined}>
+          <a className="skip-link" href="#main">
+            {t('app.skip')}
+          </a>
           <header className="masthead reveal" style={reveal(0)}>
             <div className="masthead__brand">
               <Logo size={36} />
@@ -183,7 +255,7 @@ export function App() {
             <ToolNav active={tool} onSelect={navigate} />
           </div>
 
-          <main className="main">
+          <main className="main" id="main" tabIndex={-1}>
             {!ocrAvailable && tool.group === 'from-pdf' && (
               <p className="banner banner--warn">{t('ocr.unavailable')}</p>
             )}
@@ -233,7 +305,9 @@ export function App() {
           <footer className="footer">
             <div className="footer__links">
               <span>{t('footer.license')}</span>
-              <span>{t('footer.version', { version: SITE.version })}</span>
+              <a href={SITE.changelog} target="_blank" rel="noopener noreferrer">
+                {t('footer.version', { version: SITE.version })}
+              </a>
               <a href={SITE.repo} target="_blank" rel="noopener noreferrer">
                 {t('footer.source')}
               </a>

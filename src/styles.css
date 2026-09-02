@@ -2397,3 +2397,67 @@ h3 {
     padding-right: 14px;
   }
 }
+
+/* ---------- 跳到主内容：键盘用户按 Tab 才出现 ---------- */
+
+.skip-link {
+  position: absolute;
+  left: 16px;
+  top: -64px;
+  z-index: 70;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: var(--shadow);
+  transition: top 0.15s var(--ease);
+}
+
+.skip-link:focus-visible {
+  top: 16px;
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+.main:focus {
+  outline: none;
+}
+
+/* 页码范围这类文本框和下拉框一套样式；写错了框线变红 */
+.field__row input[type='text'] {
+  flex: 1 1 160px;
+  min-width: 0;
+  max-width: 260px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  font-size: 13.5px;
+}
+
+.field__row input[aria-invalid='true'] {
+  border-color: var(--bad);
+}
+
+.editor__sample {
+  margin-right: auto;
+  align-self: center;
+  font-size: 13.5px;
+}
+
+/* 触屏没有悬停，抬起、放大这类悬停效果只给真有鼠标的设备；否则点一下会"卡"在悬停态 */
+@media (hover: none) {
+  .btn:hover,
+  .ghlink:hover,
+  .features__item:hover,
+  .features__item:hover .features__icon,
+  .dropzone:hover .dropzone__orb,
+  .dropzone:hover .dropzone__icon {
+    transform: none;
+  }
+}

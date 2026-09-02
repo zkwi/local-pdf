@@ -47,7 +47,8 @@ export const zhTW: Messages = {
   'output.markdown.hint': '產生 .md；有圖片時會打包成 zip，附帶圖片檔。',
   'output.both.hint': '同一份辨識結果，分別產生 Word 和 Markdown。',
   'output.images': '圖片',
-  'output.images.hint': '每頁轉成一張圖片，多頁時打包成 zip；格式和清晰度在「更多選項」裡調整。',
+  'output.images.hint':
+    '每頁轉成一張圖片，多頁時打包成 zip；格式、清晰度和頁碼範圍在「更多選項」裡調整。',
 
   'images.label': '圖片輸出',
   'images.format.label': '格式',
@@ -231,7 +232,7 @@ export const zhTW: Messages = {
   'layout.keepHeaderFooter': '寫入 Word 的頁首頁尾',
 
   'queue.title': '轉換佇列（{count}）',
-  'queue.downloadAll': '全部下載（{count}）',
+  'queue.downloadAll': '打包下載（{count}）',
   'queue.clear': '清空清單',
 
   'job.cancel': '取消',
@@ -396,4 +397,22 @@ export const zhTW: Messages = {
   'warning.image-budget-exceeded': '圖片總量已達 {limit} 上限，第 {page} 頁起不再保留圖片',
   'summary.imageBudget': '圖片超出 {limit} 上限，第 {page} 頁起未保留',
   'warning.scan-text-layer': '{count} 頁是自帶文字層的掃描檔，已按文字層輸出，整頁掃描圖未保留',
+
+  'app.skip': '跳到主內容',
+  'app.titleDone': '✅ 轉換完成',
+  'drop.switched': '已切換到「{tool}」',
+  'drop.sample.markdown': '沒有檔案？填入一段範例 Markdown',
+  'queue.zipping': '正在打包…',
+  'queue.zipFailed': '打包失敗，請逐個下載',
+  'job.copy': '複製 Markdown',
+  'job.copied': '已複製到剪貼簿',
+  'job.copyFailed': '複製失敗，請下載檔案',
+  'topdf.editor.sample': '填入範例',
+  'topdf.editor.sampleText':
+    '# 範例文件\n\n這是一段 **Markdown**，轉成 PDF 後文字可以選取、可以搜尋。\n\n## 清單\n\n- 無序清單\n- 第二項\n  1. 巢狀的有序清單\n  2. 第二步\n\n## 任務\n\n- [x] 已完成\n- [ ] 待辦\n\n## 表格\n\n| 項目 | 數量 | 說明 |\n| --- | ---: | --- |\n| 蘋果 | 3 | 紅的 |\n| 柳橙 | 12 | 酸甜 |\n\n## 程式碼\n\n```js\nconsole.log("Hello, Local PDF");\n```\n\n> 引用：檔案全程留在本機，不上傳。\n\n[了解更多](https://localpdfconverter.com)\n',
+  'images.range.label': '頁碼範圍',
+  'images.range.placeholder': '全部頁',
+  'images.range.hint': '留空轉換全部頁。例如 1-3, 5, 8- 表示第 1 到 3 頁、第 5 頁和第 8 頁到末頁。',
+  'images.range.invalid': '頁碼範圍看不懂，將轉換全部頁。請寫成 1-3, 5, 8- 這樣。',
+  'summary.pageRange': '第 {range} 頁',
 };

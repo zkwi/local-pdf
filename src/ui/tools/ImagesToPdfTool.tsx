@@ -10,6 +10,7 @@ import type { MessageKey } from '../../i18n/index.tsx';
 import { DropZone } from '../DropZone.tsx';
 import { formatSize } from '../format.ts';
 import { Segmented } from '../OptionsPanel.tsx';
+import { useStored } from '../persist.ts';
 import { useFileSink, useShell } from '../shell.tsx';
 import { isImageFile } from '../tools.ts';
 import type { Tool } from '../tools.ts';
@@ -38,6 +39,19 @@ const ORIENTATIONS: readonly PageOrientation[] = ['auto', 'portrait', 'landscape
 const MARGINS: readonly PageMargin[] = ['none', 'small', 'normal'];
 const QUALITIES: readonly ImageQuality[] = ['auto', 'lossless', 'compact'];
 
+const oneOf = <T extends string>(list: readonly T[], value: T, fallback: T): T =>
+  list.includes(value) ? value : fallback;
+
+/** 记住的设置里有过期的枚举值就退回默认 */
+function fixOptions(o: Options): Options {
+  return {
+    pageSize: oneOf(PAGE_SIZES, o.pageSize, DEFAULT.pageSize),
+    orientation: oneOf(ORIENTATIONS, o.orientation, DEFAULT.orientation),
+    margin: oneOf(MARGINS, o.margin, DEFAULT.margin),
+    quality: oneOf(QUALITIES, o.quality, DEFAULT.quality),
+  };
+}
+
 let seq = 0;
 
 interface ImagesToPdfToolProps {
@@ -48,13 +62,15 @@ interface ImagesToPdfToolProps {
 
 /**
  * 图片转 PDF 的合成器：缩略图按添加顺序排开，拖动调顺序、单张旋转，
- * 纸张和质量设置常驻在下面，点一下生成。
+ * 纸张和质量设置常驻在下面（改过的会记住），点一下生成。
  */
 export function ImagesToPdfTool({ tool, active, onBusy }: ImagesToPdfToolProps) {
   const { t, tn } = useI18n();
   const { toast } = useShell();
   const [items, setItems] = useState<Item[]>([]);
-  const [options, setOptions] = useState<Options>(DEFAULT);
+  const [options, setOptions] = useStored<Options>('local-pdf.images', DEFAULT, {
+    fix: fixOptions,
+  });
   const [fileName, setFileName] = useState('');
   const [nameTouched, setNameTouched] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);

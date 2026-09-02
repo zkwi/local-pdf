@@ -36,7 +36,7 @@ export function pageImageName(
 }
 
 /**
- * 只有一页就直接给图片文件，多页打成 zip。
+ * 只有一张图就直接给图片文件（从多页文档里只挑了一页时文件名带页码），多张打成 zip。
  * PNG / JPEG 本身已经压过，zip 里只存储不压缩。
  */
 export function packPageImages(
@@ -45,11 +45,15 @@ export function packPageImages(
   baseName: string,
   format: PageImageFormat,
 ): ConversionOutput {
-  if (totalPages === 1 && images.length === 1) {
+  if (images.length === 1) {
+    const only = images[0];
     return {
       kind: 'image',
-      blob: new Blob([images[0].data as BlobPart], { type: MIME[format] }),
-      fileName: `${baseName}.${EXTENSION[format]}`,
+      blob: new Blob([only.data as BlobPart], { type: MIME[format] }),
+      fileName:
+        totalPages === 1
+          ? `${baseName}.${EXTENSION[format]}`
+          : pageImageName(baseName, only.index, totalPages, format),
     };
   }
   const files: Zippable = {};
@@ -70,12 +74,13 @@ export interface RenderCallbacks {
 }
 
 /**
- * PDF 转图片：逐页渲染、编码，不经过文字抽取和版面分析。
+ * PDF 转图片：把 pageIndices 里的页逐页渲染、编码，不经过文字抽取和版面分析。
  * 渲染失败的页跳过（PdfSession 已记了 page-render-failed），一页都没成功才算失败。
+ * 进度里的 pageIndex / totalPages 是"第几张 / 共几张"，剩余时间估算按张数走。
  */
 export async function renderPageImages(
   session: PdfSession,
-  totalPages: number,
+  pageIndices: readonly number[],
   options: ConvertOptions,
   callbacks: RenderCallbacks,
 ): Promise<PageImage[]> {
@@ -84,17 +89,18 @@ export async function renderPageImages(
   const encode: ImageEncodeOptions =
     format === 'jpeg' ? { type: MIME.jpeg, quality: JPEG_QUALITY } : { type: MIME.png };
   const images: PageImage[] = [];
+  const total = pageIndices.length;
 
-  for (let i = 0; i < totalPages; i++) {
+  for (const [k, i] of pageIndices.entries()) {
     callbacks.check();
     callbacks.report({
       stage: 'rendering',
-      pageIndex: i,
-      totalPages,
+      pageIndex: k,
+      totalPages: total,
       documentPages: session.pageCount,
-      fraction: 0.05 + (0.85 * i) / totalPages,
+      fraction: 0.05 + (0.85 * k) / total,
       key: 'rendering',
-      params: { page: i + 1, total: totalPages },
+      params: { page: i + 1, total: session.pageCount },
     });
     const rendered = await session.renderPage(i, scale);
     session.releasePage(i);

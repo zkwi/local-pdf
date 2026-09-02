@@ -49,7 +49,8 @@ export const zhCN = {
   'output.markdown.hint': '生成 .md；有图片时会打成 zip，附带图片文件。',
   'output.both.hint': '同一份识别结果，分别生成 Word 和 Markdown。',
   'output.images': '图片',
-  'output.images.hint': '每页渲染成一张图片，多页时打成 zip；格式和清晰度在「更多选项」里调。',
+  'output.images.hint':
+    '每页渲染成一张图片，多页时打成 zip；格式、清晰度和页码范围在「更多选项」里调。',
 
   'images.label': '图片输出',
   'images.format.label': '格式',
@@ -233,7 +234,7 @@ export const zhCN = {
   'layout.keepHeaderFooter': '写入 Word 的页眉页脚',
 
   'queue.title': '转换队列（{count}）',
-  'queue.downloadAll': '全部下载（{count}）',
+  'queue.downloadAll': '打包下载（{count}）',
   'queue.clear': '清空列表',
 
   'job.cancel': '取消',
@@ -398,6 +399,24 @@ export const zhCN = {
   'warning.image-budget-exceeded': '图片总量已达 {limit} 上限，第 {page} 页起不再保留图片',
   'summary.imageBudget': '图片超出 {limit} 上限，第 {page} 页起未保留',
   'warning.scan-text-layer': '{count} 页是自带文字层的扫描件，已按文字层输出，整页扫描图未保留',
+
+  'app.skip': '跳到主内容',
+  'app.titleDone': '✅ 转换完成',
+  'drop.switched': '已切换到「{tool}」',
+  'drop.sample.markdown': '没有文件？填入一段示例 Markdown',
+  'queue.zipping': '正在打包…',
+  'queue.zipFailed': '打包失败，请逐个下载',
+  'job.copy': '复制 Markdown',
+  'job.copied': '已复制到剪贴板',
+  'job.copyFailed': '复制失败，请下载文件',
+  'topdf.editor.sample': '填入示例',
+  'topdf.editor.sampleText':
+    '# 示例文档\n\n这是一段 **Markdown**，转成 PDF 后文字可以选中、可以搜索。\n\n## 列表\n\n- 无序列表\n- 第二项\n  1. 嵌套的有序列表\n  2. 第二步\n\n## 任务\n\n- [x] 已完成\n- [ ] 待办\n\n## 表格\n\n| 项目 | 数量 | 说明 |\n| --- | ---: | --- |\n| 苹果 | 3 | 红的 |\n| 橙子 | 12 | 酸甜 |\n\n## 代码\n\n```js\nconsole.log("Hello, Local PDF");\n```\n\n> 引用：文件全程留在本机，不上传。\n\n[了解更多](https://localpdfconverter.com)\n',
+  'images.range.label': '页码范围',
+  'images.range.placeholder': '全部页',
+  'images.range.hint': '留空转换全部页。例如 1-3, 5, 8- 表示第 1 到 3 页、第 5 页和第 8 页到末页。',
+  'images.range.invalid': '页码范围看不懂，将转换全部页。请写成 1-3, 5, 8- 这样。',
+  'summary.pageRange': '第 {range} 页',
 } as const;
 
 export type MessageKey = keyof typeof zhCN;

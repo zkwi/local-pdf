@@ -29,6 +29,8 @@ export interface DocJobResult {
   readonly size: number;
   readonly pages: number;
   readonly imagesSkipped: number;
+  /** 打包下载要读内容 */
+  readonly blob: Blob;
 }
 
 export interface DocJob {
@@ -129,6 +131,7 @@ export function useToPdfQueue() {
               size: blob.size,
               pages: result.pages,
               imagesSkipped: result.imagesSkipped,
+              blob,
             },
           }));
         } catch (error) {

@@ -1,12 +1,15 @@
+import { unzipSync } from 'fflate';
 import { useEffect, useState } from 'react';
 import type { ConvertOptions } from '../core/contracts/options.ts';
 import type { ConversionReport, MessageParams } from '../core/contracts/report.ts';
-import type { Job } from '../hooks/useConversionQueue.ts';
+import type { Job, JobOutput } from '../hooks/useConversionQueue.ts';
+import { formatPageRange } from '../core/util/page-range.ts';
 import { useI18n } from '../i18n/index.tsx';
 import type { I18n, MessageKey } from '../i18n/index.tsx';
 import { estimateRemainingMs, formatClock } from './eta.ts';
 import { formatSize } from './format.ts';
 import { ReportView } from './ReportView.tsx';
+import { useShell } from './shell.tsx';
 
 interface JobCardProps {
   readonly job: Job;
@@ -23,8 +26,10 @@ const SLOW_ETA_MS = 90_000;
 
 export function JobCard({ job, onCancel, onRetry, onRemove }: JobCardProps) {
   const { t, tn, stageLabel, progressText, errorText } = useI18n();
+  const { toast } = useShell();
   const [password, setPassword] = useState('');
   const [showReport, setShowReport] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const [slowNoticed, setSlowNoticed] = useState(false);
   const running = job.status === 'running' || job.status === 'queued';
@@ -34,7 +39,31 @@ export function JobCard({ job, onCancel, onRetry, onRemove }: JobCardProps) {
   const outputSize = job.result?.outputs.reduce((s, o) => s + o.size, 0) ?? 0;
   const statusText = job.error !== undefined ? errorText(job.error) : progressText(job.progress);
   const imagesOnly = job.options.output === 'images';
-  const summary = job.result === undefined ? null : summarize(job.result.report, job.options, tn);
+  const summary =
+    job.result === undefined ? null : summarize(job.result.report, job.options, t, tn);
+  /** Markdown 结果可以直接复制进编辑器，不必下载再打开；带图片的 zip 包就取里面的 .md */
+  const markdownOutput = job.result?.outputs.find(
+    (o) => o.kind === 'markdown' || o.kind === 'markdown-bundle',
+  );
+
+  const copyMarkdown = async (output: JobOutput): Promise<void> => {
+    try {
+      let text: string;
+      if (output.kind === 'markdown-bundle') {
+        const files = unzipSync(new Uint8Array(await output.blob.arrayBuffer()));
+        const name = Object.keys(files).find((f) => f.toLowerCase().endsWith('.md'));
+        if (name === undefined) throw new Error('no markdown in bundle');
+        text = new TextDecoder().decode(files[name]);
+      } else {
+        text = await output.blob.text();
+      }
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      toast(t('job.copyFailed'));
+    }
+  };
 
   // 运行中每秒刷新一次已用时间和剩余估计
   useEffect(() => {
@@ -71,7 +100,15 @@ export function JobCard({ job, onCancel, onRetry, onRemove }: JobCardProps) {
     const pagesDone = (job.progress.pageIndex ?? 0) + 1;
     if (job.ocrPages >= 3 && job.ocrPages >= pagesDone * 0.3) notices.push(t('job.large.ocr'));
   }
-  if (running && pages !== undefined && documentPages !== undefined && documentPages > pages) {
+  // 图片模式下 totalPages 是选中的张数；用户自己挑了页码范围就不必再说"只转前几页"
+  const ranged = imagesOnly && job.options.pageRange.trim() !== '';
+  if (
+    running &&
+    !ranged &&
+    pages !== undefined &&
+    documentPages !== undefined &&
+    documentPages > pages
+  ) {
     notices.push(t('job.pageLimit', { total: documentPages, limit: pages }));
   }
   // 图片模式没有"只要文字"可退：内存不够只能降清晰度或拆文件
@@ -94,6 +131,15 @@ export function JobCard({ job, onCancel, onRetry, onRemove }: JobCardProps) {
           {running && (
             <button className="btn btn--ghost" type="button" onClick={() => onCancel(job.id)}>
               {t('job.cancel')}
+            </button>
+          )}
+          {job.status === 'done' && markdownOutput !== undefined && (
+            <button
+              className="btn btn--ghost"
+              type="button"
+              onClick={() => void copyMarkdown(markdownOutput)}
+            >
+              {copied ? t('job.copied') : t('job.copy')}
             </button>
           )}
           {job.status === 'done' &&
@@ -238,17 +284,19 @@ function etaText(ms: number, t: I18n['t']): string {
 function summarize(
   report: ConversionReport,
   options: ConvertOptions,
+  t: I18n['t'],
   tn: I18n['tn'],
 ): { parts: string[]; lowConfidence: number; imageBudget: MessageParams | null } {
   if (options.output === 'images') {
-    return {
-      parts: [
-        tn('summary.pages', report.pageCount),
-        `${options.pageImageFormat.toUpperCase()} · ${options.pageImageDpi} DPI`,
-      ],
-      lowConfidence: 0,
-      imageBudget: null,
-    };
+    const parts = [tn('summary.pages', report.pageCount)];
+    // 挑了页码范围就把实际渲染出来的页号列出来，和文件名里的页码对得上
+    if (options.pageRange.trim() !== '') {
+      parts.push(
+        t('summary.pageRange', { range: formatPageRange(report.pages.map((p) => p.index)) }),
+      );
+    }
+    parts.push(`${options.pageImageFormat.toUpperCase()} · ${options.pageImageDpi} DPI`);
+    return { parts, lowConfidence: 0, imageBudget: null };
   }
   const chars = report.pages.reduce((s, p) => s + p.characters, 0);
   const tables = report.pages.reduce((s, p) => s + p.tables, 0);

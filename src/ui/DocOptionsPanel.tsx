@@ -11,7 +11,7 @@ const PAGES: readonly ('a4' | 'letter')[] = ['a4', 'letter'];
 const MARGINS: readonly DocMargin[] = ['narrow', 'normal', 'wide'];
 const FONT_SIZES = ['10', '11', '12'] as const;
 type FontSize = (typeof FONT_SIZES)[number];
-const CJK: readonly CjkChoice[] = ['auto', 'zh-CN', 'zh-TW', 'ja', 'ko'];
+export const CJK_CHOICES: readonly CjkChoice[] = ['auto', 'zh-CN', 'zh-TW', 'ja', 'ko'];
 
 interface DocOptionsPanelProps {
   readonly source: DocSource;
@@ -89,7 +89,7 @@ export function DocOptionsPanel({
           <label className="field__row">
             <span>{t('docpdf.cjk.label')}</span>
             <select value={cjk} onChange={(e) => onCjkChange(e.target.value as CjkChoice)}>
-              {CJK.map((value) => (
+              {CJK_CHOICES.map((value) => (
                 <option key={value} value={value}>
                   {t(`docpdf.cjk.${value}` as MessageKey)}
                 </option>

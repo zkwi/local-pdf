@@ -12,6 +12,8 @@ export interface JobOutput {
   readonly url: string;
   readonly fileName: string;
   readonly size: number;
+  /** 打包下载和复制 Markdown 要读内容，留着 Blob 本身；对象 URL 本来就引用着它，不多占内存 */
+  readonly blob: Blob;
 }
 
 export interface JobResult {
@@ -127,6 +129,7 @@ export function useConversionQueue() {
           url: URL.createObjectURL(o.blob),
           fileName: o.fileName,
           size: o.blob.size,
+          blob: o.blob,
         }));
         patch(message.jobId, (job) => ({
           ...job,

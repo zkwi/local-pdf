@@ -35,6 +35,8 @@ interface Labels {
   readonly hint: MessageKey;
   readonly choose: MessageKey;
   readonly more: MessageKey;
+  /** "手边没有文件？试试示例"那一行的文案 */
+  readonly sample: MessageKey;
   /** 提示里要不要加"也可以 Ctrl+V 粘贴"那一行 */
   readonly paste: boolean;
 }
@@ -45,6 +47,7 @@ const LABELS: Record<DropKind, Labels> = {
     hint: 'drop.hint',
     choose: 'drop.choose',
     more: 'drop.more',
+    sample: 'drop.sample',
     paste: true,
   },
   word: {
@@ -52,6 +55,7 @@ const LABELS: Record<DropKind, Labels> = {
     hint: 'drop.hint',
     choose: 'drop.choose.word',
     more: 'drop.more.word',
+    sample: 'drop.sample',
     paste: true,
   },
   markdown: {
@@ -59,6 +63,7 @@ const LABELS: Record<DropKind, Labels> = {
     hint: 'drop.hint.markdown',
     choose: 'drop.choose.markdown',
     more: 'drop.more.markdown',
+    sample: 'drop.sample.markdown',
     paste: false,
   },
   images: {
@@ -66,6 +71,7 @@ const LABELS: Record<DropKind, Labels> = {
     hint: 'drop.hint.images',
     choose: 'drop.choose.images',
     more: 'drop.more.images',
+    sample: 'drop.sample',
     paste: false,
   },
 };
@@ -158,7 +164,7 @@ export function DropZone({
             onSample();
           }}
         >
-          {t('drop.sample')}
+          {t(labels.sample)}
         </button>
       )}
       <input

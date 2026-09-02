@@ -11,6 +11,7 @@ import type {
 import { OCR_LANGUAGES, resolveOcrLanguage } from '../core/ocr/languages.ts';
 import { cachedModelBytes, clearModelCache } from '../core/ocr/model-cache.ts';
 import { formatMegabytes, selectPaddleModels } from '../core/ocr/paddle-models.ts';
+import { parsePageRange } from '../core/util/page-range.ts';
 import { useI18n } from '../i18n/index.tsx';
 import type { MessageKey } from '../i18n/index.tsx';
 
@@ -208,10 +209,12 @@ interface ImageOptionsProps {
   readonly set: <K extends keyof ConvertOptions>(key: K, value: ConvertOptions[K]) => void;
 }
 
-/** 图片模式只有格式和清晰度两个选项；OCR、版面那些开关对它没意义，不显示 */
+/** 图片模式只有格式、清晰度和页码范围三个选项；OCR、版面那些开关对它没意义，不显示 */
 function ImageOptions({ options, set }: ImageOptionsProps) {
   const { t } = useI18n();
   const scale = options.pageImageDpi / 72;
+  // 这里还不知道文档有几页，只查写法；超出页数的部分转换时会自动忽略
+  const rangeInvalid = parsePageRange(options.pageRange, Number.MAX_SAFE_INTEGER) === null;
   return (
     <fieldset className="field">
       <legend className="field__label">{t('images.label')}</legend>
@@ -245,6 +248,21 @@ function ImageOptions({ options, set }: ImageOptionsProps) {
             width: Math.round(A4_PT.width * scale),
             height: Math.round(A4_PT.height * scale),
           })}
+        </p>
+        <label className="field__row">
+          <span>{t('images.range.label')}</span>
+          <input
+            type="text"
+            value={options.pageRange}
+            placeholder={t('images.range.placeholder')}
+            spellCheck={false}
+            autoComplete="off"
+            aria-invalid={rangeInvalid || undefined}
+            onChange={(e) => set('pageRange', e.target.value)}
+          />
+        </label>
+        <p className={`field__hint${rangeInvalid ? ' field__hint--warn' : ''}`}>
+          {rangeInvalid ? t('images.range.invalid') : t('images.range.hint')}
         </p>
       </div>
     </fieldset>

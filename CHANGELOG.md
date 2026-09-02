@@ -5,6 +5,33 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-09-02
+
+### Added
+
+- Files dropped or pasted onto the "wrong" tool page are routed to the right one: a `.docx` dropped on
+  PDF → Word switches to Word → PDF and starts converting, images go to Images → PDF, a `.md` together
+  with the images it references goes to Markdown → PDF. A toast says which tool was opened.
+- "Download all" packs every finished result into one zip (stored, not recompressed) instead of firing
+  one download per file, which browsers block after the first few. Duplicate names get " (2)" suffixes.
+- PDF → Images takes a page range ("1-3, 5, 8-") under More options; the file names keep the original
+  page numbers and the summary lists which pages were rendered.
+- Settings under More options (OCR, content, layout details, image format and resolution), the paper /
+  font choices for Word / Markdown → PDF and the Images → PDF composer settings are remembered in the
+  browser. Stale values from older versions fall back to the defaults.
+- PDF → Markdown results have a "Copy Markdown" button next to the download.
+- The Markdown editor converts on Ctrl+Enter / ⌘+Enter, and "Insert sample" (also reachable from the drop
+  zone) fills it with a document that exercises headings, lists, tasks, a table, code and a quote.
+- When a conversion finishes while the tab is in the background, the tab title shows "✅ Done" until you
+  come back.
+- A "Skip to content" link for keyboard users, an error screen with a reload button instead of a blank
+  page if the interface crashes, and the version number in the footer links to this changelog.
+
+### Changed
+
+- Hover lifts and icon tilts are only applied on devices that actually have a pointer that hovers, so
+  buttons no longer stick in their hover state after a tap on touch screens.
+
 ## [0.3.0] — 2026-09-02
 
 ### Added

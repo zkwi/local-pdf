@@ -49,7 +49,7 @@ export const en: Messages = {
   'output.both.hint': 'Word and Markdown from the same recognition result.',
   'output.images': 'Images',
   'output.images.hint':
-    'Renders every page as an image, zipped when there is more than one; format and resolution are under "More options".',
+    'Renders every page as an image, zipped when there is more than one; format, resolution and page range are under "More options".',
 
   'images.label': 'Image output',
   'images.format.label': 'Format',
@@ -249,7 +249,7 @@ export const en: Messages = {
   'layout.keepHeaderFooter': 'Write them as Word headers/footers',
 
   'queue.title': 'Queue ({count})',
-  'queue.downloadAll': 'Download all ({count})',
+  'queue.downloadAll': 'Download all as zip ({count})',
   'queue.clear': 'Clear list',
 
   'job.cancel': 'Cancel',
@@ -430,4 +430,24 @@ export const en: Messages = {
   'summary.imageBudget': 'Images over the {limit} limit; none kept from page {page}',
   'warning.scan-text-layer':
     '{count} pages are scans with their own text layer; the text was used and the full-page scan images were not kept',
+
+  'app.skip': 'Skip to content',
+  'app.titleDone': '✅ Done',
+  'drop.switched': 'Switched to {tool}',
+  'drop.sample.markdown': 'No file at hand? Fill in a Markdown sample',
+  'queue.zipping': 'Packing…',
+  'queue.zipFailed': 'Could not pack the files; please download them one by one',
+  'job.copy': 'Copy Markdown',
+  'job.copied': 'Copied to the clipboard',
+  'job.copyFailed': 'Could not copy; please download the file instead',
+  'topdf.editor.sample': 'Insert sample',
+  'topdf.editor.sampleText':
+    '# Sample document\n\nThis is a bit of **Markdown**; in the PDF the text stays selectable and searchable.\n\n## Lists\n\n- A bullet\n- Another one\n  1. A nested numbered step\n  2. The second step\n\n## Tasks\n\n- [x] Done\n- [ ] To do\n\n## Table\n\n| Item | Qty | Note |\n| --- | ---: | --- |\n| Apples | 3 | red |\n| Oranges | 12 | sweet |\n\n## Code\n\n```js\nconsole.log("Hello, Local PDF");\n```\n\n> Quote: the file never leaves your computer.\n\n[Learn more](https://localpdfconverter.com)\n',
+  'images.range.label': 'Page range',
+  'images.range.placeholder': 'All pages',
+  'images.range.hint':
+    'Leave empty for every page. For example 1-3, 5, 8- means pages 1 to 3, page 5, and page 8 to the end.',
+  'images.range.invalid':
+    'The page range could not be read, so every page will be converted. Write it like 1-3, 5, 8-.',
+  'summary.pageRange': 'Pages {range}',
 };

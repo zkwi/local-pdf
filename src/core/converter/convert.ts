@@ -34,6 +34,7 @@ import { cropToPng } from '../pdf/images.ts';
 import { buildSemanticDocument } from '../semantic/build.ts';
 // 主线程的转 PDF 代码也要用它；放在独立小模块里，免得把整条流水线拖进主包
 import { safeBaseName } from '../util/filename.ts';
+import { parsePageRange } from '../util/page-range.ts';
 import { buildImageReport, packPageImages, renderPageImages } from './images.ts';
 
 /** 单份文档累计的图片字节上限，超过就停止抽图 */
@@ -108,7 +109,13 @@ export async function convert(
     // 图片模式只渲染页面，后面的文字抽取、OCR 和版面分析都不需要
     if (options.output === 'images') {
       stageStart = now();
-      const images = await renderPageImages(session, totalPages, options, { check, report });
+      // 页码范围写错或一页都没落在文档里时按全部页转，界面那边已经提示过了
+      const selected = parsePageRange(options.pageRange, totalPages);
+      const pageIndices =
+        selected === null || selected.length === 0
+          ? Array.from({ length: totalPages }, (_, i) => i)
+          : selected;
+      const images = await renderPageImages(session, pageIndices, options, { check, report });
       durations.rendering = now() - stageStart;
 
       check();
@@ -116,7 +123,7 @@ export async function convert(
       stageStart = now();
       const output = packPageImages(
         images,
-        totalPages,
+        session.pageCount,
         safeBaseName(input.fileName),
         options.pageImageFormat,
       );
