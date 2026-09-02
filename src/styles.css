@@ -418,17 +418,15 @@ h3 {
   border: 1.5px dashed var(--border-strong);
   border-radius: 16px;
   background: var(--surface-2);
-  padding: 40px var(--s-5) 34px;
   text-align: center;
-  cursor: pointer;
   transition:
     border-color 0.2s,
     background 0.2s,
     box-shadow 0.3s var(--ease);
 }
 
-.dropzone:hover,
-.dropzone:focus-visible,
+.dropzone:not(.dropzone--disabled):hover,
+.dropzone:focus-within,
 .app[data-dragging] .dropzone {
   border-color: var(--accent);
   background: color-mix(in srgb, var(--accent-soft) 55%, var(--surface));
@@ -436,8 +434,35 @@ h3 {
   outline: none;
 }
 
+.dropzone__picker {
+  display: block;
+  width: 100%;
+  padding: 40px var(--s-5) 34px;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+
+.dropzone__picker:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -5px;
+}
+
+.dropzone--with-sample .dropzone__picker {
+  padding-bottom: 0;
+}
+
 /* 队列下面的"继续添加"：一行横排，图标小一号 */
 .dropzone--compact {
+  padding: 0;
+}
+
+.dropzone--compact .dropzone__picker {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -474,6 +499,9 @@ h3 {
 
 .dropzone--disabled {
   opacity: 0.5;
+}
+
+.dropzone--disabled .dropzone__picker {
   cursor: not-allowed;
 }
 
@@ -514,6 +542,7 @@ h3 {
 }
 
 .dropzone__title {
+  display: block;
   margin: 18px 0 6px;
   font-weight: 700;
   font-size: 19px;
@@ -521,6 +550,7 @@ h3 {
 }
 
 .dropzone__hint {
+  display: block;
   margin: 0;
   color: var(--text-dim);
   font-size: 14px;
@@ -541,7 +571,7 @@ h3 {
 
 .dropzone__sample {
   display: block;
-  margin: 12px auto 0;
+  margin: 12px auto 28px;
   font-size: 13.5px;
 }
 
@@ -1867,8 +1897,16 @@ h3 {
     font-size: 15px;
   }
 
-  .dropzone {
+  .dropzone__picker {
     padding: var(--s-6) var(--s-4) var(--s-5);
+  }
+
+  .dropzone--with-sample .dropzone__picker {
+    padding-bottom: 0;
+  }
+
+  .dropzone__sample {
+    margin-bottom: var(--s-5);
   }
 
   .dropzone__title {
@@ -2011,6 +2049,28 @@ h3 {
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.toolnav__activity {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-dim);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.toolnav__activity[data-busy] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
 .toolnav__item:focus-visible {
@@ -2305,10 +2365,32 @@ h3 {
   .toolnav__item {
     justify-content: center;
     padding: 7px 8px;
+    min-height: 38px;
   }
 
   .thumbs {
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+
+  .thumb__tools {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .thumb__tools button {
+    min-height: 38px;
+    font-size: 15px;
+  }
+
+  .composer__head .queue__actions {
+    width: 100%;
+  }
+
+  .composer__head .queue__actions .btn {
+    flex: 1;
+    min-height: 40px;
+    padding-left: 8px;
+    padding-right: 8px;
   }
 
   .composer__settings {
@@ -2366,6 +2448,19 @@ h3 {
 .editor__toggle {
   justify-self: start;
   font-size: 13.5px;
+}
+
+.editor__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  color: var(--text);
+  font-size: 13.5px;
+}
+
+.editor__head .link {
+  flex: none;
 }
 
 .editor textarea {

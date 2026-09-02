@@ -14,6 +14,7 @@ type FontSize = (typeof FONT_SIZES)[number];
 export const CJK_CHOICES: readonly CjkChoice[] = ['auto', 'zh-CN', 'zh-TW', 'ja', 'ko'];
 
 interface DocOptionsPanelProps {
+  readonly id: string;
   readonly source: DocSource;
   readonly options: DocPdfOptions;
   readonly onChange: (options: DocPdfOptions) => void;
@@ -23,6 +24,7 @@ interface DocOptionsPanelProps {
 
 /** Word / Markdown 转 PDF 的"更多选项"：Markdown 多一组纸张设置，Word 沿用文档自己的 */
 export function DocOptionsPanel({
+  id,
   source,
   options,
   onChange,
@@ -39,7 +41,7 @@ export function DocOptionsPanel({
       JSON.stringify(DEFAULT_DOC_OPTIONS);
 
   return (
-    <div className="advanced" id="advanced-panel">
+    <div className="advanced" id={id}>
       <div className="advanced__body">
         {source === 'markdown' ? (
           <fieldset className="field">

@@ -4,10 +4,12 @@ import { useI18n } from '../i18n/index.tsx';
 export function PanelMore({
   open,
   changed,
+  controls,
   onToggle,
 }: {
   readonly open: boolean;
   readonly changed: boolean;
+  readonly controls: string;
   readonly onToggle: () => void;
 }) {
   const { t } = useI18n();
@@ -16,7 +18,7 @@ export function PanelMore({
       type="button"
       className={`panel__more${open ? ' panel__more--open' : ''}`}
       aria-expanded={open}
-      aria-controls="advanced-panel"
+      aria-controls={controls}
       onClick={onToggle}
     >
       <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">

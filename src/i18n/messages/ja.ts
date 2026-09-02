@@ -71,6 +71,8 @@ export const ja: Messages = {
   'nav.word': 'Word',
   'nav.markdown': 'Markdown',
   'nav.images': '画像',
+  'nav.activity.saved': '{tool}、{count} 件を保持',
+  'nav.activity.busy': '{tool}、{count} 件を処理中',
   'tool.docTitle': 'Local PDF · ブラウザで {tool}',
   'tool.pdf-to-word.title': 'PDF → Word',
   'tool.pdf-to-word.lede':
@@ -191,6 +193,9 @@ export const ja: Messages = {
     'PDF をダウンロードします。文字は選択・検索でき、フォントを埋め込まないのでファイルは小さくなります。',
   'topdf.error.invalid': '有効な Word 文書（.docx）ではないか、ファイルが壊れています',
   'topdf.editor.toggle': 'Markdown を直接貼り付け・入力',
+  'topdf.editor.resume': 'Markdown の編集を続ける',
+  'topdf.editor.title': 'Markdown の内容',
+  'topdf.editor.collapse': 'エディターを閉じる',
   'topdf.editor.placeholder': '# 見出し\n\nここに Markdown を貼り付けるか入力してください…',
   'topdf.editor.convert': 'PDF に変換',
   'topdf.editor.clear': 'クリア',

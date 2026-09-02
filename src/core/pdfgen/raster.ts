@@ -73,7 +73,7 @@ export async function encodeDrawable(
   const height = Math.max(1, Math.round(sourceHeight * shrink));
 
   const canvas = makeCanvas(width, height);
-  const ctx = canvas.getContext('2d') as
+  const ctx = canvas.getContext('2d', { willReadFrequently: quality === 'auto' }) as
     OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D | null;
   if (ctx === null) throw new Error('canvas 2d context unavailable');
   ctx.fillStyle = '#ffffff';

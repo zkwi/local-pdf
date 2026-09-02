@@ -99,71 +99,60 @@ export function DropZone({
   const className = [
     'dropzone',
     compact ? 'dropzone--compact' : '',
+    !compact && onSample !== undefined ? 'dropzone--with-sample' : '',
     disabled ? 'dropzone--disabled' : '',
   ]
     .filter(Boolean)
     .join(' ');
 
   return (
-    <div
-      className={className}
-      onClick={open}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          open();
-        }
-      }}
-      role="button"
-      tabIndex={0}
-      aria-label={t(labels.choose)}
-    >
-      <span className="dropzone__orb" aria-hidden="true">
-        <svg className="dropzone__icon" viewBox="0 0 48 48">
-          <path
-            d="M24 32V12m0 0-7 7m7-7 7 7"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M8 30v4a6 6 0 0 0 6 6h20a6 6 0 0 0 6-6v-4"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-          />
-        </svg>
-      </span>
-      {compact ? (
-        <p className="dropzone__title">{t(labels.more)}</p>
-      ) : (
-        <>
-          <p className="dropzone__title">{t(labels.title)}</p>
-          <p className="dropzone__hint">
-            {t(labels.hint)}
-            {labels.paste && <span className="dropzone__hint-line">{t('drop.paste')}</span>}
-          </p>
-        </>
-      )}
-      <span
-        className={`btn ${compact ? 'btn--ghost' : 'btn--primary'} dropzone__button`}
-        aria-hidden="true"
+    <div className={className}>
+      <button
+        className="dropzone__picker"
+        type="button"
+        disabled={disabled}
+        aria-label={t(labels.choose)}
+        onClick={open}
       >
-        {t(labels.choose)}
-      </span>
-      {!compact && onSample !== undefined && (
-        <button
-          type="button"
-          className="link dropzone__sample"
-          onClick={(e) => {
-            // 不让点击冒泡到外层，否则会同时打开文件选择框
-            e.stopPropagation();
-            onSample();
-          }}
+        <span className="dropzone__orb" aria-hidden="true">
+          <svg className="dropzone__icon" viewBox="0 0 48 48">
+            <path
+              d="M24 32V12m0 0-7 7m7-7 7 7"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M8 30v4a6 6 0 0 0 6 6h20a6 6 0 0 0 6-6v-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+            />
+          </svg>
+        </span>
+        {compact ? (
+          <span className="dropzone__title">{t(labels.more)}</span>
+        ) : (
+          <>
+            <span className="dropzone__title">{t(labels.title)}</span>
+            <span className="dropzone__hint">
+              {t(labels.hint)}
+              {labels.paste && <span className="dropzone__hint-line">{t('drop.paste')}</span>}
+            </span>
+          </>
+        )}
+        <span
+          className={`btn ${compact ? 'btn--ghost' : 'btn--primary'} dropzone__button`}
+          aria-hidden="true"
         >
+          {t(labels.choose)}
+        </span>
+      </button>
+      {!compact && onSample !== undefined && (
+        <button type="button" className="link dropzone__sample" onClick={onSample}>
           {t(labels.sample)}
         </button>
       )}
@@ -174,9 +163,7 @@ export function DropZone({
         accept={accept}
         multiple
         tabIndex={-1}
-        // 不阻止冒泡的话，input.click() 会再次触发外层 div 的 onClick，
-        // 文件选择器被打开两次，第一个会被第二个顶掉
-        onClick={(e) => e.stopPropagation()}
+        aria-hidden="true"
         onChange={(e) => {
           onFiles([...(e.target.files ?? [])]);
           e.target.value = '';

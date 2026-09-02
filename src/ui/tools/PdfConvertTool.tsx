@@ -83,6 +83,7 @@ export function PdfConvertTool({ tool, active, queue, ocrAvailable }: PdfConvert
   const [sampleLoading, setSampleLoading] = useState(false);
   const [zipping, setZipping] = useState(false);
   const queueRef = useRef<HTMLDivElement>(null);
+  const advancedId = `${tool.id}-advanced-panel`;
 
   const jobs = useMemo(
     () =>
@@ -228,12 +229,14 @@ export function PdfConvertTool({ tool, active, queue, ocrAvailable }: PdfConvert
         <PanelMore
           open={advancedOpen}
           changed={settingsChanged}
+          controls={advancedId}
           onToggle={() => setAdvancedOpen((v) => !v)}
         />
       </div>
 
       {advancedOpen && (
         <OptionsPanel
+          id={advancedId}
           options={options}
           onChange={setOptions}
           ocrAvailable={ocrAvailable}

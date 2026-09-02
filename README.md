@@ -57,7 +57,7 @@
 | Scanned pages (OCR)                  | PaddleOCR PP-OCRv6, decided per page; native text always wins; ruled tables in scans are rebuilt; oversized scans and phone screenshots are scaled to A4 |
 | Interface languages                  | 简体中文 · 繁體中文 · English · 日本語                                      |
 | Password-protected PDFs, batch queue | Progress, cancellation, per-file conversion report; "Download all" packs the results into one zip |
-| Drop anything anywhere               | A file dropped on the wrong tool page opens the right tool; settings are remembered between visits |
+| Drop anything anywhere               | A file dropped on the wrong tool page opens the right tool; settings are remembered and tool badges show retained work |
 
 What it deliberately does **not** do: tables with no ruling lines at all (misdetection costs more than it helps),
 font embedding, editable formulas, vertical text (flattened with a warning), text colour.

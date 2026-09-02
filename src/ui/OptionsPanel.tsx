@@ -16,6 +16,7 @@ import { useI18n } from '../i18n/index.tsx';
 import type { MessageKey } from '../i18n/index.tsx';
 
 interface OptionsPanelProps {
+  readonly id: string;
   readonly options: ConvertOptions;
   readonly onChange: (options: ConvertOptions) => void;
   readonly ocrAvailable: boolean;
@@ -45,6 +46,7 @@ const A4_PT = { width: 595, height: 842 };
  * 这里只放"结果不对时可能想调"的开关，用大白话标注，不提技术名词。
  */
 export function OptionsPanel({
+  id,
   options,
   onChange,
   ocrAvailable,
@@ -66,7 +68,7 @@ export function OptionsPanel({
       JSON.stringify(DEFAULT_OPTIONS);
 
   return (
-    <div className="advanced" id="advanced-panel">
+    <div className="advanced" id={id}>
       <div className="advanced__body">
         {options.output === 'images' ? (
           <ImageOptions options={options} set={set} />

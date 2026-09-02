@@ -67,6 +67,7 @@ export function DocToPdfTool({ tool, source, active, queue }: DocToPdfToolProps)
   /** 内联编辑器的状态放在这里，"填入示例"从拖放区也能打开它 */
   const [editorOpen, setEditorOpen] = useState(false);
   const [draft, setDraft] = useState('');
+  const advancedId = `${tool.id}-advanced-panel`;
 
   const jobs = useMemo(
     () => queue.jobs.filter((job) => job.source === source),
@@ -140,6 +141,11 @@ export function DocToPdfTool({ tool, source, active, queue }: DocToPdfToolProps)
     setEditorOpen(true);
   }, [t]);
 
+  const submitDraft = useCallback(() => {
+    convertDraft(draft);
+    setEditorOpen(false);
+  }, [convertDraft, draft]);
+
   const finished = jobs.filter((job) => job.status === 'done');
   const busy = jobs.some((job) => job.status === 'running' || job.status === 'queued');
   const downloadAll = async (): Promise<void> => {
@@ -164,7 +170,8 @@ export function DocToPdfTool({ tool, source, active, queue }: DocToPdfToolProps)
         {jobs.length === 0 ? (
           <DropZone
             onFiles={handleFiles}
-            onSample={source === 'markdown' ? fillSample : undefined}
+            onSample={source === 'markdown' && !editorOpen ? fillSample : undefined}
+            compact={editorOpen}
             kind={source}
             accept={tool.accept}
           />
@@ -217,9 +224,10 @@ export function DocToPdfTool({ tool, source, active, queue }: DocToPdfToolProps)
           open={editorOpen}
           draft={draft}
           onOpen={() => setEditorOpen(true)}
+          onClose={() => setEditorOpen(false)}
           onDraft={setDraft}
           onSample={fillSample}
-          onConvert={() => convertDraft(draft)}
+          onConvert={submitDraft}
         />
       )}
 
@@ -228,12 +236,14 @@ export function DocToPdfTool({ tool, source, active, queue }: DocToPdfToolProps)
         <PanelMore
           open={advancedOpen}
           changed={settingsChanged}
+          controls={advancedId}
           onToggle={() => setAdvancedOpen((v) => !v)}
         />
       </div>
 
       {advancedOpen && (
         <DocOptionsPanel
+          id={advancedId}
           source={source}
           options={options}
           onChange={setOptions}
@@ -249,6 +259,7 @@ interface MarkdownEditorProps {
   readonly open: boolean;
   readonly draft: string;
   readonly onOpen: () => void;
+  readonly onClose: () => void;
   readonly onDraft: (text: string) => void;
   readonly onSample: () => void;
   readonly onConvert: () => void;
@@ -259,6 +270,7 @@ function MarkdownEditor({
   open,
   draft,
   onOpen,
+  onClose,
   onDraft,
   onSample,
   onConvert,
@@ -275,7 +287,7 @@ function MarkdownEditor({
     return (
       <div className="editor">
         <button type="button" className="link editor__toggle" onClick={onOpen}>
-          {t('topdf.editor.toggle')}
+          {t(draft.trim() === '' ? 'topdf.editor.toggle' : 'topdf.editor.resume')}
         </button>
       </div>
     );
@@ -288,11 +300,17 @@ function MarkdownEditor({
   };
   return (
     <div className="editor">
+      <div className="editor__head">
+        <strong>{t('topdf.editor.title')}</strong>
+        <button type="button" className="link" onClick={onClose}>
+          {t('topdf.editor.collapse')}
+        </button>
+      </div>
       <textarea
         ref={textareaRef}
         value={draft}
         placeholder={t('topdf.editor.placeholder')}
-        aria-label={t('topdf.editor.toggle')}
+        aria-label={t('topdf.editor.title')}
         rows={10}
         spellCheck={false}
         onChange={(e) => onDraft(e.target.value)}

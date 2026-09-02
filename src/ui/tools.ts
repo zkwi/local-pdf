@@ -11,6 +11,12 @@ export type ToolId =
 
 export type ToolGroup = 'from-pdf' | 'to-pdf';
 
+/** 导航里只需要知道某个工具留了多少内容、现在是否仍在处理。 */
+export interface ToolActivity {
+  readonly count: number;
+  readonly busy: boolean;
+}
+
 export interface Tool {
   readonly id: ToolId;
   /** 相对站点根的路径段；首页为空 */

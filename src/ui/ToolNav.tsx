@@ -3,7 +3,7 @@ import { useI18n } from '../i18n/index.tsx';
 import type { MessageKey } from '../i18n/index.tsx';
 import { toolHref } from './router.ts';
 import { TOOLS } from './tools.ts';
-import type { Tool, ToolGroup } from './tools.ts';
+import type { Tool, ToolActivity, ToolGroup, ToolId } from './tools.ts';
 
 type Kind = 'word' | 'markdown' | 'images';
 
@@ -21,9 +21,11 @@ const GROUPS: readonly ToolGroup[] = ['from-pdf', 'to-pdf'];
  */
 export function ToolNav({
   active,
+  activity,
   onSelect,
 }: {
   readonly active: Tool;
+  readonly activity: Readonly<Record<ToolId, ToolActivity>>;
   readonly onSelect: (tool: Tool) => void;
 }) {
   const { t } = useI18n();
@@ -44,17 +46,36 @@ export function ToolNav({
             {TOOLS.filter((tool) => tool.group === group).map((tool) => {
               const on = tool.id === active.id;
               const kind = kindOf(tool);
+              const state = activity[tool.id];
+              const toolTitle = t(`tool.${tool.id}.title` as MessageKey);
+              const accessibleTitle =
+                state.count === 0
+                  ? toolTitle
+                  : t(state.busy ? 'nav.activity.busy' : 'nav.activity.saved', {
+                      tool: toolTitle,
+                      count: state.count,
+                    });
               return (
                 <li key={tool.id}>
                   <a
                     href={toolHref(tool)}
                     className={`toolnav__item${on ? ' toolnav__item--on' : ''}`}
                     aria-current={on ? 'page' : undefined}
-                    title={t(`tool.${tool.id}.title` as MessageKey)}
+                    aria-label={accessibleTitle}
+                    title={accessibleTitle}
                     onClick={(e) => handle(e, tool)}
                   >
                     {ICONS[kind]}
                     <span>{t(`nav.${kind}` as MessageKey)}</span>
+                    {state.count > 0 && (
+                      <span
+                        className="toolnav__activity"
+                        data-busy={state.busy || undefined}
+                        aria-hidden="true"
+                      >
+                        {state.count > 99 ? '99+' : state.count}
+                      </span>
+                    )}
                   </a>
                 </li>
               );

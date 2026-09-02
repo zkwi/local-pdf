@@ -5,6 +5,35 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-09-02
+
+### Added
+
+- Tool navigation now shows a small count on every tool that has retained jobs or selected images. The
+  badge stays visible when switching tools, distinguishes work still in progress, and is included in the
+  link's accessible name.
+- The inline Markdown editor has a labelled header and can be collapsed without losing the draft. Opening
+  it compacts the file picker to leave more room for text; converting collapses it so the result is visible,
+  with a clear action to resume editing.
+
+### Changed
+
+- Image reorder, rotate and remove controls use a larger two-by-two touch layout on narrow screens. Batch
+  actions and the tool navigation also have larger mobile targets without introducing horizontal overflow.
+- File drop zones now use one real native button for file selection, with the sample action as a separate
+  sibling control. This removes nested interactive semantics while preserving click, keyboard, paste and
+  whole-page drop behaviour.
+
+### Fixed
+
+- Direct links to any of the six tools now keep their tool-specific document title after React mounts.
+  The canonical URL also follows client-side tool navigation and the selected language instead of staying
+  on the page that first loaded.
+- Every mounted tool now has a unique advanced-options panel id, so each “More options” button controls the
+  correct panel even after switching between tools.
+- Automatic image-quality detection asks the browser for a read-optimised Canvas context, removing repeated
+  pixel-read warnings and avoiding an unnecessary GPU readback penalty.
+
 ## [0.4.0] — 2026-09-02
 
 ### Added

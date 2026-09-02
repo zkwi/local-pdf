@@ -16,6 +16,7 @@ import { ShellContext } from './ui/shell.tsx';
 import type { FileSink, Shell } from './ui/shell.tsx';
 import { ToolNav } from './ui/ToolNav.tsx';
 import { acceptsFile, routeTool, TOOLS } from './ui/tools.ts';
+import type { ToolActivity, ToolId } from './ui/tools.ts';
 import { DocToPdfTool } from './ui/tools/DocToPdfTool.tsx';
 import { ImagesToPdfTool } from './ui/tools/ImagesToPdfTool.tsx';
 import { PdfConvertTool } from './ui/tools/PdfConvertTool.tsx';
@@ -44,12 +45,12 @@ interface Pending {
  * 六个工具页全部挂着、只显示当前这个，切换工具不丢队列和已选的图片。
  */
 export function App() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const caps = useMemo(() => probeCapabilities(), []);
   const [tool, navigate] = useTool();
   const [dragging, setDragging] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const [imagesBusy, setImagesBusy] = useState(false);
+  const [imageActivity, setImageActivity] = useState<ToolActivity>({ count: 0, busy: false });
   /** 后台标签页里转完了：标题挂个 ✅，切回来就摘掉 */
   const [attention, setAttention] = useState(false);
   const sinkRef = useRef<FileSink | null>(null);
@@ -102,7 +103,25 @@ export function App() {
   const pdfSettled = pdfJobs.filter((j) => j.status !== 'running' && j.status !== 'queued').length;
   const docJobs = docQueue.jobs;
   const docSettled = docJobs.filter((j) => j.status !== 'running' && j.status !== 'queued').length;
-  const busy = pdfSettled < pdfJobs.length || docSettled < docJobs.length || imagesBusy;
+  const busy = pdfSettled < pdfJobs.length || docSettled < docJobs.length || imageActivity.busy;
+  const toolActivity = useMemo<Record<ToolId, ToolActivity>>(() => {
+    const summarize = (jobs: readonly { readonly status: string }[]): ToolActivity => ({
+      count: jobs.length,
+      busy: jobs.some((job) => job.status === 'running' || job.status === 'queued'),
+    });
+    return {
+      'pdf-to-word': summarize(
+        pdfJobs.filter((job) => job.options.output === 'docx' || job.options.output === 'both'),
+      ),
+      'pdf-to-markdown': summarize(
+        pdfJobs.filter((job) => job.options.output === 'markdown' || job.options.output === 'both'),
+      ),
+      'pdf-to-images': summarize(pdfJobs.filter((job) => job.options.output === 'images')),
+      'word-to-pdf': summarize(docJobs.filter((job) => job.source === 'word')),
+      'markdown-to-pdf': summarize(docJobs.filter((job) => job.source === 'markdown')),
+      'images-to-pdf': imageActivity,
+    };
+  }, [docJobs, imageActivity, pdfJobs]);
 
   // 页面空闲时先把转换 Worker（含 pdf.js，约 2 MB）拉起来，第一次转换不用等下载
   const { warmUp } = pdfQueue;
@@ -212,6 +231,17 @@ export function App() {
     toolTitle,
   ]);
 
+  // history.pushState 不会触发语言 Provider 的 effect，canonical 必须跟当前工具主动同步。
+  useEffect(() => {
+    const canonical = new URL(location.pathname, location.origin);
+    if (new URLSearchParams(location.search).get('lang') === locale) {
+      canonical.searchParams.set('lang', locale);
+    }
+    document.head
+      .querySelector<HTMLLinkElement>('link[rel="canonical"]')
+      ?.setAttribute('href', canonical.href);
+  }, [locale, tool.id]);
+
   useEffect(() => {
     if (!busy) return;
     const guard = (e: BeforeUnloadEvent): void => {
@@ -252,7 +282,7 @@ export function App() {
           </header>
 
           <div className="reveal" style={reveal(1)}>
-            <ToolNav active={tool} onSelect={navigate} />
+            <ToolNav active={tool} activity={toolActivity} onSelect={navigate} />
           </div>
 
           <main className="main" id="main" tabIndex={-1}>
@@ -290,7 +320,7 @@ export function App() {
                       />
                     )}
                     {each.id === 'images-to-pdf' && (
-                      <ImagesToPdfTool tool={each} active={active} onBusy={setImagesBusy} />
+                      <ImagesToPdfTool tool={each} active={active} onActivity={setImageActivity} />
                     )}
                   </div>
                 );

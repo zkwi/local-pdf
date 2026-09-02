@@ -13,7 +13,7 @@ import { Segmented } from '../OptionsPanel.tsx';
 import { useStored } from '../persist.ts';
 import { useFileSink, useShell } from '../shell.tsx';
 import { isImageFile } from '../tools.ts';
-import type { Tool } from '../tools.ts';
+import type { Tool, ToolActivity } from '../tools.ts';
 
 interface Item {
   readonly id: string;
@@ -57,14 +57,14 @@ let seq = 0;
 interface ImagesToPdfToolProps {
   readonly tool: Tool;
   readonly active: boolean;
-  readonly onBusy: (busy: boolean) => void;
+  readonly onActivity: (activity: ToolActivity) => void;
 }
 
 /**
  * 图片转 PDF 的合成器：缩略图按添加顺序排开，拖动调顺序、单张旋转，
  * 纸张和质量设置常驻在下面（改过的会记住），点一下生成。
  */
-export function ImagesToPdfTool({ tool, active, onBusy }: ImagesToPdfToolProps) {
+export function ImagesToPdfTool({ tool, active, onActivity }: ImagesToPdfToolProps) {
   const { t, tn } = useI18n();
   const { toast } = useShell();
   const [items, setItems] = useState<Item[]>([]);
@@ -196,7 +196,6 @@ export function ImagesToPdfTool({ tool, active, onBusy }: ImagesToPdfToolProps) 
     const abort = new AbortController();
     controller.current = abort;
     setProgress({ done: 0, total: items.length });
-    onBusy(true);
     const name = (fileName.trim() || 'images').replace(/\.pdf$/i, '');
     try {
       const out = await imagesToPdf(
@@ -216,7 +215,6 @@ export function ImagesToPdfTool({ tool, active, onBusy }: ImagesToPdfToolProps) 
     } finally {
       controller.current = null;
       setProgress(null);
-      onBusy(false);
     }
   };
 
@@ -228,6 +226,11 @@ export function ImagesToPdfTool({ tool, active, onBusy }: ImagesToPdfToolProps) 
   );
 
   const total = useMemo(() => items.reduce((s, i) => s + i.file.size, 0), [items]);
+  const busy = progress !== null;
+
+  useEffect(() => {
+    onActivity({ count: items.length, busy });
+  }, [busy, items.length, onActivity]);
 
   // 生成完把结果卡滚进视野：缩略图多的时候它在很下面
   const resultRef = useRef<HTMLDivElement>(null);

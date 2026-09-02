@@ -73,6 +73,8 @@ export const zhCN = {
   'nav.word': 'Word',
   'nav.markdown': 'Markdown',
   'nav.images': '图片',
+  'nav.activity.saved': '{tool}，已保留 {count} 项',
+  'nav.activity.busy': '{tool}，正在处理 {count} 项',
   'tool.docTitle': 'Local PDF · {tool}，本地转换',
   'tool.pdf-to-word.title': 'PDF 转 Word',
   'tool.pdf-to-word.lede':
@@ -179,6 +181,9 @@ export const zhCN = {
   'seo.how.topdf.3': '下载 PDF：文字可选中、可搜索；不嵌字体，文件很小。',
   'topdf.error.invalid': '文件不是有效的 Word 文档（.docx），或者已损坏',
   'topdf.editor.toggle': '直接粘贴或输入 Markdown',
+  'topdf.editor.resume': '继续编辑刚才的 Markdown',
+  'topdf.editor.title': 'Markdown 内容',
+  'topdf.editor.collapse': '收起编辑器',
   'topdf.editor.placeholder': '# 标题\n\n在这里粘贴或输入 Markdown…',
   'topdf.editor.convert': '转成 PDF',
   'topdf.editor.clear': '清空',

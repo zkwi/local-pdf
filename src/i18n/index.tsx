@@ -165,21 +165,13 @@ export function I18nProvider({ children }: { readonly children: ReactNode }) {
     };
   }, [locale, setLocale]);
 
-  // <head> 里跟语言走的东西：lang、标题、描述、canonical
+  // 这里只管纯语言状态；当前工具对应的标题和 canonical 由 App 同步。
   useEffect(() => {
     document.documentElement.lang = locale;
-    document.title = value.t('app.docTitle');
     setHeadTag(
       'meta[name="description"]',
       () => Object.assign(document.createElement('meta'), { name: 'description' }),
       (el) => el.setAttribute('content', value.t('meta.description')),
-    );
-    const canonical = new URL(location.pathname, location.origin);
-    if (localeFromUrl() !== null) canonical.searchParams.set(LANG_PARAM, locale);
-    setHeadTag(
-      'link[rel="canonical"]',
-      () => Object.assign(document.createElement('link'), { rel: 'canonical' }),
-      (el) => el.setAttribute('href', canonical.href),
     );
   }, [locale, value]);
 

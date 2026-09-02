@@ -71,6 +71,8 @@ export const zhTW: Messages = {
   'nav.word': 'Word',
   'nav.markdown': 'Markdown',
   'nav.images': '圖片',
+  'nav.activity.saved': '{tool}，已保留 {count} 項',
+  'nav.activity.busy': '{tool}，正在處理 {count} 項',
   'tool.docTitle': 'Local PDF · {tool}，本機轉換',
   'tool.pdf-to-word.title': 'PDF 轉 Word',
   'tool.pdf-to-word.lede':
@@ -177,6 +179,9 @@ export const zhTW: Messages = {
   'seo.how.topdf.3': '下載 PDF：文字可選取、可搜尋；不嵌字型，檔案很小。',
   'topdf.error.invalid': '檔案不是有效的 Word 文件（.docx），或者已損壞',
   'topdf.editor.toggle': '直接貼上或輸入 Markdown',
+  'topdf.editor.resume': '繼續編輯剛才的 Markdown',
+  'topdf.editor.title': 'Markdown 內容',
+  'topdf.editor.collapse': '收起編輯器',
   'topdf.editor.placeholder': '# 標題\n\n在這裡貼上或輸入 Markdown…',
   'topdf.editor.convert': '轉成 PDF',
   'topdf.editor.clear': '清空',

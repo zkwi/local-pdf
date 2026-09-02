@@ -73,6 +73,8 @@ export const en: Messages = {
   'nav.word': 'Word',
   'nav.markdown': 'Markdown',
   'nav.images': 'Images',
+  'nav.activity.saved': '{tool}, {count} items kept',
+  'nav.activity.busy': '{tool}, processing {count} items',
   'tool.docTitle': 'Local PDF · {tool} in your browser',
   'tool.pdf-to-word.title': 'PDF to Word',
   'tool.pdf-to-word.lede':
@@ -190,6 +192,9 @@ export const en: Messages = {
     'Download the PDF: the text is selectable and searchable, and with no embedded fonts the file stays small.',
   'topdf.error.invalid': 'The file is not a valid Word document (.docx), or it is damaged',
   'topdf.editor.toggle': 'Paste or type Markdown instead',
+  'topdf.editor.resume': 'Continue editing your Markdown',
+  'topdf.editor.title': 'Markdown content',
+  'topdf.editor.collapse': 'Collapse editor',
   'topdf.editor.placeholder': '# Heading\n\nPaste or type Markdown here…',
   'topdf.editor.convert': 'Convert to PDF',
   'topdf.editor.clear': 'Clear',
