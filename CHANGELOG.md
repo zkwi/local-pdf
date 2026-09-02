@@ -57,11 +57,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
   does not make it out as bold; a bold value sitting next to a label in the same row ("帐户号码 | 1001…")
   is no longer a heading; 16-digit account numbers are no longer read as section numbers; "•若中考…"
   (a bullet followed directly by Chinese) is a list item.
+- Numbered items in Chinese official documents (first line indented two characters, continuation
+  lines back at the margin) were split after their first line; they stay together unless the item
+  really ended early.
 - Page counts inflate less: multi-line paragraphs are written with the measured baseline pitch as an
   exact line height (Word no longer stretches lines to the font's own, taller line height), single-line
   paragraphs borrow the page's body pitch, headings no longer add 12 pt before and 6 pt after on top of
   the measured gap, and a page break is written as "page break before" on the next paragraph instead of
   a separate empty paragraph, which produced a blank page whenever the previous page was exactly full.
+  Paragraph spacing is measured as the baseline distance minus the line pitch, so uniform leading
+  (a 28 pt-pitch notice) no longer gets 6 pt of extra space after every paragraph.
 - Charts with vector grid lines and boxes drawn around a single block of text were turned into tables
   (one brokerage report had 71 one-cell tables around its charts); a box with a single cell is now a
   paragraph.
