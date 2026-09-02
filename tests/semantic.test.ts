@@ -3,7 +3,7 @@ import { buildLines } from '../src/core/layout/lines.ts';
 import { linesToRuns } from '../src/core/semantic/build.ts';
 import { ptToHalfPoint, ptToPx96, ptToTwip } from '../src/core/geometry/units.ts';
 import { cleanFontName, mapFont } from '../src/core/docx/fonts.ts';
-import { mergeOcrSpans, shouldRunOcr } from '../src/core/ocr/engine.ts';
+import { isSparseOcr, mergeOcrSpans, shouldRunOcr } from '../src/core/ocr/engine.ts';
 import { line, span } from './helpers.ts';
 
 describe('linesToRuns', () => {
@@ -143,5 +143,32 @@ describe('pageNumberAware', () => {
     expect(pageNumberAware([title], 'center').runs.some((r) => r.field === 'page-number')).toBe(
       false,
     );
+  });
+});
+
+describe('isSparseOcr', () => {
+  it('封面上的几个字算零星', () => {
+    expect(
+      isSparseOcr([line('2025/26 年度', 72, 100, 80), line('中国量化投资白皮书', 72, 130, 120)]),
+    ).toBe(true);
+  });
+
+  it('图表上几十个短标签算零星', () => {
+    const labels = Array.from({ length: 30 }, (_, i) => line(`${2000 + i}`, 72 + i * 15, 300, 14));
+    expect(isSparseOcr(labels)).toBe(true);
+  });
+
+  it('两行正文就不算零星，哪怕总字数不多', () => {
+    expect(
+      isSparseOcr([
+        line('Scanned Page Without Text Layer', 72, 100, 200),
+        line(
+          'This page has been rasterized so no text layer remains. Only OCR can recover it.',
+          72,
+          130,
+          400,
+        ),
+      ]),
+    ).toBe(false);
   });
 });

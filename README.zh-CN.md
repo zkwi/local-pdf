@@ -55,7 +55,9 @@ npm run ocr-models  # 可选：把 OCR 模型下载到 public/ocr-models/ 自托
 
 - 只对需要的页面做 OCR：没有文字层、文字极少但大面积是图、或文字层乱码。
 - 模型第一次用时下载，校验 SHA-256 后放进 Cache Storage，之后断网也能用。界面上能看到缓存了多少，可一键清除。
-- 想彻底不出外网：构建前跑 `npm run ocr-models`（或 `npm run ocr-models small` / `all`），应用会优先用 `public/ocr-models/`。
+- ONNX Runtime 的 wasm（26.5 MiB）按 SDK 对应的精确版本从 jsDelivr 加载：它超过了 Cloudflare Pages 这类托管 25 MiB 的单文件上限。
+- 想彻底不出外网：构建前跑 `npm run ocr-models`（或 `small` / `all`）和 `npm run ocr-runtime`，应用会优先用
+  `public/ocr-models/` 和 `public/ort/`（后者需要托管方没有 25 MiB 限制）。
 - 多线程推理需要跨源隔离，默认关闭。加上 `Cross-Origin-Opener-Policy: same-origin` 和
   `Cross-Origin-Embedder-Policy: require-corp` 即可开启（`public/_headers` 里有注释掉的现成写法）。开了 COEP 之后模型必须自托管。
 
@@ -66,8 +68,8 @@ npm run ocr-models  # 可选：把 OCR 模型下载到 public/ocr-models/ 自托
 
 ## 隐私
 
-- 没有任何上传代码，可以在网络面板自行确认：唯一的对外请求是可选的 OCR 模型下载。
-- pdf.js 的 CMap、标准字体、WASM，以及 ONNX Runtime 的 WASM 都自托管（`npm install` 时复制进 `public/`）。
+- 没有任何上传代码，可以在网络面板自行确认：对外请求只有可选的 OCR 模型和运行时下载。
+- pdf.js 的 CMap、标准字体、WASM 自托管（`npm install` 时复制进 `public/`）。
 - 文件名、内容、页数都不会发到任何地方，没有统计埋点。
 
 ## 浏览器支持

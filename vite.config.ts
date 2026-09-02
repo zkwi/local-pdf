@@ -1,11 +1,22 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath, URL } from 'node:url';
+
+/** OCR 运行时从 CDN 取 wasm 时必须和 SDK 打包进来的 ORT 是同一个版本 */
+const ortVersion = (
+  JSON.parse(
+    readFileSync(new URL('./node_modules/onnxruntime-web/package.json', import.meta.url), 'utf-8'),
+  ) as { version: string }
+).version;
 
 export default defineConfig({
   // 相对 base，方便直接扔到任意静态目录 / file 协议以外的子路径下托管
   base: './',
   plugins: [react()],
+  define: {
+    __ORT_VERSION__: JSON.stringify(ortVersion),
+  },
   resolve: {
     alias: {
       '@core': fileURLToPath(new URL('./src/core', import.meta.url)),
@@ -18,6 +29,12 @@ export default defineConfig({
   },
   worker: {
     format: 'es',
+    rollupOptions: {
+      // SDK 主模块里 import('onnxruntime-web') 只有直连模式会走到；我们只用 worker 模式。
+      // 不排除的话 Rollup 会把 26.5 MiB 的 jsep wasm 当资源复制进 dist，超出 Pages 的单文件上限。
+      // 这个 import 发生在转换 Worker 里，所以要写在 worker.rollupOptions 而不是 build.rollupOptions。
+      external: ['onnxruntime-web'],
+    },
   },
   optimizeDeps: {
     // PaddleOCR.js 内部用 new URL('./assets/worker-entry-*.js', import.meta.url) 起嵌套 Worker，

@@ -49,11 +49,14 @@ SDK 的 `ModelAsset` 只接受 URL，也没有下载进度回调。我们：
 取模型的顺序：Cache Storage → 应用自己的 `ocr-models/`（`npm run ocr-models` 下载到 public）→ 官方 bcebos 源。
 本地目录探测用 HEAD 请求，并检查 content-type 不是 `text/html`（dev/preview 对未知路径会回落到 index.html）。
 
-### 3. ORT wasm 只认 postinstall 复制的那份，而且是 jsep 版
+### 3. ORT wasm 按精确版本从 jsDelivr 取，自托管可选，而且是 jsep 版
 
 SDK 打进来的 ORT 胶水代码和 wasm 必须是同一版本；SDK 默认回落到 jsdelivr 上一个**写死的版本号**，
-和 npm 实际解析到的版本不一定一致。所以 `scripts/copy-runtime-assets.mjs` 从 `node_modules/onnxruntime-web`
-复制到 `public/ort/`，`wasmPaths` 固定指向它。
+和 npm 实际解析到的版本不一定一致。所以构建时用 `define` 把 `node_modules/onnxruntime-web` 的版本号注进代码，
+运行时先探测同源的 `public/ort/`（`npm run ocr-runtime` 复制），没有就用 `cdn.jsdelivr.net/npm/onnxruntime-web@<该版本>/dist/`。
+默认不随站点发布这份 wasm：26.5 MiB 超过 Cloudflare Pages 的 25 MiB 单文件上限。
+同理 Rollup 里把 `onnxruntime-web` 设为 external，否则它会把 wasm 当资源复制进 dist（SDK 主模块的
+`import('onnxruntime-web')` 只有直连模式才执行，worker 模式用不到）。
 
 复制的是 `ort-wasm-simd-threaded.jsep.{mjs,wasm}`：SDK 引的是 ORT 的默认构建（`ort.mjs`，含 WebGPU），
 这个构建里 wasm 后端也从 jsep 版文件加载，非 jsep 那对它根本不会请求。实测复制错文件的报错是

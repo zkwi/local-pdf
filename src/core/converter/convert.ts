@@ -17,7 +17,7 @@ import type { ExtractedImage } from '../layout/analyze.ts';
 import { analyzeDocument, MIN_IMAGE_SIDE } from '../layout/analyze.ts';
 import { createOcrEngine } from '../ocr/create.ts';
 import type { OcrEngine } from '../ocr/engine.ts';
-import { mergeOcrSpans, shouldRunOcr } from '../ocr/engine.ts';
+import { isSparseOcr, mergeOcrSpans, shouldRunOcr } from '../ocr/engine.ts';
 import { mergeStripSpans, planStrips, STRIP_THRESHOLD_PT } from '../ocr/strips.ts';
 import type { StripResult } from '../ocr/strips.ts';
 import { computeTextHealth, describeError, PdfSession } from '../pdf/extractor.ts';
@@ -29,12 +29,6 @@ const MAX_TOTAL_IMAGE_BYTES = 80 * 1024 * 1024;
 
 /** OCR 至少按这个倍率渲染（72 pt × 3 ≈ 216 DPI），低于这个小字号识别率掉得厉害 */
 const MIN_OCR_SCALE = 3;
-
-/**
- * 自动模式下 OCR 出来的字少于这个数，就当这页是整版图表/插图而不是扫描的文字页：
- * 把几十个坐标轴刻度当正文塞进 Word、再把原图丢掉，比保留原图差得多。
- */
-const MIN_OCR_CHARS_AUTO = 120;
 
 export class CancelledError extends Error {
   constructor() {
@@ -173,12 +167,15 @@ export async function convert(
                   ? await recognizeInStrips(session, engine, i, page.height, scale)
                   : await engine.recognize(rendered.canvas, rendered.scale, i);
               ocrTotal += now() - ocrStart;
-              const ocrChars = ocrSpans.reduce((s, sp) => s + sp.text.length, 0);
-              if (options.ocr === 'auto' && ocrChars < MIN_OCR_CHARS_AUTO) {
+              // 自动模式下，整版图表/封面上认出的零星标签不当正文，保留原图
+              if (options.ocr === 'auto' && isSparseOcr(ocrSpans)) {
                 warnings.push({
                   code: 'ocr-sparse-kept-image',
                   pageIndex: i,
-                  params: { page: i + 1, count: ocrChars },
+                  params: {
+                    page: i + 1,
+                    count: ocrSpans.reduce((s, sp) => s + sp.text.length, 0),
+                  },
                 });
               } else {
                 const merged = mergeOcrSpans(page.spans, ocrSpans);

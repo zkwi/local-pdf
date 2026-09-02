@@ -17,8 +17,30 @@ export interface PaddleEngine extends OcrEngine {
   readonly unverifiedModels: readonly string[];
 }
 
-/** ORT 的 wasm 与 SDK 打进来的 ORT 版本必须一致，所以只认 postinstall 复制到 public/ort/ 的那份 */
+/**
+ * ONNX Runtime 的 wasm 要和 SDK 打进来的 ORT 版本一致。
+ * 优先用应用自己目录下的 public/ort/（npm run ocr-runtime 复制），没有就从 jsDelivr 按精确版本号取——
+ * 26.5 MiB 的 wasm 超过了 Cloudflare Pages 等静态托管 25 MiB 的单文件上限，默认不能随站点一起发布。
+ */
 const ORT_DIR = 'ort/';
+const ORT_WASM = 'ort-wasm-simd-threaded.jsep.wasm';
+const ORT_CDN = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${__ORT_VERSION__}/dist/`;
+let ortBasePromise: Promise<string> | null = null;
+
+async function resolveOrtBase(assetBase: string): Promise<string> {
+  ortBasePromise ??= (async () => {
+    const local = `${assetBase}${ORT_DIR}`;
+    try {
+      const response = await fetch(`${local}${ORT_WASM}`, { method: 'HEAD', cache: 'no-store' });
+      const type = response.headers.get('content-type') ?? '';
+      if (response.ok && !type.includes('text/html')) return local;
+    } catch {
+      /* 本地没有就走 CDN */
+    }
+    return ORT_CDN;
+  })();
+  return ortBasePromise;
+}
 
 /**
  * PaddleOCR.js 适配器。
@@ -65,7 +87,10 @@ export async function createPaddleEngine(options: PaddleEngineOptions): Promise<
   const recUrl = await modelUrl(selection.rec);
 
   progress({ key: 'ocr-model-init', progress: 0.9 });
-  const { PaddleOCR } = await import('@paddleocr/paddleocr-js');
+  const [{ PaddleOCR }, wasmPaths] = await Promise.all([
+    import('@paddleocr/paddleocr-js'),
+    resolveOrtBase(options.assetBase),
+  ]);
 
   const isolated = (globalThis as { crossOriginIsolated?: boolean }).crossOriginIsolated === true;
   const cores = typeof navigator !== 'undefined' ? navigator.hardwareConcurrency || 2 : 2;
@@ -79,7 +104,7 @@ export async function createPaddleEngine(options: PaddleEngineOptions): Promise<
     textRecognitionModelAsset: { url: recUrl },
     ortOptions: {
       backend: 'wasm',
-      wasmPaths: `${options.assetBase}${ORT_DIR}`,
+      wasmPaths,
       // 多线程 wasm 需要 COOP/COEP，没有隔离时只能单线程
       numThreads: isolated ? Math.max(1, Math.min(4, cores - 1)) : 1,
       simd: true,

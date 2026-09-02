@@ -61,3 +61,18 @@ export function mergeOcrSpans(
   });
   return [...native, ...kept];
 }
+
+/**
+ * 自动模式下判断一页 OCR 结果是不是"图表/封面上的零星标签"而不是正文：
+ * 字太少，或者字不多且每行都很短（坐标轴刻度、图例这类）。
+ * 是的话保留原图，不把几十个标签当段落塞进 Word。
+ */
+export function isSparseOcr(spans: readonly PrimitiveTextSpan[]): boolean {
+  const lengths = spans.map((s) => s.text.trim().length).filter((n) => n > 0);
+  const chars = lengths.reduce((a, b) => a + b, 0);
+  if (chars < 40) return true;
+  if (chars >= 300) return false;
+  const sorted = [...lengths].sort((a, b) => a - b);
+  const medianLen = sorted[Math.floor(sorted.length / 2)] ?? 0;
+  return medianLen <= 6;
+}

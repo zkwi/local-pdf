@@ -59,8 +59,11 @@ The engine is [PaddleOCR.js](https://github.com/PaddlePaddle/PaddleOCR/tree/main
 - OCR runs only on pages that need it: no text layer, almost no text over a large image, or a garbled text layer.
 - Models are downloaded on first use, verified against SHA-256 and kept in Cache Storage; they work offline afterwards.
   The UI shows what is cached and can clear it.
-- To avoid any third-party request, run `npm run ocr-models` (or `npm run ocr-models small` / `all`) before building:
-  the app prefers `public/ocr-models/` when present.
+- The ONNX Runtime WASM (26.5 MiB) is loaded from jsDelivr, pinned to the exact version the SDK was built with,
+  because it exceeds the 25 MiB single-file limit of Cloudflare Pages and similar hosts.
+- To avoid any third-party request, run `npm run ocr-models` (or `npm run ocr-models small` / `all`) and
+  `npm run ocr-runtime` before building: the app prefers `public/ocr-models/` and `public/ort/` when present
+  (the latter needs a host without the 25 MiB limit).
 - Multi-threaded inference needs cross-origin isolation. It is off by default; add
   `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp` to enable it
   (`public/_headers` has the lines commented out). With COEP the models must be self-hosted.
@@ -73,8 +76,8 @@ optional COOP/COEP lines for multi-threaded OCR commented out. Any other static 
 
 ## Privacy
 
-- No upload code exists. Check the network panel: the only external request is the optional OCR model download.
-- pdf.js CMaps, standard fonts and WASM, plus the ONNX Runtime WASM, are self-hosted (copied into `public/` on `npm install`).
+- No upload code exists. Check the network panel: the only external requests are the optional OCR model and runtime downloads.
+- pdf.js CMaps, standard fonts and WASM are self-hosted (copied into `public/` on `npm install`).
 - Nothing about the document (name, text, page count) is sent anywhere. There is no analytics.
 
 ## Browser support

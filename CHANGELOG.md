@@ -5,6 +5,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Changed
+
+- The ONNX Runtime WASM is no longer shipped with the site; it is loaded from jsDelivr pinned to the exact
+  version the OCR SDK was built with (the 26.5 MiB file exceeds Cloudflare Pages' 25 MiB limit).
+  `npm run ocr-runtime` copies it into `public/ort/` for hosts that allow it; the app prefers the local copy.
+
 ## [0.1.0] — 2026-09-02
 
 First public release.

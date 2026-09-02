@@ -31,6 +31,7 @@
   "scripts": {
     "assets": "node scripts/copy-runtime-assets.mjs",
     "ocr-models": "node scripts/download-ocr-models.mjs",
+    "ocr-runtime": "node scripts/copy-ort-runtime.mjs",
     "predev": "npm run assets",
     "dev": "vite",
     "prebuild": "npm run assets",
