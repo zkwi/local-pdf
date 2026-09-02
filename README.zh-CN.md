@@ -77,7 +77,7 @@ npm run ocr-models  # 可选：把 OCR 模型下载到 public/ocr-models/ 自托
 | 标准（默认） | PP-OCRv6 tiny  | 模型 6 MB + 运行时约 11 MB    | 普通扫描文档     |
 | 高           | PP-OCRv6 small | 模型 31 MB + 运行时约 11 MB   | 小字号、模糊页面 |
 
-- 只对需要的页面做 OCR：没有文字层、文字极少但大面积是图、或文字层乱码。
+- 只对需要的页面做 OCR：没有文字层、文字极少但大面积是图、整页是图而文字层只有水印或页眉页脚页码、或文字层乱码。
 - 模型第一次用时下载，校验 SHA-256 后放进 Cache Storage，之后断网也能用。界面上能看到缓存了多少，可一键清除。
 - ONNX Runtime 的 wasm（26.5 MiB）按 SDK 对应的精确版本从 jsDelivr 加载：它超过了 Cloudflare Pages 这类托管 25 MiB 的单文件上限。
 - 想彻底不出外网：构建前跑 `npm run ocr-models`（或 `small` / `all`）和 `npm run ocr-runtime`，应用会优先用

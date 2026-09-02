@@ -37,6 +37,8 @@ export interface ConversionProgress {
   readonly stage: ConversionStage;
   readonly pageIndex?: number;
   readonly totalPages?: number;
+  /** 文档真实页数；超过 maxPages 时比 totalPages 大，界面据此提前告知只转前几页 */
+  readonly documentPages?: number;
   /** 0~1 */
   readonly fraction: number;
   readonly key: ProgressKey;

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ConvertOptions } from '../core/contracts/options.ts';
 import type { ConversionProgress, ConversionReport, OutputKind } from '../core/contracts/report.ts';
+import { pushSample } from '../ui/eta.ts';
+import type { PageSample } from '../ui/eta.ts';
 import type { WorkerError, WorkerRequest, WorkerResponse } from '../worker/protocol.ts';
 
 export type JobStatus = 'queued' | 'running' | 'done' | 'error' | 'cancelled';
@@ -20,8 +22,17 @@ export interface JobResult {
 export interface Job {
   readonly id: string;
   readonly file: File;
+  /** 提交时用的设置；界面据此决定要不要提供"只要文字"重试 */
+  readonly options: ConvertOptions;
   readonly status: JobStatus;
   readonly progress: ConversionProgress;
+  /** 第一条进度到达的时间；排队中的任务还没有 */
+  readonly startedAt?: number;
+  readonly finishedAt?: number;
+  /** 逐页阶段的采样点，估算剩余时间用 */
+  readonly samples: readonly PageSample[];
+  /** 已经 OCR 过的页数：扫描页占大头时提示里要解释为什么慢 */
+  readonly ocrPages: number;
   readonly result?: JobResult;
   readonly error?: WorkerError;
 }
@@ -36,6 +47,37 @@ function assetBase(): string {
 
 let seq = 0;
 const nextId = (): string => `job-${Date.now().toString(36)}-${seq++}`;
+
+function applyProgress(job: Job, progress: ConversionProgress, at: number): Job {
+  return {
+    ...job,
+    status: 'running',
+    progress,
+    startedAt: job.startedAt ?? at,
+    samples:
+      progress.stage === 'extracting' && progress.pageIndex !== undefined
+        ? pushSample(job.samples, progress.pageIndex, at)
+        : job.samples,
+    // 每个需要识别的页面进入 ocr 阶段时恰好发一条进度
+    ocrPages: job.ocrPages + (progress.stage === 'ocr' ? 1 : 0),
+  };
+}
+
+/** 新建或重试时的初始状态 */
+function fresh(job: Job, options: ConvertOptions): Job {
+  return {
+    ...job,
+    options,
+    status: 'queued',
+    progress: INITIAL_PROGRESS,
+    startedAt: undefined,
+    finishedAt: undefined,
+    samples: [],
+    ocrPages: 0,
+    result: undefined,
+    error: undefined,
+  };
+}
 
 export function useConversionQueue() {
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -55,6 +97,7 @@ export function useConversionQueue() {
           error.code === 'cancelled'
             ? { stage: 'cancelled', fraction: 0, key: 'cancelled' }
             : FAILED_PROGRESS,
+        finishedAt: Date.now(),
         error,
       }));
     },
@@ -73,7 +116,8 @@ export function useConversionQueue() {
       if (message.type !== 'progress' && message.type !== 'done' && message.type !== 'error')
         return;
       if (message.type === 'progress') {
-        patch(message.jobId, (job) => ({ ...job, status: 'running', progress: message.progress }));
+        const at = Date.now();
+        patch(message.jobId, (job) => applyProgress(job, message.progress, at));
         return;
       }
       if (message.type === 'done') {
@@ -87,12 +131,33 @@ export function useConversionQueue() {
           ...job,
           status: 'done',
           progress: { stage: 'completed', fraction: 1, key: 'completed' },
+          finishedAt: Date.now(),
           result: { outputs, report: message.report },
         }));
         filesRef.current.delete(message.jobId);
         return;
       }
       fail(message.jobId, message.error);
+    };
+    worker.onerror = (event) => {
+      // Worker 整个崩了（多半是内存耗尽）：没结束的任务一起标失败，下次再起一个新的
+      event.preventDefault();
+      const detail = event.message || 'worker crashed';
+      worker.terminate();
+      if (workerRef.current === worker) workerRef.current = null;
+      setJobs((prev) =>
+        prev.map((job) =>
+          job.status === 'running' || job.status === 'queued'
+            ? {
+                ...job,
+                status: 'error',
+                progress: FAILED_PROGRESS,
+                finishedAt: Date.now(),
+                error: { code: 'worker-crashed', detail },
+              }
+            : job,
+        ),
+      );
     };
     workerRef.current = worker;
     return worker;
@@ -120,7 +185,18 @@ export function useConversionQueue() {
       const created: Job[] = files.map((file) => {
         const id = nextId();
         filesRef.current.set(id, file);
-        return { id, file, status: 'queued', progress: INITIAL_PROGRESS };
+        return fresh(
+          {
+            id,
+            file,
+            options,
+            status: 'queued',
+            progress: INITIAL_PROGRESS,
+            samples: [],
+            ocrPages: 0,
+          },
+          options,
+        );
       });
       setJobs((prev) => [...created, ...prev]);
       for (const job of created) {
@@ -143,7 +219,7 @@ export function useConversionQueue() {
     (id: string, options: ConvertOptions): void => {
       const job = jobs.find((j) => j.id === id);
       if (job === undefined) return;
-      patch(id, (j) => ({ ...j, status: 'queued', progress: INITIAL_PROGRESS, error: undefined }));
+      patch(id, (j) => fresh(j, options));
       void submit(id, job.file, options).catch((error: unknown) => {
         fail(id, { code: 'unknown', detail: error instanceof Error ? error.message : 'read-file' });
       });

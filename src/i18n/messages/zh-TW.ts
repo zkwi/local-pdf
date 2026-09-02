@@ -30,9 +30,6 @@ export const zhTW: Messages = {
   'summary.lowConfidence.one': '1 頁把握不高，建議核對',
   'summary.lowConfidence.other': '{count} 頁把握不高，建議核對',
   'app.github': 'GitHub 儲存庫',
-  'trust.noUpload': '不上傳',
-  'trust.noSignup': '無需註冊',
-  'trust.openSource': '免費開源',
   'drop.paste': '也可以按 Ctrl+V 直接貼上檔案',
   'drop.sample': '手邊沒有檔案？試試示例 PDF',
   'drop.sampleFailed': '示例檔案載入失敗，請稍後再試',
@@ -224,4 +221,35 @@ export const zhTW: Messages = {
   'compat.mobile.copied': '已複製',
   'compat.mobile.continue': '仍要在手機上試試（僅建議小檔案）',
   'compat.lowMemory': '目前裝置記憶體較小，轉換大檔案時可能失敗，建議一次只轉一個檔案。',
+
+  'features.label': '為什麼用 Local PDF',
+  'features.local.title': '檔案不離開本機',
+  'features.local.body': '沒有伺服器，解析、辨識、產生全在瀏覽器裡完成，離線也能用。',
+  'features.editable.title': '真正可編輯的 Word',
+  'features.editable.body': '段落、標題、清單、表格、圖片、頁首頁尾都重建，不是整頁截圖。',
+  'features.ocr.title': '掃描檔自動辨識',
+  'features.ocr.body': '沒有文字層的頁面自動 OCR，支援中文、英文、日文等 50 多種語言。',
+  'features.free.title': '免費開源',
+  'features.free.body': 'MIT 授權，不註冊、不限次數、沒有浮水印。',
+
+  'job.elapsed': '已用 {time}',
+  'job.duration': '用時 {time}',
+  'job.eta.underMinute': '剩餘不到 1 分鐘',
+  'job.eta.minutes': '剩餘約 {count} 分鐘',
+  'job.eta.hours': '剩餘約 {hours} 小時 {minutes} 分鐘',
+  'job.large.size':
+    '檔案較大（{size}），轉換會比較久。請保持本頁開啟；可以切到其他分頁，標題列會顯示進度。',
+  'job.large.pages':
+    '這份檔案有 {pages} 頁（{size}），轉換會比較久。請保持本頁開啟；可以切到其他分頁，標題列會顯示進度。',
+  'job.large.ocr': '這是掃描檔，每一頁都要辨識文字，比一般 PDF 慢很多，速度取決於電腦效能。',
+  'job.pageLimit': '文件共 {total} 頁，本次只轉換前 {limit} 頁。',
+  'job.retryPlain': '改用「只要文字」重試',
+
+  'error.out-of-memory': '瀏覽器記憶體不足，轉換中斷',
+  'error.worker-crashed': '轉換程序意外結束，多半是記憶體不足',
+  'error.memory.hint':
+    '可以試試：關閉其他分頁後重試；改用「只要文字」模式，不保留圖片；或者把 PDF 拆成幾段分別轉換。',
+  'warning.image-budget-exceeded': '圖片總量已達 {limit} 上限，第 {page} 頁起不再保留圖片',
+  'summary.imageBudget': '圖片超出 {limit} 上限，第 {page} 頁起未保留',
+  'warning.scan-text-layer': '{count} 頁是自帶文字層的掃描檔，已按文字層輸出，整頁掃描圖未保留',
 };

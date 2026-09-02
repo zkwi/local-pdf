@@ -6,7 +6,15 @@ import type {
 } from '../core/contracts/report.ts';
 
 export type WorkerErrorCode =
-  'cancelled' | 'password-required' | 'password-incorrect' | 'invalid-pdf' | 'unknown';
+  | 'cancelled'
+  | 'password-required'
+  | 'password-incorrect'
+  | 'invalid-pdf'
+  /** 流水线里抛出的内存分配失败 */
+  | 'out-of-memory'
+  /** Worker 整个崩了（主线程收到 onerror），多半也是内存耗尽 */
+  | 'worker-crashed'
+  | 'unknown';
 
 export interface WorkerError {
   readonly code: WorkerErrorCode;

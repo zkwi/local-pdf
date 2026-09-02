@@ -17,6 +17,7 @@ import { buildLines } from './lines.ts';
 import { segmentRegions } from './regions.ts';
 import { detectRowRuledTables } from './row-tables.ts';
 import { detectTables } from './tables.ts';
+import { isScanWithTextLayer } from '../ocr/engine.ts';
 
 export interface ExtractedImage {
   readonly data: Uint8Array;
@@ -141,7 +142,12 @@ function analyzePage(
     ? segmentRegions(flowLines, page.width)
     : segmentRegions(flowLines, page.width, Number.POSITIVE_INFINITY);
 
-  const ctx = { pageIndex: page.index, bodyFontSize, order };
+  const ctx = {
+    pageIndex: page.index,
+    bodyFontSize,
+    order,
+    noisyFontSizes: page.textHealth.hiddenText || page.ocrApplied,
+  };
   const blocks: LayoutBlock[] = [];
   for (const region of regions) blocks.push(...buildBlocksForRegion(region, ctx));
   order = ctx.order;
@@ -229,6 +235,14 @@ function insertByPosition(blocks: LayoutBlock[], item: LayoutBlock): void {
   else blocks.splice(idx, 0, item);
 }
 
+/** 盖住页宽 85% 以上的图：扫描页的整页图 */
+export function isFullPageImage(
+  image: { readonly bbox: { readonly width: number } },
+  page: { readonly width: number },
+): boolean {
+  return image.bbox.width > page.width * 0.85;
+}
+
 function buildImageBlocks(
   page: PrimitivePage,
   images: ImageStore,
@@ -240,8 +254,8 @@ function buildImageBlocks(
     const stored = images.get(image.id);
     if (!stored) continue;
     if (image.bbox.width < MIN_IMAGE_SIDE || image.bbox.height < MIN_IMAGE_SIDE) continue;
-    // 扫描页整页图已经被 OCR 成文字，再插一张原图只会重复
-    if (page.ocrApplied && image.bbox.width > page.width * 0.85) continue;
+    // 扫描页整页图已经被 OCR 成文字（或自带的文字层就是它的识别结果），再插一张原图只会重复
+    if ((page.ocrApplied || isScanWithTextLayer(page)) && isFullPageImage(image, page)) continue;
     if (tables.some((t) => contains(t.meta.bbox, image.bbox, 2))) continue;
 
     out.push({

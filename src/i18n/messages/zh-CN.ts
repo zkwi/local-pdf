@@ -32,9 +32,6 @@ export const zhCN = {
   'summary.lowConfidence.one': '1 页把握不高，建议核对',
   'summary.lowConfidence.other': '{count} 页把握不高，建议核对',
   'app.github': 'GitHub 仓库',
-  'trust.noUpload': '不上传',
-  'trust.noSignup': '无需注册',
-  'trust.openSource': '免费开源',
   'drop.paste': '也可以按 Ctrl+V 直接粘贴文件',
   'drop.sample': '手边没有文件？试试示例 PDF',
   'drop.sampleFailed': '示例文件加载失败，请稍后再试',
@@ -226,6 +223,37 @@ export const zhCN = {
   'compat.mobile.copied': '已复制',
   'compat.mobile.continue': '仍要在手机上试试（仅建议小文件）',
   'compat.lowMemory': '当前设备内存较小，转换大文件时可能失败，建议一次只转一个文件。',
+
+  'features.label': '为什么用 Local PDF',
+  'features.local.title': '文件不出本机',
+  'features.local.body': '没有服务器，解析、识别、生成全在浏览器里完成，断网也能用。',
+  'features.editable.title': '真正可编辑的 Word',
+  'features.editable.body': '段落、标题、列表、表格、图片、页眉页脚都重建，不是整页截图。',
+  'features.ocr.title': '扫描件自动识别',
+  'features.ocr.body': '没有文字层的页面自动 OCR，支持中文、英文、日文等 50 多种语言。',
+  'features.free.title': '免费开源',
+  'features.free.body': 'MIT 协议，不注册、不限次数、没有水印。',
+
+  'job.elapsed': '已用 {time}',
+  'job.duration': '用时 {time}',
+  'job.eta.underMinute': '剩余不到 1 分钟',
+  'job.eta.minutes': '剩余约 {count} 分钟',
+  'job.eta.hours': '剩余约 {hours} 小时 {minutes} 分钟',
+  'job.large.size':
+    '文件较大（{size}），转换会比较久。请保持本页打开；可以切到其他标签页，标题栏会显示进度。',
+  'job.large.pages':
+    '这份文件有 {pages} 页（{size}），转换会比较久。请保持本页打开；可以切到其他标签页，标题栏会显示进度。',
+  'job.large.ocr': '这是扫描件，每一页都要识别文字，比普通 PDF 慢很多，速度取决于电脑性能。',
+  'job.pageLimit': '文档共 {total} 页，本次只转换前 {limit} 页。',
+  'job.retryPlain': '改用「只要文字」重试',
+
+  'error.out-of-memory': '浏览器内存不足，转换中断',
+  'error.worker-crashed': '转换进程意外退出，多半是内存不足',
+  'error.memory.hint':
+    '可以试试：关闭其他标签页后重试；改用「只要文字」模式，不保留图片；或者把 PDF 拆成几段分别转换。',
+  'warning.image-budget-exceeded': '图片总量已达 {limit} 上限，第 {page} 页起不再保留图片',
+  'summary.imageBudget': '图片超出 {limit} 上限，第 {page} 页起未保留',
+  'warning.scan-text-layer': '{count} 页是自带文字层的扫描件，已按文字层输出，整页扫描图未保留',
 } as const;
 
 export type MessageKey = keyof typeof zhCN;

@@ -85,7 +85,8 @@ The engine is [PaddleOCR.js](https://github.com/PaddlePaddle/PaddleOCR/tree/main
 | Standard (default) | PP-OCRv6 tiny  | 6 MB model + ~11 MB runtime (gzip) | ordinary scans            |
 | High               | PP-OCRv6 small | 31 MB model + ~11 MB runtime       | small print, blurry pages |
 
-- OCR runs only on pages that need it: no text layer, almost no text over a large image, or a garbled text layer.
+- OCR runs only on pages that need it: no text layer, almost no text over a large image, a page that is one big
+  image whose only text is a watermark, header/footer or page number, or a garbled text layer.
 - Models are downloaded on first use, verified against SHA-256 and kept in Cache Storage; they work offline afterwards.
   The UI shows what is cached and can clear it.
 - The ONNX Runtime WASM (26.5 MiB) is loaded from jsDelivr, pinned to the exact version the SDK was built with,

@@ -208,6 +208,53 @@ def scanned(path):
     doc.close()
 
 
+def scan_text_layer(path):
+    """可搜索扫描件：整页一张图，文字层不可见（Tr 3），页面以 /Rotate 270 存放，
+    文字矩阵被压扁去贴合图上的行框（真实扫描软件就是这么写的）"""
+    doc = fitz.open()
+    # 未旋转的媒体框 728×516，/Rotate 270 后显示为 516×728 的竖页
+    page = doc.new_page(width=728, height=516)
+    tiny = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, 8, 8), False)
+    tiny.clear_with(235)
+    page.insert_image(page.rect, pixmap=tiny)
+    page.insert_font(fontname="helv")
+    page.set_rotation(270)
+
+    def squashed(s, x0, y0, w, h, fs=9.5):
+        # 显示坐标 (x0, y0, w, h) → 用户坐标：user_x = 728 - display_y, user_y = 516 - display_x
+        width_units = fitz.get_text_length(s, fontname="helv", fontsize=1)
+        a = h / (fs * width_units)
+        d = w / fs
+        ux = 728 - (y0 + h)
+        # 字形框沿基线上方占 0.8、下方占 0.2，原点要往下（用户 y 正向）挪 0.2 个行宽，框才落在 x0..x0+w
+        uy = 516 - (x0 + w) + 0.2 * w
+        esc = s.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+        return f"BT /helv {fs} Tf 3 Tr {a:.6f} 0 0 {d:.6f} {ux:.3f} {uy:.3f} Tm ({esc}) Tj ET\n"
+
+    stream = squashed("Scan fixture, chapter one", 70, 22, 166, 8) + squashed("1", 24, 22, 8, 9)
+    body = [
+        "This page imitates a searchable scan: every glyph is invisible (Tr 3),",
+        "the page is stored sideways with /Rotate 270, and the text matrix is",
+        "squashed so that each string box matches one printed line of the image.",
+        "Real OCR software writes layers like this so that text selection works",
+        "even though the glyphs themselves would look absurd if they were drawn.",
+        "The extractor must read these boxes as ordinary horizontal lines with a",
+        "font size equal to the line height, not as giant rotated characters.",
+        "Paragraph two starts here after a small gap and keeps going for a few",
+        "more lines so that the page has enough characters to count as a scan",
+        "with a proper text layer rather than a figure with a couple of labels.",
+        "The last line of the fixture ends the page without any page number.",
+    ]
+    y = 50
+    for i, s in enumerate(body):
+        stream += squashed(s, 47, y, 300 if i in (6, 10) else 422, 10)
+        y += 24 if i == 6 else 15
+    xref = page.get_contents()[0]
+    doc.update_stream(xref, doc.xref_stream(xref) + b"\n" + stream.encode("latin-1"))
+    doc.save(path, garbage=4, deflate=True)
+    doc.close()
+
+
 def main():
     jobs = [
         ("single-column-en.pdf", single_column_en),
@@ -217,6 +264,7 @@ def main():
         ("with-image.pdf", with_image),
         ("multipage-header-footer.pdf", multipage),
         ("scanned-no-text.pdf", scanned),
+        ("scan-text-layer-rot270.pdf", scan_text_layer),
     ]
     for name, fn in jobs:
         target = os.path.join(HERE, name)

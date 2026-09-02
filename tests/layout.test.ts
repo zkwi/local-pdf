@@ -150,3 +150,74 @@ describe('detectHeadersFooters', () => {
     expect(result.headerLineIds.size).toBe(0);
   });
 });
+
+describe('OCR 来的页面（字号不可靠）', () => {
+  const analyzeNoisy = (spans: ReturnType<typeof line>[]) => {
+    const { lines } = buildLines(spans);
+    const ctx = { pageIndex: 0, bodyFontSize: 10, order: 0, noisyFontSizes: true };
+    return segmentRegions(lines, 595).regions.flatMap((region) =>
+      buildBlocksForRegion(region, ctx),
+    );
+  };
+
+  it('多级编号短行单独成标题，不和下一行正文粘在一起', () => {
+    const blocks = analyzeNoisy([
+      line('1.3.1 农业农村现代化', 72, 100, 120),
+      line(
+        '实现农业农村现代化是全面建设社会主义现代化国家的重大任务，需要将先进技术',
+        72,
+        114,
+        400,
+      ),
+      line('装备、管理理念等引入农业，将基础设施和基本公共服务向农村延伸覆盖。', 72, 128, 400),
+    ]);
+    expect(blocks.map((b) => b.kind)).toEqual(['heading', 'paragraph']);
+    expect(blocks[0]?.kind === 'heading' ? blocks[0].level : null).toBe(3);
+  });
+
+  it('OCR 框左边界抖动，不按缩进分段，只看上一行是否提前收尾', () => {
+    const blocks = analyzeNoisy([
+      line(
+        '第五级，信息系统受到破坏后，会对国家安全造成特别严重损害。第五级信息系统',
+        47,
+        100,
+        420,
+      ),
+      line('使用单位应当依据国家管理规范、技术标准和业务特殊安全需求进行保护，并', 25, 114, 442),
+      line('对该级信息系统信息安全等级保护工作进行专门监督、检查。', 40, 128, 280),
+      line('《信息安全技术 网络安全等级保护基本要求》规定了不同级别的等级保护对', 46, 142, 421),
+      line('象应具备的基本安全保护能力。', 40, 156, 140),
+    ]);
+    expect(blocks.map((b) => b.kind)).toEqual(['paragraph', 'paragraph']);
+    expect(blocks[0]?.kind === 'paragraph' ? blocks[0].lines.length : 0).toBe(3);
+  });
+
+  it('项目符号行的续行不拆开', () => {
+    const blocks = analyzeNoisy([
+      line(
+        '● 可管理性：风险责任人(或责任组织)管理风险发生或影响的容易程度。如果容易管',
+        45,
+        100,
+        421,
+      ),
+      line('理，可管理性就高。', 77, 114, 88),
+      line(
+        '● 可控性：风险责任人(或责任组织)能够控制风险后果的程度。如果后果很容易控制，',
+        43,
+        128,
+        416,
+      ),
+    ]);
+    expect(blocks.map((b) => b.kind)).toEqual(['list-item', 'list-item']);
+    expect(blocks[0]?.kind === 'list-item' ? blocks[0].lines.length : 0).toBe(2);
+  });
+
+  it('字号只大 17% 的正文行不算标题：OCR 估的字号页与页之间就差这么多', () => {
+    const blocks = analyzeNoisy([
+      line('备将获取的数据记录到电子健康文件中，方便病人或医生查阅。', 72, 100, 400, {
+        fontSize: 11.7,
+      }),
+    ]);
+    expect(blocks[0]?.kind).toBe('paragraph');
+  });
+});

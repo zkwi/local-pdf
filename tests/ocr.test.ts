@@ -3,6 +3,8 @@ import type { OcrResultItem } from '@paddleocr/paddleocr-js';
 import { languageSpec, OCR_LANGUAGES } from '../src/core/ocr/languages.ts';
 import { paddleItemsToSpans } from '../src/core/ocr/paddle.ts';
 import { localModelUrl, selectPaddleModels } from '../src/core/ocr/paddle-models.ts';
+import type { PrimitivePage, PrimitiveTextSpan } from '../src/core/contracts/primitives.ts';
+import { isScanWithTextLayer, shouldRunOcr, snapFontSizes } from '../src/core/ocr/engine.ts';
 
 const item = (poly: [number, number][], text: string, score = 0.95): OcrResultItem => ({
   poly,
@@ -138,5 +140,115 @@ describe('languageSpec', () => {
   it('每种语言都有 PaddleOCR 的 lang 映射', () => {
     for (const lang of OCR_LANGUAGES) expect(lang.paddle).toBeTruthy();
     expect(languageSpec('zh-Hant').paddle).toBe('chinese_cht');
+  });
+});
+
+const fakeSpan = (text: string, y: number, rotation = 0): PrimitiveTextSpan => ({
+  id: `s${y}-${text.length}`,
+  pageIndex: 0,
+  text,
+  bbox: { x: 50, y, width: 80, height: 9 },
+  baseline: y + 8,
+  fontSize: 9,
+  fontKey: 'f',
+  fontName: 'f',
+  fontFamily: 'sans-serif',
+  bold: false,
+  italic: false,
+  rotation,
+  vertical: false,
+  source: 'native-pdf',
+  confidence: 1,
+  hasEOL: false,
+});
+
+const fakePage = (
+  spans: PrimitiveTextSpan[],
+  imageCoverage: number,
+  hiddenText = false,
+): PrimitivePage => ({
+  index: 0,
+  width: 595,
+  height: 842,
+  rotation: 0,
+  spans,
+  images: [],
+  segments: [],
+  links: [],
+  textHealth: {
+    charCount: spans.reduce((n, s) => n + s.text.trim().length, 0),
+    printableRatio: 1,
+    replacementRatio: 0,
+    imageCoverage,
+    textCoverage: 0.05,
+    suspicious: false,
+    hiddenText,
+  },
+  ocrApplied: false,
+});
+
+// 页眉一行 + 斜着的水印 + 右下角页码，一共三十多个字
+const decorative = [
+  fakeSpan('淘宝：考试大神店 更新：2022.08.28 已备案知识产权，侵权必究', 26),
+  fakeSpan('考试大神店', 321, 315),
+  fakeSpan('99', 822),
+];
+
+describe('shouldRunOcr', () => {
+  it('整页是图、文字层只有页眉、页码和水印：要 OCR', () => {
+    expect(shouldRunOcr(fakePage(decorative, 0.86), 'auto')).toBe(true);
+  });
+
+  it('正文区有真实文字（图注）：不 OCR', () => {
+    const withCaption = [...decorative, fakeSpan('图 3-1 系统架构示意', 700)];
+    expect(shouldRunOcr(fakePage(withCaption, 0.86), 'auto')).toBe(false);
+  });
+
+  it('图不够大时不 OCR；策略 off / force 直接决定', () => {
+    expect(shouldRunOcr(fakePage(decorative, 0.4), 'auto')).toBe(false);
+    expect(shouldRunOcr(fakePage(decorative, 0.86), 'off')).toBe(false);
+    expect(shouldRunOcr(fakePage([], 0), 'force')).toBe(true);
+  });
+});
+
+describe('isScanWithTextLayer', () => {
+  const body = Array.from({ length: 14 }, (_, i) =>
+    fakeSpan('这是一行有二十多个字的正文文字内容，用来凑够字数。', 100 + i * 14),
+  );
+
+  it('全是不可见文字且不稀疏：是带文字层的扫描页', () => {
+    expect(isScanWithTextLayer(fakePage(body, 1, true))).toBe(true);
+  });
+
+  it('文字可见、或只有零星标签：不是', () => {
+    expect(isScanWithTextLayer(fakePage(body, 1, false))).toBe(false);
+    expect(
+      isScanWithTextLayer(fakePage([fakeSpan('图 1', 300), fakeSpan('表 2', 400)], 1, true)),
+    ).toBe(false);
+  });
+});
+
+describe('snapFontSizes', () => {
+  const at = (text: string, size: number): PrimitiveTextSpan => ({
+    ...fakeSpan(text, 100),
+    fontSize: size,
+  });
+
+  it('主流字号附近的都吸附过去，明显大的保留，离谱的压到上限', () => {
+    const spans = [
+      at('这是正文第一行的文字内容', 9.5),
+      at('这是正文第二行的文字内容', 11.2),
+      at('这是正文第三行的文字内容', 10.1),
+      at('章节标题', 15),
+      at('。', 143),
+    ];
+    const sizes = snapFontSizes(spans).map((s) => s.fontSize);
+    expect(sizes.slice(0, 3)).toEqual([10.1, 10.1, 10.1]);
+    expect(sizes[3]).toBe(15);
+    expect(sizes[4]).toBeCloseTo(30.3, 1);
+  });
+
+  it('没有文字时原样返回', () => {
+    expect(snapFontSizes([])).toEqual([]);
   });
 });

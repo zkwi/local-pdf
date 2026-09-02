@@ -8,6 +8,7 @@ import { SITE } from './site.ts';
 import { probeCapabilities } from './ui/capabilities.ts';
 import { CompatGate } from './ui/CompatGate.tsx';
 import { DropZone, splitPdfs } from './ui/DropZone.tsx';
+import { Features } from './ui/Features.tsx';
 import { JobCard } from './ui/JobCard.tsx';
 import { LanguageSelect } from './ui/LanguageSelect.tsx';
 import { Logo } from './ui/Logo.tsx';
@@ -48,8 +49,8 @@ export function App() {
   );
 
   const handleRetry = useCallback(
-    (id: string, password?: string) => {
-      retry(id, effective(password === undefined ? options : { ...options, password }));
+    (id: string, patch?: Partial<ConvertOptions>) => {
+      retry(id, effective({ ...options, ...patch }));
     },
     [effective, options, retry],
   );
@@ -212,11 +213,7 @@ export function App() {
 
           <DropZone onFiles={handleFiles} onSample={loadSample} />
 
-          <ul className="trust" aria-label={t('app.badgeLocalTitle')}>
-            <li>{t('trust.noUpload')}</li>
-            <li>{t('trust.noSignup')}</li>
-            <li>{t('trust.openSource')}</li>
-          </ul>
+          <Features />
 
           <section className="output" aria-label={t('output.label')}>
             <span className="output__label">{t('output.label')}</span>

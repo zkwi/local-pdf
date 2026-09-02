@@ -27,6 +27,8 @@ export type WarningCode =
   | 'vertical-text-flattened'
   | 'font-substituted'
   | 'page-limit-exceeded'
+  | 'image-budget-exceeded'
+  | 'scan-text-layer'
   | 'page-size-clamped'
   | 'no-text-found';
 

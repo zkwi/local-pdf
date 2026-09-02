@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
-import { CancelledError, convert } from '../core/converter/convert.ts';
-import type { WorkerError, WorkerRequest, WorkerResponse } from './protocol.ts';
+import { convert } from '../core/converter/convert.ts';
+import { classifyError } from './classify.ts';
+import type { WorkerRequest, WorkerResponse } from './protocol.ts';
 
 const controllers = new Map<string, AbortController>();
 /** 串行处理，避免多份大文档同时占内存 */
@@ -50,26 +51,10 @@ self.onmessage = (event: MessageEvent<WorkerRequest>): void => {
       post({
         type: 'error',
         jobId: request.jobId,
-        error: classify(error, controller.signal.aborted),
+        error: classifyError(error, controller.signal.aborted),
       });
     } finally {
       controllers.delete(request.jobId);
     }
   });
 };
-
-function classify(error: unknown, aborted: boolean): WorkerError {
-  // 取消时模型下载会以 AbortError 抛出，统一归到 cancelled
-  if (error instanceof CancelledError || aborted) return { code: 'cancelled' };
-
-  const name = error instanceof Error ? error.name : '';
-  const raw = error instanceof Error ? error.message : String(error);
-
-  if (name === 'PasswordException') {
-    return { code: /incorrect/i.test(raw) ? 'password-incorrect' : 'password-required' };
-  }
-  if (name === 'InvalidPDFException' || /invalid pdf/i.test(raw)) {
-    return { code: 'invalid-pdf' };
-  }
-  return { code: 'unknown', detail: raw };
-}

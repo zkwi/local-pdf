@@ -49,7 +49,30 @@ function matchLocale(tag: string): Locale | null {
   return null;
 }
 
-/** 优先级：URL 参数 → 上次的选择 → 浏览器语言 → 英文 */
+/**
+ * 浏览器语言一个都对不上时按时区猜地区：在这些时区里用别的界面语言的人，
+ * 多半还是读这几种文字。index.html 里的启动脚本有同一份表。
+ */
+const TIMEZONE_LOCALES: Readonly<Record<string, Locale>> = {
+  'Asia/Shanghai': 'zh-CN',
+  'Asia/Chongqing': 'zh-CN',
+  'Asia/Harbin': 'zh-CN',
+  'Asia/Urumqi': 'zh-CN',
+  'Asia/Taipei': 'zh-TW',
+  'Asia/Hong_Kong': 'zh-TW',
+  'Asia/Macau': 'zh-TW',
+  'Asia/Tokyo': 'ja',
+};
+
+function localeFromTimeZone(): Locale | null {
+  try {
+    return TIMEZONE_LOCALES[Intl.DateTimeFormat().resolvedOptions().timeZone] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** 优先级：URL 参数 → 上次的选择 → 浏览器语言 → 时区 → 英文 */
 export function detectLocale(): Locale {
   const fromUrl = localeFromUrl();
   if (fromUrl !== null) return fromUrl;
@@ -63,7 +86,7 @@ export function detectLocale(): Locale {
     const hit = matchLocale(tag);
     if (hit !== null) return hit;
   }
-  return 'en';
+  return localeFromTimeZone() ?? 'en';
 }
 
 export function interpolate(template: string, params?: MessageParams): string {

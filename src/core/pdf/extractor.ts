@@ -12,6 +12,7 @@ import type {
 } from '../contracts/primitives.ts';
 import type { ConversionWarning } from '../contracts/layout.ts';
 import { clusterBoxes, makeBBox, unionBBox } from '../geometry/bbox.ts';
+import { snapFontSizes } from '../ocr/engine.ts';
 import { sanitizeText } from '../util/sanitize.ts';
 import { isSymbolFont, mapSymbolFontText } from './symbols.ts';
 import { walkOperatorList } from './operators.ts';
@@ -152,9 +153,13 @@ export class PdfSession {
     const width = viewport.width;
     const height = viewport.height;
 
-    let graphics = { segments: [], images: [], fontKeys: [] as string[] } as ReturnType<
-      typeof walkOperatorList
-    >;
+    let graphics = {
+      segments: [],
+      images: [],
+      fontKeys: [] as string[],
+      hiddenTextOps: 0,
+      visibleTextOps: 0,
+    } as ReturnType<typeof walkOperatorList>;
     try {
       const opList = await page.getOperatorList();
       graphics = walkOperatorList(opList, transform, index);
@@ -166,6 +171,8 @@ export class PdfSession {
       });
     }
 
+    // 文字全部以不可见模式绘制：可搜索扫描件的文字层
+    const hiddenLayer = graphics.hiddenTextOps > 0 && graphics.visibleTextOps === 0;
     const fonts = this.#collectFonts(page, graphics.fontKeys);
     const textContent = await page.getTextContent();
     const styles = textContent.styles as unknown as Record<string, PdfTextStyle>;
@@ -190,23 +197,26 @@ export class PdfSession {
         transform,
         index,
         spans.length,
+        hiddenLayer,
       );
       if (span !== null) spans.push(span);
     }
 
     const links = await this.#extractLinks(page, index, transform);
     const images = mergeImageTiles(graphics.images);
+    // 文字层是别的 OCR 软件写的：字号按框高估的，逐行抖动，先吸附到主流字号
+    const finalSpans = hiddenLayer ? snapFontSizes(spans) : spans;
 
     return {
       index,
       width,
       height,
       rotation: page.rotate,
-      spans,
+      spans: finalSpans,
       images,
       segments: graphics.segments,
       links,
-      textHealth: computeTextHealth(spans, images, width, height, rawText),
+      textHealth: computeTextHealth(finalSpans, images, width, height, rawText, hiddenLayer),
       ocrApplied: false,
     };
   }
@@ -369,6 +379,7 @@ function buildSpan(
   transform: readonly number[],
   pageIndex: number,
   seq: number,
+  hiddenLayer: boolean,
 ): PrimitiveTextSpan | null {
   const tx = Util.transform(transform, item.transform);
   const fontSize = Math.hypot(tx[2], tx[3]);
@@ -404,20 +415,22 @@ function buildSpan(
 
   const font = fonts.get(item.fontName);
   const angle = (Math.atan2(tx[1], tx[0]) * 180) / Math.PI;
+  const rotation = ((angle % 360) + 360) % 360;
+  const squashed = normalizeSquashedSpan(rotation, bbox, vertical, ascentRatio, hiddenLayer);
 
   return {
     id: `p${pageIndex}-s${seq}`,
     pageIndex,
     text: item.str,
     bbox,
-    baseline: oy,
-    fontSize,
+    baseline: squashed?.baseline ?? oy,
+    fontSize: squashed?.fontSize ?? fontSize,
     fontKey: item.fontName,
     fontName: font?.name ?? item.fontName,
     fontFamily: font?.family ?? style?.fontFamily ?? 'sans-serif',
     bold: font?.bold ?? false,
     italic: font?.italic ?? false,
-    rotation: ((angle % 360) + 360) % 360,
+    rotation: squashed?.rotation ?? rotation,
     vertical,
     source: 'native-pdf',
     confidence: 1,
@@ -464,6 +477,7 @@ export function computeTextHealth(
   width: number,
   height: number,
   rawText?: string,
+  hiddenText = false,
 ): TextHealth {
   const text = rawText ?? spans.map((s) => s.text).join('');
   let broken = 0;
@@ -491,7 +505,28 @@ export function computeTextHealth(
     imageCoverage,
     textCoverage,
     suspicious: replacementRatio > 0.12 || (charCount > 20 && printableRatio < 0.7),
+    hiddenText,
   };
+}
+
+/**
+ * 可搜索扫描件常把不可见文字压扁去贴合图上的行框：字的朝向是竖的或倒的，
+ * 包围盒却是横着的一整行（字号被算成了整行的宽度）。这种片段的包围盒就是行框，
+ * 按横排处理：字号取行框高度，基线按普通横排文字估。真正的旋转文字包围盒是竖长的，不受影响。
+ */
+export function normalizeSquashedSpan(
+  rotation: number,
+  bbox: BBox,
+  vertical: boolean,
+  ascentRatio: number,
+  hiddenLayer = false,
+): { rotation: number; fontSize: number; baseline: number } | null {
+  if (vertical || rotation < 45 || rotation > 315) return null;
+  // 文字层全是不可见的（可搜索扫描件）时，连页码这种一两个字的方块也是压扁出来的；
+  // 否则只处理明显横长的，免得误伤真正竖着写的字
+  const minAspect = hiddenLayer ? 0.5 : 1.5;
+  if (bbox.width <= bbox.height * minAspect) return null;
+  return { rotation: 0, fontSize: bbox.height, baseline: bbox.y + bbox.height * ascentRatio };
 }
 
 export function describeError(error: unknown): string {

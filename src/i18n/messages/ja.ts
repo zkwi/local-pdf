@@ -30,9 +30,6 @@ export const ja: Messages = {
   'summary.lowConfidence.one': '要確認 1 ページ',
   'summary.lowConfidence.other': '要確認 {count} ページ',
   'app.github': 'GitHub リポジトリ',
-  'trust.noUpload': 'アップロードなし',
-  'trust.noSignup': '登録不要',
-  'trust.openSource': '無料・オープンソース',
   'drop.paste': 'Ctrl+V でファイルを貼り付けることもできます',
   'drop.sample': '手元にファイルがなければサンプル PDF をお試しください',
   'drop.sampleFailed': 'サンプルを読み込めませんでした。しばらくしてからお試しください',
@@ -236,4 +233,41 @@ export const ja: Messages = {
   'compat.mobile.continue': 'それでもこの端末で試す（小さなファイルのみ推奨）',
   'compat.lowMemory':
     'この端末はメモリが少ないため、大きなファイルは失敗することがあります。1 ファイルずつ変換してください。',
+
+  'features.label': 'Local PDF の特長',
+  'features.local.title': 'ファイルは端末から出ません',
+  'features.local.body':
+    'サーバーはありません。解析・認識・生成はすべてブラウザ内で行われ、オフラインでも使えます。',
+  'features.editable.title': '本当に編集できる Word',
+  'features.editable.body':
+    '段落・見出し・リスト・表・画像・ヘッダーとフッターを再構築します。ページ画像を貼るだけではありません。',
+  'features.ocr.title': 'スキャンは自動で文字認識',
+  'features.ocr.body':
+    'テキスト層のないページは自動で OCR。中国語・英語・日本語など 50 以上の言語に対応。',
+  'features.free.title': '無料・オープンソース',
+  'features.free.body': 'MIT ライセンス。登録不要、回数制限なし、透かしなし。',
+
+  'job.elapsed': '経過 {time}',
+  'job.duration': '所要時間 {time}',
+  'job.eta.underMinute': '残り 1 分未満',
+  'job.eta.minutes': '残り約 {count} 分',
+  'job.eta.hours': '残り約 {hours} 時間 {minutes} 分',
+  'job.large.size':
+    '大きなファイル（{size}）のため時間がかかります。このページを開いたままにしてください。他のタブに切り替えても、タイトルバーに進捗が表示されます。',
+  'job.large.pages':
+    'このファイルは {pages} ページ（{size}）あり、時間がかかります。このページを開いたままにしてください。他のタブに切り替えても、タイトルバーに進捗が表示されます。',
+  'job.large.ocr':
+    'スキャン文書のため 1 ページずつ文字認識を行います。通常の PDF よりかなり時間がかかり、速度はパソコンの性能に依存します。',
+  'job.pageLimit': '文書は {total} ページありますが、今回は先頭 {limit} ページのみ変換します。',
+  'job.retryPlain': '「テキストのみ」で再試行',
+
+  'error.out-of-memory': 'ブラウザのメモリが不足し、変換が中断しました',
+  'error.worker-crashed': '変換プロセスが予期せず終了しました。メモリ不足の可能性が高いです',
+  'error.memory.hint':
+    '対処法：他のタブを閉じて再試行する。「テキストのみ」モードにして画像を保持しない。PDF を分割して別々に変換する。',
+  'warning.image-budget-exceeded':
+    '画像の合計が上限 {limit} に達したため、{page} ページ以降の画像は保持しません',
+  'summary.imageBudget': '画像が上限 {limit} を超えたため {page} ページ以降は保持していません',
+  'warning.scan-text-layer':
+    '{count} ページはテキスト層付きのスキャンです。テキスト層を出力し、ページ全体のスキャン画像は保持していません',
 };

@@ -30,9 +30,6 @@ export const en: Messages = {
   'summary.lowConfidence.one': '1 page worth checking',
   'summary.lowConfidence.other': '{count} pages worth checking',
   'app.github': 'GitHub repository',
-  'trust.noUpload': 'Nothing uploaded',
-  'trust.noSignup': 'No sign-up',
-  'trust.openSource': 'Free & open source',
   'drop.paste': 'You can also paste a file with Ctrl+V',
   'drop.sample': 'No file at hand? Try a sample PDF',
   'drop.sampleFailed': 'The sample could not be loaded, please try again later',
@@ -238,4 +235,41 @@ export const en: Messages = {
   'compat.mobile.continue': 'Try on this phone anyway (small files only)',
   'compat.lowMemory':
     'This device has little memory; large files may fail. Convert one file at a time.',
+
+  'features.label': 'Why Local PDF',
+  'features.local.title': 'Files never leave your computer',
+  'features.local.body':
+    'There is no server: parsing, recognition and file generation all run in your browser, even offline.',
+  'features.editable.title': 'Real, editable Word',
+  'features.editable.body':
+    'Paragraphs, headings, lists, tables, images and headers/footers are rebuilt, not pasted in as page screenshots.',
+  'features.ocr.title': 'Scans recognised automatically',
+  'features.ocr.body':
+    'Pages without a text layer go through OCR, covering Chinese, English, Japanese and 50+ other languages.',
+  'features.free.title': 'Free and open source',
+  'features.free.body': 'MIT licence. No account, no limits, no watermark.',
+
+  'job.elapsed': 'Elapsed {time}',
+  'job.duration': 'Took {time}',
+  'job.eta.underMinute': 'Under a minute left',
+  'job.eta.minutes': 'About {count} min left',
+  'job.eta.hours': 'About {hours} h {minutes} min left',
+  'job.large.size':
+    'Large file ({size}): this will take a while. Keep this page open; you can switch tabs and watch the progress in the title bar.',
+  'job.large.pages':
+    'This file has {pages} pages ({size}): this will take a while. Keep this page open; you can switch tabs and watch the progress in the title bar.',
+  'job.large.ocr':
+    'This is a scan, so every page is recognised one by one, which is much slower than a regular PDF; speed depends on your computer.',
+  'job.pageLimit': 'The document has {total} pages; only the first {limit} are converted.',
+  'job.retryPlain': 'Retry with "Text only"',
+
+  'error.out-of-memory': 'The browser ran out of memory and the conversion stopped',
+  'error.worker-crashed': 'The conversion process quit unexpectedly, most likely out of memory',
+  'error.memory.hint':
+    'Things to try: close other tabs and retry; switch to "Text only" so images are not kept; or split the PDF into parts and convert them separately.',
+  'warning.image-budget-exceeded':
+    'Images reached the {limit} limit; none are kept from page {page} onwards',
+  'summary.imageBudget': 'Images over the {limit} limit; none kept from page {page}',
+  'warning.scan-text-layer':
+    '{count} pages are scans with their own text layer; the text was used and the full-page scan images were not kept',
 };

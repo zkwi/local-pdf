@@ -7,6 +7,8 @@ import { endsSentence, matchListMarker, matchSectionNumber } from './text.ts';
 export interface BlockContext {
   readonly pageIndex: number;
   readonly bodyFontSize: number;
+  /** 字号是 OCR 从框高估出来的（自己识别的或文件自带的文字层），已被吸附成正文大小，标题不能只看字号 */
+  readonly noisyFontSizes?: boolean;
   /** 起始阅读序号，返回时会累加 */
   order: number;
 }
@@ -15,6 +17,8 @@ export interface BlockContext {
 const PARAGRAPH_GAP_RATIO = 1.55;
 /** 上一行右边界离栏宽还差这么多字宽，就认为该行是段末短行 */
 const SHORT_LINE_SLACK = 2.5;
+/** OCR 框的右边界也会抖一两个字宽，得放宽 */
+const SHORT_LINE_SLACK_NOISY = 3.5;
 /** 首行缩进阈值（字宽倍数） */
 const INDENT_RATIO = 0.7;
 
@@ -36,7 +40,8 @@ export function buildBlocksForRegion(region: Region, ctx: BlockContext): LayoutB
   for (let i = 1; i < lines.length; i++) {
     const prev = lines[i - 1];
     const line = lines[i];
-    if (shouldBreak(prev, line, { baseGap, regionLeft, regionRight })) {
+    const noisy = ctx.noisyFontSizes === true;
+    if (shouldBreak(prev, line, { baseGap, regionLeft, regionRight, noisy })) {
       groups.push(current);
       current = [line];
     } else {
@@ -52,6 +57,7 @@ interface BreakContext {
   readonly baseGap: number;
   readonly regionLeft: number;
   readonly regionRight: number;
+  readonly noisy: boolean;
 }
 
 function shouldBreak(prev: TextLine, line: TextLine, ctx: BreakContext): boolean {
@@ -62,8 +68,14 @@ function shouldBreak(prev: TextLine, line: TextLine, ctx: BreakContext): boolean
   if (Math.abs(prev.fontSize - line.fontSize) > em * 0.15) return true;
   if (prev.bold !== line.bold) return true;
   if (matchListMarker(line.text) !== null) return true;
+  // OCR 来的页面："1.3.1 农业农村现代化"、"2.项目文件"这类编号短行字号和正文一样，
+  // 只能靠编号和长度认出来，前后都要断开，不然会和下一行正文粘成一段
+  if (ctx.noisy && (isNumberedShortLine(prev, ctx) || isNumberedShortLine(line, ctx))) return true;
 
-  const prevIsShort = right(prev.bbox) < ctx.regionRight - em * SHORT_LINE_SLACK;
+  const slack = ctx.noisy ? SHORT_LINE_SLACK_NOISY : SHORT_LINE_SLACK;
+  const prevIsShort = right(prev.bbox) < ctx.regionRight - em * slack;
+  // OCR 框的左边界能抖一两个字宽，缩进不可信：只看上一行是否提前收尾
+  if (ctx.noisy) return prevIsShort && endsSentence(prev.text);
   const lineIsIndented = line.bbox.x > ctx.regionLeft + em * INDENT_RATIO;
 
   // 上一行提前收尾且这一行没有缩进 → 上一段结束
@@ -72,6 +84,20 @@ function shouldBreak(prev: TextLine, line: TextLine, ctx: BreakContext): boolean
   if (lineIsIndented && !prevIsShort) return true;
 
   return false;
+}
+
+/**
+ * OCR 页面上"1.3.1 农业农村现代化"、"2.项目文件"这类编号短行：字号和正文一样，只能靠编号认。
+ * 项目符号行不算（"● 可管理性：……"的续行还在下一行），占满整行的也不算。
+ */
+function isNumberedShortLine(line: TextLine, ctx: BreakContext): boolean {
+  const text = line.text.trim();
+  if (text.length > 40 || endsSentence(text)) return false;
+  if (right(line.bbox) >= ctx.regionRight - line.fontSize * SHORT_LINE_SLACK_NOISY) return false;
+  const depth = matchSectionNumber(text);
+  if (depth !== null && depth >= 2) return true;
+  const marker = matchListMarker(text);
+  return marker !== null && marker.ordered;
 }
 
 function classify(
@@ -91,12 +117,24 @@ function classify(
 
   const first = group[0];
   const marker = matchListMarker(first.text);
-  const headingLevel = detectHeading(group, ctx.bodyFontSize);
+  const headingLevel = detectHeading(group, ctx.bodyFontSize, ctx.noisyFontSizes === true);
   // "一、背景" 这类中文标题同时能匹配上编号，字号明显大于正文时按标题处理
   const clearlyLarger =
-    ctx.bodyFontSize > 0 && median(group.map((l) => l.fontSize)) / ctx.bodyFontSize >= 1.12;
+    ctx.bodyFontSize > 0 &&
+    median(group.map((l) => l.fontSize)) / ctx.bodyFontSize >=
+      sizeRatioForHeading(ctx.noisyFontSizes === true);
 
-  if (marker !== null && group.length <= 6 && !(headingLevel !== null && clearlyLarger)) {
+  // OCR 页面上"1.3.1 农业农村现代化"也能匹配上列表编号，但多级编号的短行是标题
+  const numberedHeading =
+    ctx.noisyFontSizes === true &&
+    headingLevel !== null &&
+    (matchSectionNumber(first.text) ?? 0) >= 2;
+  if (
+    marker !== null &&
+    group.length <= 6 &&
+    !(headingLevel !== null && clearlyLarger) &&
+    !numberedHeading
+  ) {
     return {
       kind: 'list-item',
       meta,
@@ -126,7 +164,16 @@ function estimateListLevel(x: number, regionLeft: number, fontSize: number): num
   return Math.min(4, Math.floor(indent / Math.max(fontSize * 1.4, 8)));
 }
 
-function detectHeading(group: readonly TextLine[], bodyFontSize: number): 1 | 2 | 3 | 4 | null {
+/** 只凭字号判标题的最小倍数：OCR 估的字号页与页之间能差 15%，得留出余量 */
+function sizeRatioForHeading(noisy: boolean): number {
+  return noisy ? 1.35 : 1.12;
+}
+
+function detectHeading(
+  group: readonly TextLine[],
+  bodyFontSize: number,
+  noisy: boolean,
+): 1 | 2 | 3 | 4 | null {
   if (group.length > 3) return null;
   const text = group
     .map((l) => l.text)
@@ -140,9 +187,15 @@ function detectHeading(group: readonly TextLine[], bodyFontSize: number): 1 | 2 
   const sectionDepth = matchSectionNumber(text);
 
   const isHeading =
-    ratio >= 1.12 ||
+    ratio >= sizeRatioForHeading(noisy) ||
     (bold && ratio >= 0.98 && !endsSentence(text) && text.length <= 60) ||
-    (sectionDepth !== null && (bold || ratio >= 1.05));
+    (sectionDepth !== null && (bold || ratio >= (noisy ? sizeRatioForHeading(true) : 1.05))) ||
+    // OCR 来的字号已经吸附成正文大小，"1.3.1 农业农村现代化"这种多级编号的短行只能靠编号认
+    (noisy &&
+      sectionDepth !== null &&
+      sectionDepth >= 2 &&
+      text.length <= 40 &&
+      !endsSentence(text));
   if (!isHeading) return null;
 
   if (sectionDepth !== null) return Math.min(4, sectionDepth) as 1 | 2 | 3 | 4;

@@ -21,3 +21,6 @@ public/ocr-models/
 
 # 6.5 MB 的扫描件夹具不入库，用 tests/fixtures/make_fixtures.py 现生成
 tests/fixtures/scanned-no-text.pdf
+
+# 夹具生成脚本被当模块导入时留下的缓存
+__pycache__/

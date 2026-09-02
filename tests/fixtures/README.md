@@ -18,9 +18,10 @@ PyMuPDF 是 AGPL/商业双许可，不能进产品链路（见 `docs/adr/001-per
 | `with-image.pdf` | 图片抽取与阅读顺序 | ✅ |
 | `multipage-header-footer.pdf` | 多页、页眉、页码 | ✅ |
 | `scanned-no-text.pdf` | 无文字层的扫描件（OCR 路径） | ❌ 6.5 MB，跑脚本现生成 |
+| `scan-text-layer-rot270.pdf` | 可搜索扫描件：整页图 + 不可见的压扁文字层，页面 /Rotate 270 | ✅ 4 KB |
 
-单元测试（`npm test`）不依赖这些 PDF——版面算法是纯函数，测试里直接构造 span。
-这些夹具用于人工端到端验证。
+单元测试（`npm test`）基本不依赖这些 PDF——版面算法是纯函数，测试里直接构造 span；
+只有 `tests/scan-layer.test.ts` 会用 pdf.js 真的打开 `scan-text-layer-rot270.pdf`。其余夹具用于人工端到端验证。
 
 ## 还没覆盖的场景
 

@@ -67,6 +67,8 @@ export interface TextHealth {
   /** 文本覆盖面积 / 页面面积 */
   readonly textCoverage: number;
   readonly suspicious: boolean;
+  /** 文字全部以不可见模式绘制：可搜索扫描件的文字层 */
+  readonly hiddenText: boolean;
 }
 
 export interface PrimitivePage {

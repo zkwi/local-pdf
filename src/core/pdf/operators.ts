@@ -28,6 +28,9 @@ export interface PageGraphics {
   readonly segments: PrimitiveSegment[];
   readonly images: PrimitiveImage[];
   readonly fontKeys: string[];
+  /** 以不可见模式（渲染模式 3 / 7）画的文字操作数，可搜索扫描件的文字层全是这种 */
+  readonly hiddenTextOps: number;
+  readonly visibleTextOps: number;
 }
 
 interface OperatorListLike {
@@ -190,6 +193,13 @@ function isFlatNumberArray(value: unknown): value is ArrayLike<number> {
  * - 图像占位框（PDF 图像画在单位方框里，经 CTM 变换即为实际位置）
  * - 用到的字体 key（之后到 commonObjs 查真实字体名与粗斜体）
  */
+const TEXT_OPS = new Set<number>([
+  OPS.showText,
+  OPS.showSpacedText,
+  OPS.nextLineShowText,
+  OPS.nextLineSetSpacingShowText,
+]);
+
 export function walkOperatorList(
   opList: OperatorListLike,
   baseTransform: readonly number[],
@@ -200,8 +210,12 @@ export function walkOperatorList(
   const fontKeys = new Set<string>();
 
   let ctm = [...baseTransform] as Matrix;
-  const stack: Matrix[] = [];
+  const stack: { ctm: Matrix; renderMode: number }[] = [];
   let lineWidth = 1;
+  // 文字渲染模式属于图形状态，随 q/Q 保存恢复；3 和 7 是不可见文字
+  let renderMode = 0;
+  let hiddenTextOps = 0;
+  let visibleTextOps = 0;
 
   const { fnArray, argsArray } = opList;
   for (let i = 0; i < fnArray.length; i++) {
@@ -209,10 +223,18 @@ export function walkOperatorList(
     const args = argsArray[i] as unknown[] | null | undefined;
 
     if (fn === OPS.save) {
-      stack.push([...ctm] as Matrix);
+      stack.push({ ctm: [...ctm] as Matrix, renderMode });
     } else if (fn === OPS.restore) {
       const prev = stack.pop();
-      if (prev) ctm = prev;
+      if (prev) {
+        ctm = prev.ctm;
+        renderMode = prev.renderMode;
+      }
+    } else if (fn === OPS.setTextRenderingMode && args) {
+      renderMode = Number(args[0]) || 0;
+    } else if (TEXT_OPS.has(fn)) {
+      if (renderMode === 3 || renderMode === 7) hiddenTextOps++;
+      else visibleTextOps++;
     } else if (fn === OPS.transform && args) {
       ctm = Util.transform(ctm, args as number[]) as Matrix;
     } else if (fn === OPS.setLineWidth && args) {
@@ -235,7 +257,7 @@ export function walkOperatorList(
     }
   }
 
-  return { segments, images, fontKeys: [...fontKeys] };
+  return { segments, images, fontKeys: [...fontKeys], hiddenTextOps, visibleTextOps };
 }
 
 function collectPath(

@@ -39,7 +39,72 @@ export function shouldRunOcr(page: PrimitivePage, policy: OcrPolicy): boolean {
   const health: TextHealth = page.textHealth;
   if (health.charCount === 0 && health.imageCoverage > 0.1) return true;
   if (health.charCount < 24 && health.imageCoverage > 0.35) return true;
+  // 整页是图、文字层只有水印 / 页眉页脚 / 页码的，是带水印的扫描页
+  if (
+    health.imageCoverage > 0.6 &&
+    health.charCount < 300 &&
+    page.spans.length > 0 &&
+    isDecorativeText(page)
+  ) {
+    return true;
+  }
   return health.suspicious;
+}
+
+/** 页眉页脚区：上下各占页高的这个比例 */
+const MARGIN_RATIO = 0.08;
+
+/** 每个文字片段都是旋转的（水印）或落在上下边缘（页眉、页脚、页码），正文区一个字都没有 */
+function isDecorativeText(page: PrimitivePage): boolean {
+  const top = page.height * MARGIN_RATIO;
+  const bottom = page.height * (1 - MARGIN_RATIO);
+  return page.spans.every(
+    (s) => s.rotation !== 0 || s.bbox.y + s.bbox.height <= top || s.bbox.y >= bottom,
+  );
+}
+
+/**
+ * 自带文字层的扫描页（"可搜索 PDF"）：文字全是不可见的，而且不是零星几个标签。
+ * 这种页按文字层输出，整页扫描图不再保留，和自己 OCR 过的页一致。
+ */
+export function isScanWithTextLayer(page: PrimitivePage): boolean {
+  return page.textHealth.hiddenText && !isSparseOcr(page.spans);
+}
+
+/** 与主流字号相差不到这么多的都当同一个字号（OCR 框高的抖动大约 ±25%） */
+const SNAP_TOLERANCE = 0.35;
+/** 比主流字号大这么多倍以上的一律压下来：图表里被拉成整块的标签，不是真的大字 */
+const MAX_SIZE_RATIO = 3;
+
+/**
+ * OCR 来的文字（自己识别的，或文件自带的文字层）字号是从框高估的，同一段里每行都不一样：
+ * 版面分析会把段落一行行拆开、把稍大的行当标题，Word 里字号也忽大忽小。
+ * 按字符数加权取主流字号，附近的一律吸附过去，离谱的大字压到上限。
+ */
+export function snapFontSizes(spans: readonly PrimitiveTextSpan[]): PrimitiveTextSpan[] {
+  const weighted = spans
+    .map((s) => ({ size: s.fontSize, chars: s.text.trim().length }))
+    .filter((w) => w.chars > 0 && w.size > 0)
+    .sort((a, b) => a.size - b.size);
+  if (weighted.length === 0) return [...spans];
+  const half = weighted.reduce((sum, w) => sum + w.chars, 0) / 2;
+  let acc = 0;
+  let dominant = weighted[weighted.length - 1].size;
+  for (const w of weighted) {
+    acc += w.chars;
+    if (acc >= half) {
+      dominant = w.size;
+      break;
+    }
+  }
+  return spans.map((s) => {
+    const ratio = s.fontSize / dominant;
+    if (Math.abs(ratio - 1) < SNAP_TOLERANCE) {
+      return s.fontSize === dominant ? s : { ...s, fontSize: dominant };
+    }
+    if (ratio > MAX_SIZE_RATIO) return { ...s, fontSize: dominant * MAX_SIZE_RATIO };
+    return s;
+  });
 }
 
 /** OCR 结果和原生文字合并时，位置重叠的原生片段优先保留 */

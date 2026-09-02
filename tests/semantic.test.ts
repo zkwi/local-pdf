@@ -84,6 +84,7 @@ describe('OCR 触发判断', () => {
     links: [],
     ocrApplied: false,
     textHealth: {
+      hiddenText: false,
       charCount,
       printableRatio: 1,
       replacementRatio: 0,

@@ -5,6 +5,43 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Added
+
+- A feature strip under the drop zone (local, editable Word, OCR, free) replaces the three small trust
+  chips; the same four points are in the static English content for search engines.
+- Slow conversions show elapsed time and an estimate of the time left based on the speed of the most
+  recent pages, plus a notice for large files (keep the tab open, scans are recognised page by page).
+  Documents longer than the page limit say so up front instead of only in the report.
+- Out-of-memory failures and a crashed worker get their own message with concrete suggestions and a
+  one-click "Text only" retry; a crashed worker no longer leaves jobs spinning forever.
+- Language detection falls back to the time zone (mainland China, Taiwan, Hong Kong, Macau, Japan) when
+  no browser language matches, and the page is labelled and titled in the detected language before the
+  app loads instead of flashing English first.
+
+### Fixed
+
+- Searchable scans (a full-page image plus an invisible OCR text layer, as scanner software produces)
+  came out as pages of giant rotated characters when the PDF stored pages with /Rotate 90/180/270: the
+  squashed text boxes of such layers are now read as ordinary lines. The full-page scan image is dropped
+  in favour of the text layer, the same as for pages OCR'd by Local PDF, so such books convert in a
+  fraction of the time and produce a small, editable document; the report says how many pages this applied to.
+- Font sizes of OCR text (Local PDF's own OCR and foreign text layers alike) are estimated from box heights
+  and wobble from line to line; they are now snapped to the page's dominant size, so paragraphs are no longer
+  split line by line and ordinary lines are no longer promoted to headings. On such pages indentation is
+  ignored too (OCR boxes jitter by a character or two) and multi-level numbered short lines ("1.3.1 …")
+  still become headings.
+
+### Changed
+
+- Default page limit raised from 500 to 1000.
+- Scanned pages whose only text layer is a watermark, header/footer or page number are now recognised
+  with OCR instead of being treated as regular pages (a 236-page scanned book used to come out as page
+  images plus watermark text).
+- Report notes are ordered rarest first, so one important note is not buried under hundreds of repeated
+  ones; the job summary shows a badge when the image budget was reached.
+- Sections in the main column now have consistent spacing; they used to touch.
+- The report now says when the 80 MB image budget was reached instead of dropping images silently.
+
 ## [0.1.0] — 2026-09-02
 
 First public release.

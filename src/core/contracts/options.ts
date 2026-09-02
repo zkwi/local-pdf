@@ -49,5 +49,5 @@ export const DEFAULT_OPTIONS: ConvertOptions = {
   keepHeaderFooter: true,
   detectColumns: true,
   renderScale: 2,
-  maxPages: 500,
+  maxPages: 1000,
 };

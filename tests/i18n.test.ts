@@ -41,6 +41,8 @@ describe('i18n 文案表', () => {
       'rotated-text-flattened',
       'vertical-text-flattened',
       'page-limit-exceeded',
+      'image-budget-exceeded',
+      'scan-text-layer',
       'page-size-clamped',
       'no-text-found',
     ];

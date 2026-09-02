@@ -40,6 +40,24 @@
       <main class="prerender">
         <h1>Local PDF — PDF to Word / Markdown in your browser</h1>
         <p>Your PDF stays local. Everything runs inside your browser, nothing is uploaded.</p>
+        <h2>Why Local PDF</h2>
+        <ul>
+          <li>
+            <strong>Files never leave your computer.</strong> There is no server: parsing,
+            recognition and file generation all run in your browser, even offline.
+          </li>
+          <li>
+            <strong>Real, editable Word.</strong> Paragraphs, headings, lists, tables, images and
+            headers/footers are rebuilt, not pasted in as page screenshots.
+          </li>
+          <li>
+            <strong>Scans recognised automatically.</strong> Pages without a text layer go through
+            OCR, covering Chinese, English, Japanese and 50+ other languages.
+          </li>
+          <li>
+            <strong>Free and open source.</strong> MIT licence. No account, no limits, no watermark.
+          </li>
+        </ul>
         <h2>How it works</h2>
         <ol>
           <li>Drop a PDF onto the page, paste it with Ctrl+V, or try the sample file first.</li>
@@ -99,6 +117,82 @@
         Local PDF 在浏览器里本地转换 PDF，需要开启 JavaScript 后刷新。
       </p>
     </noscript>
+    <script>
+      // React 接管前先按访客语言标记页面：中文、日文用户不会先看到一屏英文。
+      // 判断顺序和 src/i18n/index.tsx 的 detectLocale 一致：?lang= → 上次选择 → 浏览器语言 → 时区 → 英文。
+      // 标题、标语分别是各语言的 app.docTitle 与 app.tagline，tests/seo.test.ts 会核对。
+      (function () {
+        var HERO = {
+          'zh-CN': [
+            'Local PDF · PDF 转 Word / Markdown，本地转换',
+            '你的 PDF 不出本机：转换全部在浏览器里完成，不上传。',
+            '正在加载…',
+          ],
+          'zh-TW': [
+            'Local PDF · PDF 轉 Word / Markdown，本機轉換',
+            '你的 PDF 不離開本機：轉換全部在瀏覽器裡完成，不上傳。',
+            '正在載入…',
+          ],
+          ja: [
+            'Local PDF · ブラウザで PDF → Word / Markdown',
+            'PDF は端末から出ません。変換はすべてブラウザ内で行われ、アップロードはしません。',
+            '読み込み中…',
+          ],
+        };
+        var TIMEZONES = {
+          'Asia/Shanghai': 'zh-CN',
+          'Asia/Chongqing': 'zh-CN',
+          'Asia/Harbin': 'zh-CN',
+          'Asia/Urumqi': 'zh-CN',
+          'Asia/Taipei': 'zh-TW',
+          'Asia/Hong_Kong': 'zh-TW',
+          'Asia/Macau': 'zh-TW',
+          'Asia/Tokyo': 'ja',
+        };
+        function known(value) {
+          return value === 'en' || Object.prototype.hasOwnProperty.call(HERO, value) ? value : null;
+        }
+        function fromTag(tag) {
+          var lower = String(tag).toLowerCase();
+          if (lower.indexOf('zh') === 0) return /hant|tw|hk|mo/.test(lower) ? 'zh-TW' : 'zh-CN';
+          if (lower.indexOf('ja') === 0) return 'ja';
+          if (lower.indexOf('en') === 0) return 'en';
+          return null;
+        }
+        var locale = null;
+        try {
+          locale = known(new URLSearchParams(location.search).get('lang'));
+        } catch (e) {}
+        if (!locale) {
+          try {
+            locale = known(localStorage.getItem('local-pdf.locale'));
+          } catch (e) {}
+        }
+        if (!locale) {
+          var tags = navigator.languages || [navigator.language];
+          for (var i = 0; i < tags.length && !locale; i++) locale = fromTag(tags[i]);
+        }
+        if (!locale) {
+          try {
+            locale = TIMEZONES[Intl.DateTimeFormat().resolvedOptions().timeZone] || null;
+          } catch (e) {}
+        }
+        if (!locale || locale === 'en') return;
+        document.documentElement.lang = locale;
+        document.title = HERO[locale][0];
+        var main = document.querySelector('.prerender');
+        if (main) {
+          main.innerHTML =
+            '<h1>' +
+            HERO[locale][0] +
+            '</h1><p>' +
+            HERO[locale][1] +
+            '</p><p>' +
+            HERO[locale][2] +
+            '</p>';
+        }
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

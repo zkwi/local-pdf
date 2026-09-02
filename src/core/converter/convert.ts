@@ -14,10 +14,16 @@ import type {
 } from '../contracts/report.ts';
 import { writeDocx } from '../docx/writer.ts';
 import type { ExtractedImage } from '../layout/analyze.ts';
-import { analyzeDocument, MIN_IMAGE_SIDE } from '../layout/analyze.ts';
+import { analyzeDocument, isFullPageImage, MIN_IMAGE_SIDE } from '../layout/analyze.ts';
 import { createOcrEngine } from '../ocr/create.ts';
 import type { OcrEngine } from '../ocr/engine.ts';
-import { isSparseOcr, mergeOcrSpans, shouldRunOcr } from '../ocr/engine.ts';
+import {
+  isScanWithTextLayer,
+  isSparseOcr,
+  mergeOcrSpans,
+  shouldRunOcr,
+  snapFontSizes,
+} from '../ocr/engine.ts';
 import { mergeStripSpans, planStrips, STRIP_THRESHOLD_PT } from '../ocr/strips.ts';
 import type { StripResult } from '../ocr/strips.ts';
 import { computeTextHealth, describeError, PdfSession } from '../pdf/extractor.ts';
@@ -116,7 +122,9 @@ export async function convert(
     const pages: PrimitivePage[] = [];
     const images = new Map<string, ExtractedImage>();
     let imageBytes = 0;
+    let imageBudgetWarned = false;
     let ocrTotal = 0;
+    let scanLayerPages = 0;
 
     for (let i = 0; i < totalPages; i++) {
       check();
@@ -124,6 +132,7 @@ export async function convert(
         stage: 'extracting',
         pageIndex: i,
         totalPages,
+        documentPages: session.pageCount,
         fraction: 0.05 + (0.65 * i) / totalPages,
         key: 'extracting',
         params: { page: i + 1, total: totalPages },
@@ -142,8 +151,13 @@ export async function convert(
       }
 
       const needsOcr = shouldRunOcr(page, options.ocr);
+      // 自带文字层的扫描页：整页扫描图会被文字替代，不渲染也不裁剪，省下大半时间和图片预算
+      const cropTargets = isScanWithTextLayer(page)
+        ? page.images.filter((image) => !isFullPageImage(image, page))
+        : page.images;
+      if (cropTargets.length < page.images.length) scanLayerPages++;
       const wantImages =
-        options.extractImages && options.mode !== 'plain-text' && page.images.length > 0;
+        options.extractImages && options.mode !== 'plain-text' && cropTargets.length > 0;
 
       if (needsOcr || wantImages) {
         const scale = needsOcr ? Math.max(options.renderScale, MIN_OCR_SCALE) : options.renderScale;
@@ -178,7 +192,7 @@ export async function convert(
                   },
                 });
               } else {
-                const merged = mergeOcrSpans(page.spans, ocrSpans);
+                const merged = mergeOcrSpans(page.spans, snapFontSizes(ocrSpans));
                 page = {
                   ...page,
                   spans: merged,
@@ -198,8 +212,19 @@ export async function convert(
           }
 
           if (wantImages) {
-            for (const image of page.images) {
-              if (imageBytes >= MAX_TOTAL_IMAGE_BYTES) break;
+            for (const image of cropTargets) {
+              if (imageBytes >= MAX_TOTAL_IMAGE_BYTES) {
+                // 只报一次：从这一页起图片都不再保留，用户在报告里能看到原因
+                if (!imageBudgetWarned) {
+                  imageBudgetWarned = true;
+                  warnings.push({
+                    code: 'image-budget-exceeded',
+                    pageIndex: i,
+                    params: { page: i + 1, limit: `${MAX_TOTAL_IMAGE_BYTES / 1024 / 1024} MB` },
+                  });
+                }
+                break;
+              }
               if (image.bbox.width < MIN_IMAGE_SIDE || image.bbox.height < MIN_IMAGE_SIDE) continue;
               try {
                 const cropped = await cropToPng(rendered.canvas, image.bbox, rendered.scale);
@@ -229,6 +254,9 @@ export async function convert(
     }
     durations.extracting = now() - stageStart - ocrTotal - (durations['ocr-model'] ?? 0);
     if (ocrTotal > 0) durations.ocr = ocrTotal;
+    if (scanLayerPages > 0) {
+      warnings.push({ code: 'scan-text-layer', params: { count: scanLayerPages } });
+    }
 
     check();
     report({ stage: 'analyzing', fraction: 0.72, key: 'analyzing' });

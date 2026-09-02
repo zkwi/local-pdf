@@ -14,7 +14,14 @@ function confidenceClass(value: number): string {
 export function ReportView({ report }: ReportViewProps) {
   const { t, warningText } = useI18n();
   const pageWarnings = report.pages.flatMap((p) => p.warnings);
-  const allWarnings = [...report.warnings, ...pageWarnings];
+  // 少见的提示排前面：几百条"旋转文字"不该把唯一一条"图片超限"挤到看不见的地方
+  const counts = new Map<string, number>();
+  for (const w of [...report.warnings, ...pageWarnings]) {
+    counts.set(w.code, (counts.get(w.code) ?? 0) + 1);
+  }
+  const allWarnings = [...report.warnings, ...pageWarnings].sort(
+    (a, b) => (counts.get(a.code) ?? 0) - (counts.get(b.code) ?? 0),
+  );
   const totalChars = report.pages.reduce((s, p) => s + p.characters, 0);
   const totalTables = report.pages.reduce((s, p) => s + p.tables, 0);
   const totalImages = report.pages.reduce((s, p) => s + p.images, 0);
