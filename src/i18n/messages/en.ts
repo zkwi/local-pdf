@@ -29,6 +29,17 @@ export const en: Messages = {
   'summary.ocrPages.other': 'OCR on {count} pages',
   'summary.lowConfidence.one': '1 page worth checking',
   'summary.lowConfidence.other': '{count} pages worth checking',
+  'app.github': 'GitHub repository',
+  'trust.noUpload': 'Nothing uploaded',
+  'trust.noSignup': 'No sign-up',
+  'trust.openSource': 'Free & open source',
+  'drop.paste': 'You can also paste a file with Ctrl+V',
+  'drop.sample': 'No file at hand? Try a sample PDF',
+  'drop.sampleFailed': 'The sample could not be loaded, please try again later',
+  'footer.source': 'Source',
+  'footer.issues': 'Report an issue',
+  'footer.version': 'Version {version}',
+  'footer.builtWith': 'Built with pdf.js · docx.js · PaddleOCR.js · remark',
 
   'output.label': 'Convert to',
   'output.docx': 'Word',
@@ -185,17 +196,35 @@ export const en: Messages = {
     'Page {page} exceeds the Word page-size limit (a tall image); laid out on A4 pages instead',
   'warning.no-text-found': 'No text was found on page {page}',
 
-  'notes.title': 'Good to know',
-  'notes.privacy':
-    'Files are processed entirely in your browser; nothing is uploaded, and it works offline.',
-  'notes.ocr':
-    'Scanned pages are recognised automatically; the first time downloads about 17 MB of components, after that nothing more.',
-  'notes.report':
-    'Open the conversion report when a file finishes; pages with low confidence are worth checking against the original.',
-  'notes.limits':
-    'Known limits: tables without ruling lines are not detected, formulas and complex graphics become images, fonts are not embedded.',
+  'meta.description':
+    'Local PDF converts PDF to Word and Markdown entirely in your browser. Nothing is uploaded, free and open source, with automatic OCR for scanned pages in Chinese, English, Japanese and more.',
+  'seo.how.title': 'How it works',
+  'seo.how.1': 'Drop a PDF onto the page, paste it with Ctrl+V, or try the sample file first.',
+  'seo.how.2':
+    'Text extraction, layout analysis and OCR for scanned pages all run inside your browser; the file is never sent anywhere.',
+  'seo.how.3':
+    'Download Word or Markdown, and open the conversion report to see which pages deserve a second look.',
+  'seo.why.title': 'Why convert locally',
+  'seo.why.body':
+    'Most online converters upload your file to a server. Local PDF has no server: it is a static page, the conversion engine runs in your browser, and you can verify that in the network panel. Contracts, statements and papers never leave your computer.',
+  'seo.faq.title': 'Frequently asked questions',
+  'seo.faq.q1': 'Is it really free?',
+  'seo.faq.a1':
+    'Yes. It is open source under the MIT licence, needs no account, and has no limit on the number or size of files beyond the memory of your computer.',
+  'seo.faq.q2': 'Does it upload my file?',
+  'seo.faq.a2':
+    'No. There is no server to upload to, and the page keeps working offline once loaded. Only the OCR components are downloaded the first time a scanned page needs them.',
+  'seo.faq.q3': 'Can it convert scanned PDFs?',
+  'seo.faq.a3':
+    'Yes. Pages without a text layer are recognised with PaddleOCR inside your browser, covering Simplified and Traditional Chinese, English, Japanese and more than 50 other languages.',
+  'seo.faq.q4': 'How faithful is the Word output?',
+  'seo.faq.a4':
+    'Text from PDFs with a text layer is exact; paragraphs, headings, lists, ruled tables, images and headers/footers are rebuilt. Fonts are not embedded, so line breaks can shift; the report flags pages with low confidence.',
+  'seo.faq.q5': 'Which browsers are supported?',
+  'seo.faq.a5':
+    'Recent Chrome, Edge, Firefox and Safari 16.4 or later on a computer. Phones handle small files, but large scans can run out of memory.',
 
-  'footer.license': 'MIT licence · pdf.js + docx.js + PaddleOCR.js + remark',
+  'footer.license': 'MIT licence',
   'footer.hint': 'Recognition is never perfect; check important documents.',
 
   'compat.unsupported.title': 'This browser cannot run the converter',

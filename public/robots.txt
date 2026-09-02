@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /ocr-models/
+Disallow: /ort/
+
+Sitemap: https://localpdfconverter.com/sitemap.xml

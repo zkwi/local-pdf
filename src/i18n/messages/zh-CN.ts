@@ -31,6 +31,17 @@ export const zhCN = {
   'summary.ocrPages.other': 'OCR {count} 页',
   'summary.lowConfidence.one': '1 页把握不高，建议核对',
   'summary.lowConfidence.other': '{count} 页把握不高，建议核对',
+  'app.github': 'GitHub 仓库',
+  'trust.noUpload': '不上传',
+  'trust.noSignup': '无需注册',
+  'trust.openSource': '免费开源',
+  'drop.paste': '也可以按 Ctrl+V 直接粘贴文件',
+  'drop.sample': '手边没有文件？试试示例 PDF',
+  'drop.sampleFailed': '示例文件加载失败，请稍后再试',
+  'footer.source': '源码',
+  'footer.issues': '反馈问题',
+  'footer.version': '版本 {version}',
+  'footer.builtWith': '基于 pdf.js · docx.js · PaddleOCR.js · remark',
 
   'output.label': '转换成',
   'output.docx': 'Word',
@@ -177,13 +188,32 @@ export const zhCN = {
     '第 {page} 页尺寸超出 Word 上限（长图），已按 A4 排版，内容顺延到多页',
   'warning.no-text-found': '第 {page} 页没有提取到任何文字',
 
-  'notes.title': '使用提示',
-  'notes.privacy': '文件全程在浏览器里处理，不会上传到任何服务器，断网也能用。',
-  'notes.ocr': '扫描件会自动识别文字；第一次需要下载约 17 MB 的识别组件，之后不再下载。',
-  'notes.report': '转换完成后可以打开「转换报告」，把握度低的页面建议对照原件核对。',
-  'notes.limits': '已知限制：不识别无框线表格，公式和复杂图形按图片处理，不嵌入字体。',
+  'meta.description':
+    'Local PDF：在浏览器里把 PDF 转成 Word 和 Markdown。不上传、免费、开源，扫描件自动 OCR，支持中英日多语言。',
+  'seo.how.title': '三步完成',
+  'seo.how.1': '把 PDF 拖进页面，或按 Ctrl+V 粘贴，或先试试示例文件。',
+  'seo.how.2': '文字提取、版面分析、扫描页 OCR 全部在你的浏览器里完成，文件不会发到任何地方。',
+  'seo.how.3': '下载 Word 或 Markdown；打开转换报告，看看哪些页面值得再核对一眼。',
+  'seo.why.title': '为什么要在本地转换',
+  'seo.why.body':
+    '大多数在线转换工具会把你的文件上传到服务器。Local PDF 没有服务器：它是一个静态页面，转换引擎在浏览器里运行，你可以在网络面板里亲自确认。合同、对账单、论文，都不会离开你的电脑。',
+  'seo.faq.title': '常见问题',
+  'seo.faq.q1': '真的免费吗？',
+  'seo.faq.a1': '是。MIT 协议开源，不用注册账号，文件数量和大小都没有限制，只受你电脑内存约束。',
+  'seo.faq.q2': '会上传我的文件吗？',
+  'seo.faq.a2':
+    '不会。这里没有可以上传的服务器，页面加载后断网也能用。只有第一次识别扫描件时会下载 OCR 组件。',
+  'seo.faq.q3': '扫描件能转吗？',
+  'seo.faq.a3':
+    '能。没有文字层的页面会用 PaddleOCR 在浏览器里识别，支持简体中文、繁体中文、英文、日文等 50 多种语言。',
+  'seo.faq.q4': 'Word 的还原度如何？',
+  'seo.faq.a4':
+    '有文字层的 PDF 文字是精确的；段落、标题、列表、有线表格、图片、页眉页脚都会重建。字体不嵌入，所以换行位置可能变化；转换报告会标出把握不高的页面。',
+  'seo.faq.q5': '哪些浏览器可以用？',
+  'seo.faq.a5':
+    '电脑上近期版本的 Chrome、Edge、Firefox 和 Safari 16.4 以上。手机能转小文件，大的扫描件容易因内存不足失败。',
 
-  'footer.license': 'MIT 许可 · pdf.js + docx.js + PaddleOCR.js + remark',
+  'footer.license': 'MIT 许可',
   'footer.hint': '识别结果一定有误差，重要文件请核对。',
 
   'compat.unsupported.title': '这个浏览器无法运行本工具',

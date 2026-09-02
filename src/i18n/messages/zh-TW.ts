@@ -29,6 +29,17 @@ export const zhTW: Messages = {
   'summary.ocrPages.other': 'OCR {count} 頁',
   'summary.lowConfidence.one': '1 頁把握不高，建議核對',
   'summary.lowConfidence.other': '{count} 頁把握不高，建議核對',
+  'app.github': 'GitHub 儲存庫',
+  'trust.noUpload': '不上傳',
+  'trust.noSignup': '無需註冊',
+  'trust.openSource': '免費開源',
+  'drop.paste': '也可以按 Ctrl+V 直接貼上檔案',
+  'drop.sample': '手邊沒有檔案？試試示例 PDF',
+  'drop.sampleFailed': '示例檔案載入失敗，請稍後再試',
+  'footer.source': '原始碼',
+  'footer.issues': '回報問題',
+  'footer.version': '版本 {version}',
+  'footer.builtWith': '基於 pdf.js · docx.js · PaddleOCR.js · remark',
 
   'output.label': '轉換成',
   'output.docx': 'Word',
@@ -175,13 +186,32 @@ export const zhTW: Messages = {
     '第 {page} 頁尺寸超出 Word 上限（長圖），已按 A4 排版，內容順延到多頁',
   'warning.no-text-found': '第 {page} 頁沒有擷取到任何文字',
 
-  'notes.title': '使用提示',
-  'notes.privacy': '檔案全程在瀏覽器裡處理，不會上傳到任何伺服器，離線也能用。',
-  'notes.ocr': '掃描件會自動辨識文字；第一次需要下載約 17 MB 的辨識元件，之後不再下載。',
-  'notes.report': '轉換完成後可以打開「轉換報告」，把握度低的頁面建議對照原件核對。',
-  'notes.limits': '已知限制：不辨識無框線表格，公式和複雜圖形按圖片處理，不嵌入字型。',
+  'meta.description':
+    'Local PDF：在瀏覽器裡把 PDF 轉成 Word 和 Markdown。不上傳、免費、開源，掃描件自動 OCR，支援中英日多語言。',
+  'seo.how.title': '三步完成',
+  'seo.how.1': '把 PDF 拖進頁面，或按 Ctrl+V 貼上，或先試試示例檔案。',
+  'seo.how.2': '文字擷取、版面分析、掃描頁 OCR 全部在你的瀏覽器裡完成，檔案不會送到任何地方。',
+  'seo.how.3': '下載 Word 或 Markdown；打開轉換報告，看看哪些頁面值得再核對一眼。',
+  'seo.why.title': '為什麼要在本機轉換',
+  'seo.why.body':
+    '大多數線上轉換工具會把你的檔案上傳到伺服器。Local PDF 沒有伺服器：它是一個靜態頁面，轉換引擎在瀏覽器裡執行，你可以在網路面板裡親自確認。合約、對帳單、論文，都不會離開你的電腦。',
+  'seo.faq.title': '常見問題',
+  'seo.faq.q1': '真的免費嗎？',
+  'seo.faq.a1': '是。MIT 授權開源，不用註冊帳號，檔案數量和大小都沒有限制，只受你電腦記憶體約束。',
+  'seo.faq.q2': '會上傳我的檔案嗎？',
+  'seo.faq.a2':
+    '不會。這裡沒有可以上傳的伺服器，頁面載入後離線也能用。只有第一次辨識掃描件時會下載 OCR 元件。',
+  'seo.faq.q3': '掃描件能轉嗎？',
+  'seo.faq.a3':
+    '能。沒有文字層的頁面會用 PaddleOCR 在瀏覽器裡辨識，支援簡體中文、繁體中文、英文、日文等 50 多種語言。',
+  'seo.faq.q4': 'Word 的還原度如何？',
+  'seo.faq.a4':
+    '有文字層的 PDF 文字是精確的；段落、標題、清單、有線表格、圖片、頁首頁尾都會重建。字型不嵌入，所以換行位置可能變化；轉換報告會標出把握不高的頁面。',
+  'seo.faq.q5': '哪些瀏覽器可以用？',
+  'seo.faq.a5':
+    '電腦上近期版本的 Chrome、Edge、Firefox 和 Safari 16.4 以上。手機能轉小檔案，大的掃描件容易因記憶體不足失敗。',
 
-  'footer.license': 'MIT 授權 · pdf.js + docx.js + PaddleOCR.js + remark',
+  'footer.license': 'MIT 授權',
   'footer.hint': '辨識結果一定有誤差，重要檔案請核對。',
 
   'compat.unsupported.title': '這個瀏覽器無法執行本工具',

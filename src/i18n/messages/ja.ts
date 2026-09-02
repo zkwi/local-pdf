@@ -29,6 +29,17 @@ export const ja: Messages = {
   'summary.ocrPages.other': 'OCR {count} ページ',
   'summary.lowConfidence.one': '要確認 1 ページ',
   'summary.lowConfidence.other': '要確認 {count} ページ',
+  'app.github': 'GitHub リポジトリ',
+  'trust.noUpload': 'アップロードなし',
+  'trust.noSignup': '登録不要',
+  'trust.openSource': '無料・オープンソース',
+  'drop.paste': 'Ctrl+V でファイルを貼り付けることもできます',
+  'drop.sample': '手元にファイルがなければサンプル PDF をお試しください',
+  'drop.sampleFailed': 'サンプルを読み込めませんでした。しばらくしてからお試しください',
+  'footer.source': 'ソースコード',
+  'footer.issues': '問題を報告',
+  'footer.version': 'バージョン {version}',
+  'footer.builtWith': 'pdf.js · docx.js · PaddleOCR.js · remark で構築',
 
   'output.label': '変換先',
   'output.docx': 'Word',
@@ -183,17 +194,35 @@ export const ja: Messages = {
     '{page} ページは Word のページサイズ上限を超えるため（縦長画像）、A4 に流し込みました',
   'warning.no-text-found': '{page} ページから文字を取り出せませんでした',
 
-  'notes.title': 'ご利用のヒント',
-  'notes.privacy':
-    'ファイルはすべてブラウザ内で処理され、サーバーには送られません。オフラインでも使えます。',
-  'notes.ocr':
-    'スキャン文書は自動で文字認識します。初回だけ約 17 MB のコンポーネントをダウンロードし、その後は不要です。',
-  'notes.report':
-    '変換後に「変換レポート」を開けます。信頼度の低いページは原本と照らし合わせてください。',
-  'notes.limits':
-    '既知の制限：罫線のない表は検出しません。数式や複雑な図形は画像になります。フォントは埋め込みません。',
+  'meta.description':
+    'Local PDF はブラウザ内で PDF を Word と Markdown に変換します。アップロードなし、無料、オープンソース。スキャン文書は自動 OCR、中国語・英語・日本語ほか多言語対応。',
+  'seo.how.title': '使い方は 3 ステップ',
+  'seo.how.1': 'PDF をページにドロップするか、Ctrl+V で貼り付けるか、まずサンプルを試します。',
+  'seo.how.2':
+    'テキスト抽出、レイアウト解析、スキャンページの OCR はすべてブラウザ内で行われ、ファイルはどこにも送信されません。',
+  'seo.how.3':
+    'Word または Markdown をダウンロードし、変換レポートで確認が必要なページをチェックします。',
+  'seo.why.title': 'なぜローカルで変換するのか',
+  'seo.why.body':
+    '多くのオンライン変換サービスはファイルをサーバーにアップロードします。Local PDF にはサーバーがありません。静的なページで、変換エンジンはブラウザ内で動作し、ネットワークパネルで自分で確認できます。契約書、明細書、論文がパソコンの外に出ることはありません。',
+  'seo.faq.title': 'よくある質問',
+  'seo.faq.q1': '本当に無料ですか？',
+  'seo.faq.a1':
+    'はい。MIT ライセンスのオープンソースで、アカウント登録は不要、ファイル数やサイズの制限はパソコンのメモリ以外にありません。',
+  'seo.faq.q2': 'ファイルはアップロードされますか？',
+  'seo.faq.a2':
+    'いいえ。アップロード先のサーバー自体が存在せず、一度読み込めばオフラインでも動作します。スキャンページの認識時に初めて OCR コンポーネントをダウンロードするだけです。',
+  'seo.faq.q3': 'スキャンした PDF も変換できますか？',
+  'seo.faq.a3':
+    'はい。テキスト層のないページは PaddleOCR がブラウザ内で認識します。簡体字・繁体字中国語、英語、日本語など 50 以上の言語に対応しています。',
+  'seo.faq.q4': 'Word の再現度はどのくらいですか？',
+  'seo.faq.a4':
+    'テキスト層のある PDF の文字は正確です。段落、見出し、リスト、罫線のある表、画像、ヘッダーとフッターを再構築します。フォントは埋め込まないため改行位置がずれることがあり、信頼度の低いページはレポートに表示されます。',
+  'seo.faq.q5': '対応ブラウザは？',
+  'seo.faq.a5':
+    'パソコンの最新の Chrome、Edge、Firefox、Safari 16.4 以降。スマートフォンでも小さなファイルは変換できますが、大きなスキャンはメモリ不足で失敗することがあります。',
 
-  'footer.license': 'MIT ライセンス · pdf.js + docx.js + PaddleOCR.js + remark',
+  'footer.license': 'MIT ライセンス',
   'footer.hint': '認識には必ず誤差があります。重要な文書は確認してください。',
 
   'compat.unsupported.title': 'このブラウザでは動作しません',

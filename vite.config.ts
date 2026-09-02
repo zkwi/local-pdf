@@ -16,6 +16,13 @@ export default defineConfig({
   plugins: [react()],
   define: {
     __ORT_VERSION__: JSON.stringify(ortVersion),
+    __APP_VERSION__: JSON.stringify(
+      (
+        JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as {
+          version: string;
+        }
+      ).version,
+    ),
   },
   resolve: {
     alias: {

@@ -186,5 +186,5 @@ export function useConversionQueue() {
     };
   }, [jobs]);
 
-  return { jobs, enqueue, cancel, retry, remove, clearFinished };
+  return { jobs, enqueue, cancel, retry, remove, clearFinished, warmUp: ensureWorker };
 }

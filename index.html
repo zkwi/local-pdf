@@ -1,18 +1,104 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#b4471f" />
     <meta
       name="description"
-      content="Local PDF: convert PDF to Word and Markdown entirely in your browser. Your PDF stays local. 纯前端 PDF 转 Word / Markdown，文件不上传。"
+      content="Local PDF converts PDF to Word and Markdown entirely in your browser. Nothing is uploaded, free and open source, with automatic OCR for scanned pages in Chinese, English, Japanese and more."
     />
+    <link rel="canonical" href="https://localpdfconverter.com/" />
+    <link rel="alternate" hreflang="x-default" href="https://localpdfconverter.com/" />
+    <link rel="alternate" hreflang="en" href="https://localpdfconverter.com/?lang=en" />
+    <link rel="alternate" hreflang="zh-Hans" href="https://localpdfconverter.com/?lang=zh-CN" />
+    <link rel="alternate" hreflang="zh-Hant" href="https://localpdfconverter.com/?lang=zh-TW" />
+    <link rel="alternate" hreflang="ja" href="https://localpdfconverter.com/?lang=ja" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Local PDF" />
+    <meta property="og:url" content="https://localpdfconverter.com/" />
+    <meta property="og:title" content="Local PDF — PDF to Word / Markdown in your browser" />
+    <meta
+      property="og:description"
+      content="Private, free, open source. Parsing, OCR and file generation all run locally; nothing is uploaded."
+    />
+    <meta property="og:image" content="https://localpdfconverter.com/og.png" />
+    <meta property="og:image:width" content="1280" />
+    <meta property="og:image:height" content="640" />
+    <meta name="twitter:card" content="summary_large_image" />
     <title>Local PDF — PDF to Word / Markdown in your browser</title>
   </head>
   <body>
-    <div id="root"></div>
+    <!--
+      #root 里的静态内容是给不执行 JavaScript 的爬虫和首屏看的英文版；
+      React 挂载后会整体替换成当前语言的界面。FAQ 文案必须和 src/i18n/messages/en.ts 一致，
+      tests/seo.test.ts 会核对。
+    -->
+    <div id="root">
+      <main class="prerender">
+        <h1>Local PDF — PDF to Word / Markdown in your browser</h1>
+        <p>Your PDF stays local. Everything runs inside your browser, nothing is uploaded.</p>
+        <h2>How it works</h2>
+        <ol>
+          <li>Drop a PDF onto the page, paste it with Ctrl+V, or try the sample file first.</li>
+          <li>
+            Text extraction, layout analysis and OCR for scanned pages all run inside your browser;
+            the file is never sent anywhere.
+          </li>
+          <li>
+            Download Word or Markdown, and open the conversion report to see which pages deserve a
+            second look.
+          </li>
+        </ol>
+        <h2>Why convert locally</h2>
+        <p>
+          Most online converters upload your file to a server. Local PDF has no server: it is a
+          static page, the conversion engine runs in your browser, and you can verify that in the
+          network panel. Contracts, statements and papers never leave your computer.
+        </p>
+        <h2>Frequently asked questions</h2>
+        <dl>
+          <dt>Is it really free?</dt>
+          <dd>
+            Yes. It is open source under the MIT licence, needs no account, and has no limit on the
+            number or size of files beyond the memory of your computer.
+          </dd>
+          <dt>Does it upload my file?</dt>
+          <dd>
+            No. There is no server to upload to, and the page keeps working offline once loaded.
+            Only the OCR components are downloaded the first time a scanned page needs them.
+          </dd>
+          <dt>Can it convert scanned PDFs?</dt>
+          <dd>
+            Yes. Pages without a text layer are recognised with PaddleOCR inside your browser,
+            covering Simplified and Traditional Chinese, English, Japanese and more than 50 other
+            languages.
+          </dd>
+          <dt>How faithful is the Word output?</dt>
+          <dd>
+            Text from PDFs with a text layer is exact; paragraphs, headings, lists, ruled tables,
+            images and headers/footers are rebuilt. Fonts are not embedded, so line breaks can
+            shift; the report flags pages with low confidence.
+          </dd>
+          <dt>Which browsers are supported?</dt>
+          <dd>
+            Recent Chrome, Edge, Firefox and Safari 16.4 or later on a computer. Phones handle small
+            files, but large scans can run out of memory.
+          </dd>
+        </dl>
+        <p><a href="https://github.com/zkwi/local-pdf">Source code on GitHub</a> · MIT licence</p>
+      </main>
+    </div>
+    <noscript>
+      <p style="font-family: system-ui, sans-serif; margin: 40px; line-height: 1.6">
+        Local PDF converts PDF files entirely inside your browser, which needs JavaScript. Please
+        enable it and reload.
+        <br />
+        Local PDF 在浏览器里本地转换 PDF，需要开启 JavaScript 后刷新。
+      </p>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -3,6 +3,8 @@ import { useI18n } from '../i18n/index.tsx';
 
 interface DropZoneProps {
   readonly onFiles: (files: readonly File[]) => void;
+  /** 点"试试示例 PDF"时调用；没有就不显示这一行 */
+  readonly onSample?: () => void;
   readonly disabled?: boolean;
 }
 
@@ -20,10 +22,10 @@ export function splitPdfs(list: FileList | readonly File[] | null): SplitFiles {
 }
 
 /**
- * 点击/键盘触发文件选择。拖放由 App 在 window 上统一接管（整页都是投放区，
- * 拖动时有全屏提示），这里不再单独处理 drop。
+ * 点击/键盘触发文件选择。拖放和粘贴由 App 在 window 上统一接管
+ * （整页都是投放区，拖动时有全屏提示），这里不再单独处理。
  */
-export function DropZone({ onFiles, disabled = false }: DropZoneProps) {
+export function DropZone({ onFiles, onSample, disabled = false }: DropZoneProps) {
   const { t } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -63,10 +65,26 @@ export function DropZone({ onFiles, disabled = false }: DropZoneProps) {
         />
       </svg>
       <p className="dropzone__title">{t('drop.title')}</p>
-      <p className="dropzone__hint">{t('drop.hint')}</p>
+      <p className="dropzone__hint">
+        {t('drop.hint')}
+        <span className="dropzone__hint-line">{t('drop.paste')}</span>
+      </p>
       <span className="btn btn--primary dropzone__button" aria-hidden="true">
         {t('drop.choose')}
       </span>
+      {onSample !== undefined && (
+        <button
+          type="button"
+          className="link dropzone__sample"
+          onClick={(e) => {
+            // 不让点击冒泡到外层，否则会同时打开文件选择框
+            e.stopPropagation();
+            onSample();
+          }}
+        >
+          {t('drop.sample')}
+        </button>
+      )}
       <input
         ref={inputRef}
         className="visually-hidden"
