@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react';
+import type { CSSProperties, ReactElement } from 'react';
 import { useI18n } from '../i18n/index.tsx';
 import type { MessageKey } from '../i18n/index.tsx';
 
@@ -6,19 +6,24 @@ const ITEMS = ['local', 'editable', 'ocr', 'free'] as const;
 type Item = (typeof ITEMS)[number];
 
 /**
- * 拖放区下面的四条卖点：本地、可编辑、扫描件、免费开源。
+ * 拖放区下面的四张卖点卡：本地、可编辑、扫描件、免费开源。
  * 一眼看清"为什么用这个"，比散落各处的小标签清楚。
+ * 整个区块是首屏第 2 个入场的，四张卡再各自错开一点（见 styles.css 的 .reveal）。
  */
 export function Features() {
   const { t } = useI18n();
   return (
-    <section className="features" aria-labelledby="features-title">
-      <h2 id="features-title" className="visually-hidden">
+    <section
+      className="features reveal"
+      style={{ '--i': 2 } as CSSProperties}
+      aria-labelledby="features-title"
+    >
+      <h2 id="features-title" className="eyebrow">
         {t('features.label')}
       </h2>
       <ul className="features__list">
-        {ITEMS.map((item) => (
-          <li key={item} className="features__item">
+        {ITEMS.map((item, index) => (
+          <li key={item} className="features__item" style={{ '--i': index } as CSSProperties}>
             <span className="features__icon" aria-hidden="true">
               {ICONS[item]}
             </span>

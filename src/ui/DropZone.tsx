@@ -47,23 +47,25 @@ export function DropZone({ onFiles, onSample, disabled = false }: DropZoneProps)
       tabIndex={0}
       aria-label={t('drop.choose')}
     >
-      <svg className="dropzone__icon" viewBox="0 0 48 48" aria-hidden="true">
-        <path
-          d="M24 32V12m0 0-7 7m7-7 7 7"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M8 30v4a6 6 0 0 0 6 6h20a6 6 0 0 0 6-6v-4"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-        />
-      </svg>
+      <span className="dropzone__orb" aria-hidden="true">
+        <svg className="dropzone__icon" viewBox="0 0 48 48">
+          <path
+            d="M24 32V12m0 0-7 7m7-7 7 7"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M8 30v4a6 6 0 0 0 6 6h20a6 6 0 0 0 6-6v-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+          />
+        </svg>
+      </span>
       <p className="dropzone__title">{t('drop.title')}</p>
       <p className="dropzone__hint">
         {t('drop.hint')}

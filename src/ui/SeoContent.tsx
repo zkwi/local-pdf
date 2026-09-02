@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { useI18n } from '../i18n/index.tsx';
 import type { MessageKey } from '../i18n/index.tsx';
 import { SITE } from '../site.ts';
@@ -49,8 +50,8 @@ export function SeoContent() {
   };
 
   return (
-    <>
-      <section className="seo">
+    <div className="content reveal" style={{ '--i': 4 } as CSSProperties}>
+      <section className="seo seo--steps">
         <h2>{t('seo.how.title')}</h2>
         <ol className="steps">
           {steps.map((step, i) => (
@@ -64,12 +65,12 @@ export function SeoContent() {
         </ol>
       </section>
 
-      <section className="seo">
+      <section className="seo seo--why">
         <h2>{t('seo.why.title')}</h2>
         <p>{t('seo.why.body')}</p>
       </section>
 
-      <section className="seo">
+      <section className="seo seo--faq">
         <h2>{t('seo.faq.title')}</h2>
         <div className="faq">
           {faq.map((f, i) => (
@@ -85,6 +86,6 @@ export function SeoContent() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
       />
-    </>
+    </div>
   );
 }

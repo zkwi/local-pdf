@@ -33,6 +33,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ### Changed
 
+- The page was re-laid out with room to breathe: a slim top bar and a real headline above the drop
+  zone, the four selling points as cards instead of a cramped strip, output format and options grouped
+  together with a sliding selector, the three steps side by side, and a highlighted "why local"
+  section. Warmer palette with a single accent, a dark theme that keeps its contrast, sections that
+  fade in on load, and hover/drag feedback on the drop zone and cards; all motion respects
+  `prefers-reduced-motion`.
 - Default page limit raised from 500 to 1000.
 - Scanned pages whose only text layer is a watermark, header/footer or page number are now recognised
   with OCR instead of being treated as regular pages (a 236-page scanned book used to come out as page

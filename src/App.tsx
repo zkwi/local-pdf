@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { DEFAULT_OPTIONS } from './core/contracts/options.ts';
 import type { ConvertOptions, OutputFormat } from './core/contracts/options.ts';
 import { useConversionQueue } from './hooks/useConversionQueue.ts';
@@ -17,6 +18,9 @@ import { SeoContent } from './ui/SeoContent.tsx';
 
 const OUTPUTS: readonly OutputFormat[] = ['docx', 'markdown', 'both'];
 const TOAST_MS = 4000;
+
+/** 首屏各区块按这个序号错开入场（见 styles.css 的 .reveal） */
+const reveal = (index: number): CSSProperties => ({ '--i': index }) as CSSProperties;
 
 export function App() {
   const { t, tn, locale } = useI18n();
@@ -177,17 +181,11 @@ export function App() {
 
   return (
     <CompatGate caps={caps}>
-      <div className="app">
-        <header className="masthead">
+      <div className="app" data-dragging={dragging || undefined}>
+        <header className="masthead reveal" style={reveal(0)}>
           <div className="masthead__brand">
-            <Logo />
-            <div>
-              <h1>
-                {t('app.title')}
-                <span className="masthead__feature">{t('app.feature')}</span>
-              </h1>
-              <p>{t('app.tagline')}</p>
-            </div>
+            <Logo size={36} />
+            <span className="masthead__name">{t('app.title')}</span>
           </div>
           <div className="masthead__actions">
             <LanguageSelect />
@@ -211,30 +209,50 @@ export function App() {
           {!ocrAvailable && <p className="banner banner--warn">{t('ocr.unavailable')}</p>}
           {caps.lowMemory && <p className="banner">{t('compat.lowMemory')}</p>}
 
-          <DropZone onFiles={handleFiles} onSample={loadSample} />
+          <section className="hero reveal" style={reveal(1)} aria-labelledby="hero-title">
+            <h1 id="hero-title" className="hero__title">
+              {t('app.feature')}
+            </h1>
+            <p className="hero__lede">{t('app.tagline')}</p>
+            <DropZone onFiles={handleFiles} onSample={loadSample} />
+          </section>
 
           <Features />
 
-          <section className="output" aria-label={t('output.label')}>
-            <span className="output__label">{t('output.label')}</span>
-            <div className="segmented segmented--large" role="radiogroup">
-              {OUTPUTS.map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  role="radio"
-                  aria-checked={options.output === value}
-                  className={`segmented__item${options.output === value ? ' segmented__item--on' : ''}`}
-                  onClick={() => setOptions((o) => ({ ...o, output: value }))}
-                >
-                  {t(`output.${value}` as MessageKey)}
-                </button>
-              ))}
+          <section className="settings reveal" style={reveal(3)} aria-label={t('output.label')}>
+            <div className="output">
+              <span className="eyebrow">{t('output.label')}</span>
+              <div
+                className="segmented segmented--large"
+                role="radiogroup"
+                // 滑块位置交给 CSS 算：改哪个选中就把序号写进变量
+                style={
+                  {
+                    '--count': OUTPUTS.length,
+                    '--index': OUTPUTS.indexOf(options.output),
+                  } as CSSProperties
+                }
+              >
+                {OUTPUTS.map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={options.output === value}
+                    className={`segmented__item${options.output === value ? ' segmented__item--on' : ''}`}
+                    onClick={() => setOptions((o) => ({ ...o, output: value }))}
+                  >
+                    {t(`output.${value}` as MessageKey)}
+                  </button>
+                ))}
+              </div>
+              <p className="output__hint" key={options.output}>
+                {t(`output.${options.output}.hint` as MessageKey)}
+              </p>
             </div>
-            <p className="output__hint">{t(`output.${options.output}.hint` as MessageKey)}</p>
-          </section>
 
-          <OptionsPanel options={options} onChange={setOptions} ocrAvailable={ocrAvailable} />
+            <OptionsPanel options={options} onChange={setOptions} ocrAvailable={ocrAvailable} />
+          </section>
 
           {jobs.length > 0 && (
             <section className="queue" ref={queueRef}>
