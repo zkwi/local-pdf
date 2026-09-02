@@ -5,6 +5,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Added
+
+- `wrangler.jsonc` for Cloudflare Workers Git deployments (assets-only Worker serving `dist/`, custom domain bound).
+
 ### Changed
 
 - The ONNX Runtime WASM is no longer shipped with the site; it is loaded from jsDelivr pinned to the exact

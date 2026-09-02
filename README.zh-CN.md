@@ -63,8 +63,10 @@ npm run ocr-models  # 可选：把 OCR 模型下载到 public/ocr-models/ 自托
 
 ## 部署
 
-纯静态站。Cloudflare Pages：连接 GitHub 仓库，构建命令 `npm run build`，输出目录 `dist`，Node 22（读 `.node-version`）。
-`public/_headers` 里有缓存头，多线程 OCR 需要的 COOP/COEP 以注释形式放在里面。其他静态托管同理。
+纯静态站。Cloudflare（Workers & Pages → Create → Workers → Import a repository）：连接 GitHub 仓库，
+构建命令 `npm run build`，部署命令 `npx wrangler deploy`。`wrangler.jsonc` 声明了一个只有静态资源的 Worker，
+产物目录 `dist/`，并绑定自定义域名；Node 22 来自 `.node-version`。`public/_headers` 里有缓存头，
+多线程 OCR 需要的 COOP/COEP 以注释形式放在里面。其他静态托管把 `dist/` 当输出目录即可。
 
 ## 隐私
 

@@ -70,9 +70,11 @@ The engine is [PaddleOCR.js](https://github.com/PaddlePaddle/PaddleOCR/tree/main
 
 ## Deploy
 
-The site is static. On Cloudflare Pages: connect the GitHub repo, build command `npm run build`,
-output directory `dist`, Node 22 (read from `.node-version`). `public/_headers` sets cache headers and has the
-optional COOP/COEP lines for multi-threaded OCR commented out. Any other static host works the same way.
+The site is static. On Cloudflare (Workers & Pages → Create → Workers → Import a repository): connect the GitHub
+repo, build command `npm run build`, deploy command `npx wrangler deploy`. `wrangler.jsonc` declares an assets-only
+Worker serving `dist/` and binds the custom domain; Node 22 comes from `.node-version`. `public/_headers` sets cache
+headers and has the optional COOP/COEP lines for multi-threaded OCR commented out. Any other static host works the
+same way with `dist/` as the output directory.
 
 ## Privacy
 

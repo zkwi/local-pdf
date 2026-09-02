@@ -1,0 +1,15 @@
+// Cloudflare Workers（Git 连接部署）的配置：这是一个只有静态资源、没有脚本的 Worker。
+// 控制台里的 Deploy command 用 `npx wrangler deploy` 就会读这个文件。
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "local-pdf",
+  "compatibility_date": "2026-09-02",
+  "assets": {
+    "directory": "./dist",
+    // 未知路径回到首页；应用探测本地模型/wasm 时会检查 content-type，不会被这个兜底骗到
+    "not_found_handling": "single-page-application",
+  },
+  // 部署时自动把域名指到这个 Worker（域名必须在同一个 Cloudflare 账号下）
+  "routes": [{ "pattern": "localpdfconverter.com", "custom_domain": true }],
+  "workers_dev": true,
+}
