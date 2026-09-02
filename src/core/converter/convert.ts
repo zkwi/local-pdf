@@ -15,6 +15,7 @@ import type {
 import { writeDocx } from '../docx/writer.ts';
 import type { ExtractedImage } from '../layout/analyze.ts';
 import { analyzeDocument, isFullPageImage, MIN_IMAGE_SIDE } from '../layout/analyze.ts';
+import { normalizeScanPages } from '../layout/scan-size.ts';
 import { createOcrEngine } from '../ocr/create.ts';
 import type { OcrEngine } from '../ocr/engine.ts';
 import {
@@ -23,7 +24,9 @@ import {
   mergeOcrSpans,
   shouldRunOcr,
   snapFontSizes,
+  unifyOcrFontSizes,
 } from '../ocr/engine.ts';
+import { detectRulesOnCanvas } from '../ocr/rules.ts';
 import { mergeStripSpans, planStrips, STRIP_THRESHOLD_PT } from '../ocr/strips.ts';
 import type { StripResult } from '../ocr/strips.ts';
 import { computeTextHealth, describeError, PdfSession } from '../pdf/extractor.ts';
@@ -35,6 +38,12 @@ const MAX_TOTAL_IMAGE_BYTES = 80 * 1024 * 1024;
 
 /** OCR 至少按这个倍率渲染（72 pt × 3 ≈ 216 DPI），低于这个小字号识别率掉得厉害 */
 const MIN_OCR_SCALE = 3;
+/**
+ * OCR 渲染的像素宽度上限。扫描仪按 2 倍尺寸存的 A4 页（1215 pt 宽）字号也是 2 倍，
+ * 再按 3 倍渲染就是三千多像素宽的图，识别慢一倍多却没更准
+ */
+const MAX_OCR_WIDTH_PX = 2600;
+const MIN_OCR_SCALE_FLOOR = 1.5;
 
 export class CancelledError extends Error {
   constructor() {
@@ -160,7 +169,12 @@ export async function convert(
         options.extractImages && options.mode !== 'plain-text' && cropTargets.length > 0;
 
       if (needsOcr || wantImages) {
-        const scale = needsOcr ? Math.max(options.renderScale, MIN_OCR_SCALE) : options.renderScale;
+        const scale = needsOcr
+          ? Math.max(
+              MIN_OCR_SCALE_FLOOR,
+              Math.min(Math.max(options.renderScale, MIN_OCR_SCALE), MAX_OCR_WIDTH_PX / page.width),
+            )
+          : options.renderScale;
         const rendered = await session.renderPage(i, scale);
         if (rendered !== null) {
           if (needsOcr) {
@@ -193,9 +207,14 @@ export async function convert(
                 });
               } else {
                 const merged = mergeOcrSpans(page.spans, snapFontSizes(ocrSpans));
+                // 扫描件的表格框线只存在于像素里，从渲染图上找出来，和矢量线段一起交给表格识别
+                const rasterRules = options.detectTables
+                  ? detectRulesOnCanvas(rendered.canvas, rendered.scale, i)
+                  : [];
                 page = {
                   ...page,
                   spans: merged,
+                  segments: [...page.segments, ...rasterRules],
                   ocrApplied: true,
                   textHealth: computeTextHealth(merged, page.images, page.width, page.height),
                 };
@@ -262,11 +281,17 @@ export async function convert(
     report({ stage: 'analyzing', fraction: 0.72, key: 'analyzing' });
     stageStart = now();
 
+    // 扫描页的尺寸是扫描仪随手定的（A4 纸扫成两倍大、手机长截图只有 213 pt 宽），按可读性缩放到 A4 尺度
+    const normalized = normalizeScanPages(pages, images);
+    for (const index of normalized.scaledPages) {
+      warnings.push({ code: 'scan-page-resized', pageIndex: index, params: { page: index + 1 } });
+    }
     const primitive: PrimitiveDocument = {
       metadata: { ...session.metadata, pageCount: pages.length },
-      pages,
+      // 各页分别吸附出来的正文字号会差百分之十几，统一掉
+      pages: unifyOcrFontSizes(normalized.pages),
     };
-    const layout = analyzeDocument(primitive, images, options);
+    const layout = analyzeDocument(primitive, normalized.images, options);
     const semantic = buildSemanticDocument(layout, primitive.metadata, options);
     durations.analyzing = now() - stageStart;
 

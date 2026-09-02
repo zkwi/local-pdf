@@ -3,40 +3,12 @@
  * 中文按西文规则处理会产生大量错误空格，所以这里必须分开处理。
  */
 import type { ListMarkerStyle } from '../contracts/layout.ts';
+import { containsCjk, isCjkChar } from '../util/cjk.ts';
 
-const CJK_RANGES: readonly (readonly [number, number])[] = [
-  [0x1100, 0x11ff], // 韩文字母
-  [0x2e80, 0x2eff], // 康熙部首补充
-  [0x3000, 0x303f], // CJK 标点
-  [0x3040, 0x30ff], // 平假名 / 片假名
-  [0x3100, 0x312f], // 注音
-  [0x3130, 0x318f], // 韩文兼容字母
-  [0x3400, 0x4dbf], // 扩展 A
-  [0x4e00, 0x9fff], // 基本区
-  [0xa960, 0xa97f],
-  [0xac00, 0xd7af], // 韩文音节
-  [0xf900, 0xfaff], // 兼容表意
-  [0xfe30, 0xfe4f], // CJK 兼容形式
-  [0xff00, 0xff60], // 全角形式
-  [0xffe0, 0xffe6],
-  [0x20000, 0x2ffff], // 扩展 B 及以后
-];
-
-export function isCjkChar(ch: string): boolean {
-  const code = ch.codePointAt(0);
-  if (code === undefined) return false;
-  return CJK_RANGES.some(([lo, hi]) => code >= lo && code <= hi);
-}
+export { containsCjk, isCjkChar };
 
 export function isLatinLetter(ch: string): boolean {
   return /[A-Za-z]/.test(ch);
-}
-
-export function containsCjk(text: string): boolean {
-  for (const ch of text) {
-    if (isCjkChar(ch)) return true;
-  }
-  return false;
 }
 
 function lastChar(text: string): string {
@@ -121,7 +93,8 @@ export function endsSentence(text: string): boolean {
   return '.。!！?？;；:："”』」）)'.includes(ch);
 }
 
-const BULLET_MARKERS = /^([•·▪◦‣⁃●○■□⁃∙*–—-])\s+/;
+// 圆点方块类符号后面紧跟中文也算（"•若中考…"），横线类必须有空格，免得把破折号开头的行当列表
+const BULLET_MARKERS = /^(?:([•·▪◦‣⁃●○■□∙])(?:\s+|(?=[㐀-鿿（【「]))|([*–—-])\s+)/;
 const ORDERED_MARKERS =
   /^(\(?\d+(\.\d+)*[.)）、]|\(?[a-zA-Z][.)）]|[①-⑳]|[一二三四五六七八九十百]+[、.)]|（\d+）|\(\d+\))\s*/;
 
@@ -146,7 +119,7 @@ export function matchListMarker(text: string): ListMarker | null {
   if (bullet !== null) {
     return {
       ordered: false,
-      marker: bullet[1],
+      marker: bullet[1] ?? bullet[2],
       rest: text.slice(bullet[0].length),
       style: 'bullet',
     };
@@ -166,9 +139,20 @@ export function matchListMarker(text: string): ListMarker | null {
   return null;
 }
 
-/** 章节编号，如 "3.2.1 概述"，用于标题层级判断 */
+/**
+ * 公文式中文章节编号："一、背景" 是二级，"（一）目标" 是三级。
+ * 括号编号也常用作列表项，这里只认出来，由上层结合上下文决定。
+ */
+export function matchCjkSectionLevel(text: string): 2 | 3 | null {
+  const t = text.trim();
+  if (/^[一二三四五六七八九十]+、/.test(t)) return 2;
+  if (/^[（(][一二三四五六七八九十]+[）)]/.test(t)) return 3;
+  return null;
+}
+
+/** 章节编号，如 "3.2.1 概述"，用于标题层级判断。每一级最多三位数：更长的是账号、金额 */
 export function matchSectionNumber(text: string): number | null {
-  const m = /^(\d+(?:\.\d+)*)\s+\S/.exec(text.trim());
+  const m = /^(\d{1,3}(?:\.\d{1,3})*)\s+\S/.exec(text.trim());
   if (m === null) return null;
   const depth = m[1].split('.').length;
   return depth >= 1 && depth <= 4 ? depth : null;

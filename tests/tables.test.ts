@@ -105,3 +105,55 @@ describe('detectTables', () => {
     expect(tables[0].meta.confidence).toBeGreaterThan(0.9);
   });
 });
+
+describe('detectTables：扫描图上找出来的线', () => {
+  const raster = (s: ReturnType<typeof hRule>) => ({ ...s, source: 'raster' as const });
+
+  it('只有一格的框（文本框、装饰框）不算表', () => {
+    let order = 0;
+    const box = [
+      hRule(100, 100, 300),
+      hRule(160, 100, 300),
+      vRule(100, 100, 160),
+      vRule(300, 100, 160),
+    ];
+    const { tables, consumedSpanIds } = detectTables(
+      box,
+      [cellSpan('框里的字', 110, 130)],
+      0,
+      () => order++,
+    );
+    expect(tables).toHaveLength(0);
+    expect(consumedSpanIds.size).toBe(0);
+  });
+
+  it('图表的网格线和坐标轴：格子多、字少，不算表；矢量画的空表仍是表', () => {
+    let order = 0;
+    const grid = [
+      hRule(100, 100, 400),
+      hRule(130, 100, 400),
+      hRule(160, 100, 400),
+      hRule(190, 100, 400),
+      vRule(100, 100, 190),
+      vRule(200, 100, 190),
+      vRule(300, 100, 190),
+      vRule(400, 100, 190),
+    ];
+    const labels = [cellSpan('10%', 110, 120), cellSpan('5%', 110, 150)];
+    expect(detectTables(grid.map(raster), labels, 0, () => order++).tables).toHaveLength(0);
+    expect(detectTables(grid, labels, 0, () => order++).tables).toHaveLength(1);
+  });
+
+  it('扫描的表格：格子里大多有字，照常识别', () => {
+    let order = 0;
+    const spans = [
+      cellSpan('A1', 110, 120),
+      cellSpan('B1', 210, 120),
+      cellSpan('A2', 110, 150),
+      cellSpan('B2', 210, 150),
+    ];
+    const { tables } = detectTables(grid2x2().map(raster), spans, 0, () => order++);
+    expect(tables).toHaveLength(1);
+    expect(tables[0].rows).toBe(2);
+  });
+});

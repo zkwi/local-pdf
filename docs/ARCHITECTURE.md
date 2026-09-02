@@ -33,14 +33,14 @@ PDF 描述的是「在某个坐标画什么」，Word 描述的是「段落、�
 
 ```text
 core/contracts   ← 谁都可以依赖，它谁都不依赖
-core/util        ← 同上；目前只有文本清洗（XML 非法字符）
+core/util        ← 同上；文本清洗（XML 非法字符）、CJK 字符判断
 core/geometry    ← 只依赖 contracts
 core/pdf         ← contracts + geometry + pdfjs-dist
-core/layout      ← contracts + geometry           （不碰 pdf.js，纯函数，好测）
+core/layout      ← contracts + geometry + util     （不碰 pdf.js，纯函数，好测）
 core/semantic    ← contracts + geometry + layout/text
 core/docx        ← contracts + geometry + docx
 core/markdown    ← contracts (+ 动态 import unified/remark、fflate)
-core/ocr         ← contracts + geometry (+ 动态 import @paddleocr/paddleocr-js)
+core/ocr         ← contracts + geometry + util (+ 动态 import @paddleocr/paddleocr-js)
 core/converter   ← 以上全部，负责编排
 worker/          ← converter
 i18n/            ← contracts（把 code / key + params 变成当前语言的文案）
@@ -96,16 +96,24 @@ OCR 是例外：PaddleOCR.js 的直连模式依赖 `document`，只能用它的 
 
 按顺序：
 
+0. **`scan-size.ts`**（转换器在版面分析前调用）扫描页尺寸归一化。扫描件的页面尺寸是扫描仪或截图
+   工具随手定的（A4 扫成 1215×1715 pt、手机长截图 213 pt 宽），文字又是 OCR 认出来的，没有原始版式
+   可言，按可读性把整页（文字框、字号、图、线）缩放到 A4 尺度，否则 Word 里是巨页配大字或 A4 配 7 号小字。
 1. **`lines.ts`** span → 文本行。按基线聚类（比 bbox 聚类稳，上下标不会把行拆开），
    再按「同基线上的超大间距」拆行——**双栏排版左右两栏的基线经常完全对齐，不拆就会
-   连成一条跨栏的行，后面的分栏检测再也找不到那条竖向空隙**。
+   连成一条跨栏的行，后面的分栏检测再也找不到那条竖向空隙**。间距不到两个字宽的栏间空隙
+   （研报正文和侧栏之间、双栏论文）靠页面级的水平投影找：几乎没有片段覆盖、两侧都贴着不少
+   长文字行的竖直空白带就是栏间空隙，隔着它的片段一律拆开，并把空隙位置交给分栏切分。
 2. **`tables.ts`** 框线合并 → 相交关系做连通分量 → 每个含 ≥2 横线和 ≥2 竖线的分量是一张表。
    缺失的内部框线即为合并单元格。表内文字从 span 直接按中心点归格，不走文本行。
+   扫描页没有矢量线段，`ocr/rules.ts` 在渲染位图上找又长又扁的墨迹分量当框线，走同一条路。
 3. **`regions.ts`** XY-Cut。先找竖向空隙（分栏），找不到再找横向空隙（段落带），递归。
    竖向优先是有意的：双栏页面上方有跨栏标题时，带着标题不存在贯通的竖向空隙，
    于是自动退化成「先横切出标题带，再在下半部分竖切出两栏」，正是想要的顺序。
-4. **`blocks.ts`** 区域内切段落，并分类成段落 / 标题 / 列表项。
+4. **`blocks.ts`** 区域内切段落，并分类成段落 / 标题 / 列表项。正文字号先看原生文字页
+   （OCR 页的字号已吸附成一个值，字数一多就会把众数拉偏）；OCR 页的标题阈值按本页自己的正文算。
 5. **`header-footer.ts`** 跨页重复检测。数字归一成 `#`，所以「第 3 页」和「第 12 页」能聚到一起。
+   页边竖排的章节名（书籍侧边页眉）跨页重复时也归入页眉。
 6. **`analyze.ts`** 编排以上，把表格和图片按位置插回正文流，算页边距和置信度。
 
 ## 文案

@@ -4,7 +4,9 @@ import type { PrimitiveTextSpan } from '../contracts/primitives.ts';
 import { makeBBox } from '../geometry/bbox.ts';
 import { sanitizeText } from '../util/sanitize.ts';
 import type { OcrEngine, OcrEngineContext } from './engine.ts';
+import { estimateOcrFontSize } from './engine.ts';
 import { loadModel } from './model-cache.ts';
+import { refineOcrSpans } from './refine.ts';
 import { formatMegabytes, localModelUrl, selectPaddleModels } from './paddle-models.ts';
 
 export interface PaddleEngineOptions extends OcrEngineContext {
@@ -125,7 +127,9 @@ export async function createPaddleEngine(options: PaddleEngineOptions): Promise<
       const bitmap = await createImageBitmap(canvas);
       try {
         const results = await ocr.predict(bitmap);
-        return paddleItemsToSpans(results[0]?.items ?? [], scale, pageIndex);
+        const spans = paddleItemsToSpans(results[0]?.items ?? [], scale, pageIndex);
+        // 引擎只给文字和框；粗细、红章都得回到渲染图上量
+        return refineOcrSpans(spans, canvas, scale);
       } finally {
         try {
           bitmap.close();
@@ -177,7 +181,7 @@ export function paddleItemsToSpans(
       bbox: makeBBox(x0, y0, x1, y1),
       // 检测框贴着字形外沿，基线大致在框底往上五分之一处
       baseline: y1 - height * 0.2,
-      fontSize: vertical ? Math.max(1, width) * 0.9 : height * 0.9,
+      fontSize: estimateOcrFontSize(text, width, height, vertical),
       fontKey: 'ocr',
       fontName: 'OCR',
       fontFamily: 'sans-serif',

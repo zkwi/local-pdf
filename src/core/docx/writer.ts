@@ -78,7 +78,10 @@ export async function writeDocx(doc: SemanticDocument): Promise<Blob> {
       section.footer.length > 0
         ? { default: new Footer({ children: section.footer.map((p) => renderParagraph(p)) }) }
         : undefined,
-    children: section.blocks.flatMap((block) => renderBlock(block, imageIds)),
+    children: renderBlocks(section.blocks, imageIds, {
+      width: section.pageWidthPt - section.margins.left - section.margins.right,
+      height: section.pageHeightPt - section.margins.top - section.margins.bottom,
+    }),
   }));
 
   const file = new Document({
@@ -132,30 +135,73 @@ function levelsFor(kind: 'bullet' | 'ordered') {
   }));
 }
 
-function renderBlock(block: SemanticBlock, imageIds: { next: number }): (Paragraph | Table)[] {
+/** 版心尺寸（pt），图片超出就等比缩进去，否则 Word 里会压到页边距外 */
+interface TextArea {
+  readonly width: number;
+  readonly height: number;
+}
+
+/**
+ * 分页写成下一段的"段前分页"，而不是单独一个带分页符的空段：
+ * 上一页的内容刚好排满时，那个空段会被挤到下一页，再分一次页，Word 里就多出一张白纸
+ */
+function renderBlocks(
+  blocks: readonly SemanticBlock[],
+  imageIds: { next: number },
+  area: TextArea,
+): (Paragraph | Table)[] {
+  const out: (Paragraph | Table)[] = [];
+  let breakBefore = false;
+  for (const block of blocks) {
+    if (block.kind === 'page-break') {
+      breakBefore = out.length > 0;
+      continue;
+    }
+    const rendered = renderBlock(block, imageIds, area, breakBefore);
+    if (breakBefore && rendered[0] instanceof Table) {
+      out.push(new Paragraph({ pageBreakBefore: true, children: [] }));
+    }
+    breakBefore = false;
+    out.push(...rendered);
+  }
+  return out;
+}
+
+function renderBlock(
+  block: SemanticBlock,
+  imageIds: { next: number },
+  area: TextArea,
+  breakBefore = false,
+): (Paragraph | Table)[] {
   switch (block.kind) {
     case 'paragraph':
-      return [renderParagraph(block)];
+      return [renderParagraph(block, breakBefore)];
     case 'heading':
-      return [renderHeading(block)];
+      return [renderHeading(block, breakBefore)];
     case 'list-item':
-      return [renderListItem(block)];
+      return [renderListItem(block, breakBefore)];
     case 'table':
       // Word 里两张紧邻的表会被合并，中间垫一个空段落隔开
       return [renderTable(block), new Paragraph({ children: [] })];
     case 'image': {
       const id = imageIds.next++;
+      const fit = Math.min(
+        1,
+        area.width > 0 ? area.width / Math.max(1, block.widthPt) : 1,
+        area.height > 0 ? area.height / Math.max(1, block.heightPt) : 1,
+      );
       return [
         new Paragraph({
           alignment: AlignmentType.CENTER,
+          pageBreakBefore: breakBefore || undefined,
           children: [
             new ImageRun({
               type: block.format === 'jpeg' ? 'jpg' : 'png',
               data: block.data,
               altText: { name: `image${id}`, description: '', title: '', id: String(id) },
               transformation: {
-                width: Math.max(1, Math.round(ptToPx96(block.widthPt))),
-                height: Math.max(1, Math.round(ptToPx96(block.heightPt))),
+                width: Math.max(1, Math.round(ptToPx96(block.widthPt * fit))),
+                height: Math.max(1, Math.round(ptToPx96(block.heightPt * fit))),
               },
             }),
           ],
@@ -187,31 +233,37 @@ function renderRuns(runs: readonly SemanticRun[], fallbackSize: number): Paragra
   });
 }
 
-function renderParagraph(block: SemanticParagraph): Paragraph {
+function renderParagraph(block: SemanticParagraph, breakBefore = false): Paragraph {
   const size = block.runs[0]?.fontSize ?? 10.5;
   return new Paragraph({
     alignment: ALIGNMENT[block.alignment],
+    pageBreakBefore: breakBefore || undefined,
     indent:
       block.firstLineIndentPt > 0 ? { firstLine: ptToTwip(block.firstLineIndentPt) } : undefined,
     spacing: {
       after: ptToTwip(block.spaceAfterPt),
       before: ptToTwip(block.spaceBeforePt),
-      line: Math.round(block.lineSpacing * 240),
-      lineRule: 'auto',
+      // 行距按量到的基线间距写成绝对值，不用倍数：倍数行距乘的是字体自己的行高，
+      // 微软雅黑这类行高 1.3 倍字号的字体会被撑得很稀，原来 3 页的文档排成 4 页。
+      // 量准了的（多行段落）写 exact，Word 里的高度就和原文一样；估的写 atLeast
+      line: ptToTwip(Math.max(size, block.lineSpacing * size)),
+      lineRule: block.lineRule ?? 'atLeast',
     },
     children: renderRuns(block.runs, size),
   });
 }
 
-function renderHeading(block: SemanticHeading): Paragraph {
+function renderHeading(block: SemanticHeading, breakBefore = false): Paragraph {
   return new Paragraph({
     heading: HEADING_BY_LEVEL[block.level],
-    spacing: { before: 240, after: 120 },
+    pageBreakBefore: breakBefore || undefined,
+    // 原文里标题前后的空白已经量在相邻块的段后距里，这里不再额外加，否则页数会膨胀
+    spacing: { before: 0, after: ptToTwip(block.spaceAfterPt ?? 6) },
     children: renderRuns(block.runs, 14),
   });
 }
 
-function renderListItem(block: SemanticListItem): Paragraph {
+function renderListItem(block: SemanticListItem, breakBefore = false): Paragraph {
   const size = block.runs[0]?.fontSize ?? 10.5;
   const level = Math.min(3, Math.max(0, block.level));
 
@@ -219,6 +271,7 @@ function renderListItem(block: SemanticListItem): Paragraph {
   // 保留原始标记文本，只用缩进模拟列表外观
   if (block.literalMarker !== undefined) {
     return new Paragraph({
+      pageBreakBefore: breakBefore || undefined,
       indent: {
         left: LIST_INDENT_TWIP * 2 * (level + 1),
         hanging: LIST_INDENT_TWIP,
@@ -229,6 +282,7 @@ function renderListItem(block: SemanticListItem): Paragraph {
   }
 
   return new Paragraph({
+    pageBreakBefore: breakBefore || undefined,
     numbering: {
       reference: block.ordered ? ORDERED_REF : BULLET_REF,
       level,

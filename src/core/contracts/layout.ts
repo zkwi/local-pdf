@@ -30,6 +30,7 @@ export type WarningCode =
   | 'image-budget-exceeded'
   | 'scan-text-layer'
   | 'page-size-clamped'
+  | 'scan-page-resized'
   | 'no-text-found';
 
 /**

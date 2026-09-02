@@ -86,12 +86,15 @@ function finishSection(
 ): SemanticSection {
   const first = pages[0];
   const keep = options.keepHeaderFooter && options.mode !== 'plain-text';
-  // 取最小值：任何一页的内容都不应该被页边距裁掉
+  // 取最小值：任何一页的内容都不应该被页边距裁掉。
+  // 只有图的页（整页扫描图、插页）不参与：图会按版心缩放，文字页的边距才是版式
+  const textPages = pages.filter((p) => p.blocks.some((b) => b.kind !== 'image'));
+  const framing = textPages.length > 0 ? textPages : pages;
   const margins = {
-    top: Math.min(...pages.map((p) => p.margins.top)),
-    right: Math.min(...pages.map((p) => p.margins.right)),
-    bottom: Math.min(...pages.map((p) => p.margins.bottom)),
-    left: Math.min(...pages.map((p) => p.margins.left)),
+    top: Math.min(...framing.map((p) => p.margins.top)),
+    right: Math.min(...framing.map((p) => p.margins.right)),
+    bottom: Math.min(...framing.map((p) => p.margins.bottom)),
+    left: Math.min(...framing.map((p) => p.margins.left)),
   };
   const headers = keep ? pages.flatMap((p) => (p.header ? [p.header.lines] : [])) : [];
   const footers = keep ? pages.flatMap((p) => (p.footer ? [p.footer.lines] : [])) : [];
@@ -111,9 +114,12 @@ function finishSection(
 const MAX_WORD_PAGE_PT = 1584;
 const A4 = { width: 595.28, height: 841.89 };
 
+/** 高宽比超过这个值的是长条页（长截图），不管多宽都在 A4 上重排 */
+const STRIP_ASPECT = 2;
+
 /**
  * 微信里的"长图"PDF 一页几千上万 pt 高，超出 Word 上限后 Word 会自己乱分页。
- * 窄长页按 A4 排版让内容顺着流；宽高都超的按比例缩到上限。
+ * 窄长页和长条页按 A4 排版让内容顺着流；宽高都超的（海报）按比例缩到上限。
  */
 export function wordPageSize(
   width: number,
@@ -121,7 +127,8 @@ export function wordPageSize(
 ): { width: number; height: number; clamped: boolean } {
   if (width <= MAX_WORD_PAGE_PT && height <= MAX_WORD_PAGE_PT)
     return { width, height, clamped: false };
-  if (height > MAX_WORD_PAGE_PT && width <= A4.width * 1.05) return { ...A4, clamped: true };
+  if (height > MAX_WORD_PAGE_PT && (width <= A4.width * 1.05 || height / width > STRIP_ASPECT))
+    return { ...A4, clamped: true };
   const k = MAX_WORD_PAGE_PT / Math.max(width, height);
   return { width: width * k, height: height * k, clamped: true };
 }
@@ -190,6 +197,7 @@ function buildPageBlocks(
 ): SemanticBlock[] {
   const out: SemanticBlock[] = [];
   const blocks = page.blocks;
+  const pagePitch = estimatePagePitch(blocks);
 
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i];
@@ -206,6 +214,7 @@ function buildPageBlocks(
       case 'paragraph': {
         const runs = linesToRuns(block.lines);
         if (runs.length === 0) break;
+        const spacing = lineSpacingFor(block.lines, pagePitch);
         out.push({
           kind: 'paragraph',
           runs,
@@ -216,7 +225,8 @@ function buildPageBlocks(
           ),
           spaceBeforePt: 0,
           spaceAfterPt: spaceAfter,
-          lineSpacing: estimateLineSpacing(block.lines),
+          lineSpacing: spacing.lineSpacing,
+          lineRule: spacing.lineRule,
           sourceElementIds: block.meta.sourceElementIds,
           origin: originOf(block),
         });
@@ -229,6 +239,7 @@ function buildPageBlocks(
           kind: 'heading',
           level: block.level,
           runs,
+          spaceAfterPt: spaceAfter,
           sourceElementIds: block.meta.sourceElementIds,
           origin: originOf(block),
         });
@@ -458,13 +469,45 @@ function clampIndent(indent: number, fontSize: number): number {
   return Math.min(indent, em * MAX_INDENT_EM);
 }
 
-function estimateLineSpacing(lines: readonly TextLine[]): number {
-  if (lines.length < 2) return 1.15;
+/** 本页多行块里量到的基线间距中位数（pt）；没有多行块时为 0 */
+export function estimatePagePitch(blocks: readonly LayoutBlock[]): number {
+  const gaps: number[] = [];
+  for (const block of blocks) {
+    if (block.kind !== 'paragraph' && block.kind !== 'list-item') continue;
+    for (let i = 1; i < block.lines.length; i++) {
+      const gap = block.lines[i].baseline - block.lines[i - 1].baseline;
+      if (gap > 0) gaps.push(gap);
+    }
+  }
+  return median(gaps);
+}
+
+/**
+ * 段落行距。多行段落按量到的基线间距精确排（exact），Word 里的高度就和原文一样，
+ * 页数才不会因为字体自己的行高更大而膨胀；单行段落没有可量的间距，
+ * 借用本页正文的行距（字号相近时），否则退回 1.15 倍并让 Word 按字体行高撑开。
+ * 行里混着明显更大的片段时不用 exact，免得把大字的顶部裁掉。
+ */
+export function lineSpacingFor(
+  lines: readonly TextLine[],
+  pagePitch: number,
+): { lineSpacing: number; lineRule: 'exact' | 'atLeast' } {
+  const size = median(lines.map((l) => l.fontSize)) || 10.5;
+  const largest = Math.max(...lines.flatMap((l) => l.spans.map((s) => s.fontSize)), size);
+  if (lines.length < 2) {
+    if (pagePitch > 0 && pagePitch >= size * 1.05 && pagePitch <= size * 2) {
+      return { lineSpacing: pagePitch / size, lineRule: 'exact' };
+    }
+    return { lineSpacing: 1.15, lineRule: 'atLeast' };
+  }
   const gaps: number[] = [];
   for (let i = 1; i < lines.length; i++) gaps.push(lines[i].baseline - lines[i - 1].baseline);
-  const size = median(lines.map((l) => l.fontSize)) || 10.5;
-  const ratio = median(gaps.filter((g) => g > 0)) / size;
-  return Number.isFinite(ratio) ? Math.min(3, Math.max(0.9, ratio)) : 1.15;
+  const pitch = median(gaps.filter((g) => g > 0));
+  const ratio = pitch / size;
+  if (!Number.isFinite(ratio) || ratio <= 0) return { lineSpacing: 1.15, lineRule: 'atLeast' };
+  const lineSpacing = Math.min(3, Math.max(0.9, ratio));
+  const safe = pitch >= largest * 1.05;
+  return { lineSpacing, lineRule: safe ? 'exact' : 'atLeast' };
 }
 
 function estimateSpaceAfter(

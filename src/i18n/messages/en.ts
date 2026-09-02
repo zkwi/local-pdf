@@ -192,6 +192,8 @@ export const en: Messages = {
     'The document has {total} pages; only the first {limit} were converted',
   'warning.page-size-clamped':
     'Page {page} exceeds the Word page-size limit (a tall image); laid out on A4 pages instead',
+  'warning.scan-page-resized':
+    'Page {page} is a scan of unusual size (an oversized scan or a phone screenshot); scaled to A4 proportions so the text is a normal size',
   'warning.no-text-found': 'No text was found on page {page}',
 
   'meta.description':

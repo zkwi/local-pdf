@@ -14,10 +14,11 @@ import { mode } from '../geometry/stats.ts';
 import { buildBlocksForRegion } from './blocks.ts';
 import { detectHeadersFooters } from './header-footer.ts';
 import { buildLines } from './lines.ts';
+import type { ColumnGutter } from './lines.ts';
 import { segmentRegions } from './regions.ts';
 import { detectRowRuledTables } from './row-tables.ts';
 import { detectTables } from './tables.ts';
-import { isScanWithTextLayer } from '../ocr/engine.ts';
+import { dominantFontSize, isScanWithTextLayer } from '../ocr/engine.ts';
 
 export interface ExtractedImage {
   readonly data: Uint8Array;
@@ -44,14 +45,7 @@ export function analyzeDocument(
   const bodyFontSize = estimateBodyFontSize(doc);
 
   const pageLines = doc.pages.map((page) => {
-    const built = buildLines(page.spans);
-    if (built.rotatedSpanCount > 0) {
-      warnings.push({
-        code: 'rotated-text-flattened',
-        pageIndex: page.index,
-        params: { page: page.index + 1, count: built.rotatedSpanCount },
-      });
-    }
+    const built = buildLines(page.spans, page.width);
     // 一两个竖排片段多半是水印、二维码旁的装饰字，不值得打扰用户
     if (built.verticalSpanCount >= 3) {
       warnings.push({
@@ -60,17 +54,44 @@ export function analyzeDocument(
         params: { page: page.index + 1 },
       });
     }
-    return { index: page.index, height: page.height, lines: built.lines };
+    return {
+      index: page.index,
+      width: page.width,
+      height: page.height,
+      lines: built.lines,
+      gutters: built.gutters,
+    };
   });
 
   const headerFooter = options.detectHeaderFooter
     ? detectHeadersFooters(pageLines)
     : { headerLineIds: new Map(), footerLineIds: new Map() };
 
+  // 旋转文字被拉平进正文才值得提醒；归入页眉的侧边章节名不算
+  for (const page of pageLines) {
+    const header = headerFooter.headerLineIds.get(page.index);
+    const count = page.lines.filter(
+      (l) =>
+        l.spans.length === 1 &&
+        !l.spans[0].vertical &&
+        l.spans[0].rotation >= 1 &&
+        l.spans[0].rotation <= 359 &&
+        header?.has(l.id) !== true,
+    ).length;
+    if (count > 0) {
+      warnings.push({
+        code: 'rotated-text-flattened',
+        pageIndex: page.index,
+        params: { page: page.index + 1, count },
+      });
+    }
+  }
+
   const pages = doc.pages.map((page, i) =>
     analyzePage(
       page,
       pageLines[i].lines,
+      pageLines[i].gutters,
       headerFooter.headerLineIds.get(page.index) ?? new Set<string>(),
       headerFooter.footerLineIds.get(page.index) ?? new Set<string>(),
       images,
@@ -82,21 +103,51 @@ export function analyzeDocument(
   return { pages, warnings, bodyFontSize };
 }
 
+/** 原生文字至少有这么多字，正文字号才只看原生页 */
+const MIN_NATIVE_SAMPLE = 300;
+/** 一个字号至少有这么多条长行，才算本页成片正文的字号 */
+const MIN_TEXT_LINES = 3;
+const LONG_LINE_CHARS = 15;
+
+/** OCR 页上成片正文用到的字号：至少三条长行共用的字号（表格里的短行不算） */
+function runningTextSizes(lines: readonly TextLine[]): number[] {
+  const counts = new Map<number, number>();
+  for (const line of lines) {
+    if (line.text.trim().length < LONG_LINE_CHARS) continue;
+    const key = Math.round(line.fontSize * 2) / 2;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return [...counts.entries()].filter(([, n]) => n >= MIN_TEXT_LINES).map(([size]) => size);
+}
+
+/**
+ * 正文字号：按字数加权的众数。原生文字页优先——OCR 页（自己识别的或自带文字层的）
+ * 的字号已经吸附成一个值，只要字数多一点就会把众数拉到它那边，原生正文的 10.5 / 11 / 12
+ * 分散在几个桶里反而输掉，结果整份文档的正文都被当成标题。
+ */
 function estimateBodyFontSize(doc: PrimitiveDocument): number {
+  const native = doc.pages.filter((p) => !p.ocrApplied && !p.textHealth.hiddenText);
+  const nativeSizes = collectSizes(native);
+  const sizes = nativeSizes.length >= MIN_NATIVE_SAMPLE ? nativeSizes : collectSizes(doc.pages);
+  const value = mode(sizes, 0.5);
+  return value > 0 ? value : 10.5;
+}
+
+function collectSizes(pages: readonly PrimitivePage[]): number[] {
   const sizes: number[] = [];
-  for (const page of doc.pages) {
+  for (const page of pages) {
     for (const span of page.spans) {
       const weight = Math.min(40, span.text.trim().length);
       for (let i = 0; i < weight; i++) sizes.push(span.fontSize);
     }
   }
-  const value = mode(sizes, 0.5);
-  return value > 0 ? value : 10.5;
+  return sizes;
 }
 
 function analyzePage(
   page: PrimitivePage,
   allLines: readonly TextLine[],
+  gutters: readonly ColumnGutter[],
   headerIds: ReadonlySet<string>,
   footerIds: ReadonlySet<string>,
   images: ImageStore,
@@ -139,17 +190,37 @@ function analyzePage(
 
   const flowLines = bodyLines.filter((line) => !line.spanIds.every((id) => consumed.has(id)));
   const { regions, columnCount, confidence } = options.detectColumns
-    ? segmentRegions(flowLines, page.width)
+    ? segmentRegions(flowLines, page.width, undefined, gutters)
     : segmentRegions(flowLines, page.width, Number.POSITIVE_INFINITY);
 
+  const noisy = page.textHealth.hiddenText || page.ocrApplied;
+  // OCR 页各页的正文字号本来就不一样（通知正文 16 号，附表 10 号），标题阈值按本页自己的正文算；
+  // 取大者是为了让夹在原生文档里的截图页（字很小）不把自己的小字当正文
+  const pageBodyFontSize = noisy
+    ? Math.max(bodyFontSize, dominantFontSize(page.spans))
+    : bodyFontSize;
   const ctx = {
     pageIndex: page.index,
-    bodyFontSize,
+    bodyFontSize: pageBodyFontSize,
     order,
-    noisyFontSizes: page.textHealth.hiddenText || page.ocrApplied,
+    noisyFontSizes: noisy,
+    pageLines: flowLines,
+    textSizes: noisy ? runningTextSizes(flowLines) : undefined,
   };
+  const pageTextRight = Math.max(...flowLines.map((l) => right(l.bbox)));
   const blocks: LayoutBlock[] = [];
-  for (const region of regions) blocks.push(...buildBlocksForRegion(region, ctx));
+  for (const region of regions) {
+    // 右边没有并排的区域（不是分栏）时，行应该排满到本页文字的右边界
+    const beside = regions.some(
+      (o) =>
+        o !== region &&
+        o.bbox.x >= right(region.bbox) - 1 &&
+        overlapRatio1D(o.bbox.y, bottom(o.bbox), region.bbox.y, bottom(region.bbox)) > 0,
+    );
+    const regionCtx = beside ? ctx : { ...ctx, lineRight: pageTextRight };
+    blocks.push(...buildBlocksForRegion(region, regionCtx));
+    ctx.order = regionCtx.order;
+  }
   order = ctx.order;
 
   for (const table of tables) insertByPosition(blocks, table);
@@ -281,10 +352,15 @@ function computeMargins(
   width: number,
   height: number,
 ): { top: number; right: number; bottom: number; left: number } {
-  if (blocks.length === 0) {
+  // 整页图（扫描页、背景图）贴着纸边，不能拿它算页边距；只有它时才用
+  const framing = blocks.filter(
+    (b) => !(b.kind === 'image' && isFullPageImage({ bbox: b.meta.bbox }, { width })),
+  );
+  const measured = framing.length > 0 ? framing : blocks;
+  if (measured.length === 0) {
     return { top: 72, right: 72, bottom: 72, left: 72 };
   }
-  const box = unionBBox(blocks.map((b) => b.meta.bbox));
+  const box = unionBBox(measured.map((b) => b.meta.bbox));
   const clamp = (v: number): number => Math.min(MAX_MARGIN, Math.max(MIN_MARGIN, Math.round(v)));
   return {
     top: clamp(box.y),

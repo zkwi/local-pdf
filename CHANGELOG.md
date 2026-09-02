@@ -5,8 +5,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-09-02
+
 ### Added
 
+- Ruled tables in scanned pages are recognised: the ruling lines are found in the rendered page image
+  (long, thin runs of ink; the skew of a scan is tolerated) and fed to the same table detector as vector
+  lines, so a scanned timetable, registration form or three-line table comes out as a Word table instead
+  of a jumble of cell texts. Boxes around a single text block and chart grids (many empty cells) are not
+  turned into tables.
+- Scanned pages of unusual size are normalised: an A4 sheet stored at twice its size (a 15 × 22 inch page
+  with 20 pt text, doubling the page count in Word), a phone screenshot 213 pt wide (7 pt text on A4) or a
+  full-page web capture 1920 pt wide are scaled so the text is a normal size on an A4-proportioned page.
+  The report notes which pages this applied to. OCR renders such oversized pages at a lower scale
+  (2600 px wide at most), which roughly halves the recognition time per page.
+- Column gutters narrower than two characters are recognised: brokerage reports with a sidebar next to the
+  body and two-column papers whose baselines line up across the gutter used to have every line joined
+  across the columns ("…非理性因素影响。作为行为 chenshengrui@csc.com.cn"); such lines are now split at the
+  gutter and the columns are read in order.
 - A feature strip under the drop zone (local, editable Word, OCR, free) replaces the three small trust
   chips; the same four points are in the static English content for search engines.
 - Slow conversions show elapsed time and an estimate of the time left based on the speed of the most
@@ -20,6 +36,35 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ### Fixed
 
+- Native documents with a few OCR'd screenshot pages (a Word-generated morning note with pasted charts)
+  came out with every paragraph as Heading 1: the OCR pages' font size, snapped to a single value, won the
+  document-wide "body size" vote against the native 10.5/11/12 pt text. The body size now comes from
+  native text whenever there is enough of it, and OCR pages use their own dominant size as the heading
+  threshold, so a 16 pt notice body is no longer a heading just because the attached timetable is 10 pt.
+- Footnote markers (a 6 pt superscript "113" at the end of a line) were placed in a paragraph of their own
+  and split the paragraph around them; superscripts and subscripts now stay in their line.
+- Section names printed sideways in the page margin of a book (a running head) landed in the body text of
+  every page; they are now treated as a repeated header (three pages with the same name are enough, since
+  the name changes with every chapter).
+- Running headers and footers of scanned pages ("请务必阅读正文之后的免责条款和声明") were left in the body
+  because their position drifts a few points from page to page and the votes were split between two
+  position buckets; repeated lines are now grouped by text first and only need a consistent position.
+- "甲方（辅导方）：陆雄杰" followed by "乙方（家长方）：陈红丹" on the next line were joined into one
+  paragraph: a short Chinese line is a paragraph end whether or not the next line is indented, in native
+  text as in OCR text. A region of only two or three short lines ("时间：…" / "地点：…") uses the page's
+  text width to decide which lines are short, so "地点：×××" no longer swallows the next line.
+- "一、培训时间" in a scanned notice is a Heading 2 (not a numbered list item) even when the ink density
+  does not make it out as bold; a bold value sitting next to a label in the same row ("帐户号码 | 1001…")
+  is no longer a heading; 16-digit account numbers are no longer read as section numbers; "•若中考…"
+  (a bullet followed directly by Chinese) is a list item.
+- Page counts inflate less: multi-line paragraphs are written with the measured baseline pitch as an
+  exact line height (Word no longer stretches lines to the font's own, taller line height), single-line
+  paragraphs borrow the page's body pitch, headings no longer add 12 pt before and 6 pt after on top of
+  the measured gap, and a page break is written as "page break before" on the next paragraph instead of
+  a separate empty paragraph, which produced a blank page whenever the previous page was exactly full.
+- Charts with vector grid lines and boxes drawn around a single block of text were turned into tables
+  (one brokerage report had 71 one-cell tables around its charts); a box with a single cell is now a
+  paragraph.
 - Searchable scans (a full-page image plus an invisible OCR text layer, as scanner software produces)
   came out as pages of giant rotated characters when the PDF stored pages with /Rotate 90/180/270: the
   squashed text boxes of such layers are now read as ordinary lines. The full-page scan image is dropped
@@ -30,6 +75,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
   split line by line and ordinary lines are no longer promoted to headings. On such pages indentation is
   ignored too (OCR boxes jitter by a character or two) and multi-level numbered short lines ("1.3.1 …")
   still become headings.
+- Scanned Chinese documents come out much closer to the original: the size of a CJK line is now taken
+  from its width and character count instead of the box height (boxes with check marks, book-title
+  marks or parentheses ran up to 40% taller than their neighbours, which broke paragraphs and lost real
+  headings), the body size is unified across pages, bold headings are recognised from ink density on the
+  rendered page, red seal fragments and low-confidence specks are dropped instead of becoming 40 pt
+  headings, hollow bullets read as a tiny "o" become real bullet items, and a short CJK line ends its
+  paragraph even without a full stop ("接口名称：无" no longer glues to the next item).
+- A page that is only a full-page image (a scan kept as a picture, a background) no longer pulls the
+  section margins down to the paper edge, and images wider than the text area are scaled to fit instead
+  of running into the margin.
+- Body paragraphs use the measured baseline pitch as a minimum line height instead of a multiple of the
+  font's own line height; fonts with tall line heights (Microsoft YaHei) no longer spread a 3-page scan
+  over 4 pages.
 
 ### Changed
 

@@ -31,6 +31,11 @@ export interface SemanticParagraph {
   readonly spaceBeforePt: number;
   readonly spaceAfterPt: number;
   readonly lineSpacing: number;
+  /**
+   * exact：行距是从多行段落量出来的基线间距，照原样排；
+   * atLeast（默认）：行距只是估计，让 Word 按字体自己的行高再撑开
+   */
+  readonly lineRule?: 'exact' | 'atLeast';
   readonly sourceElementIds: readonly string[];
   readonly origin?: BlockOrigin;
 }
@@ -39,6 +44,8 @@ export interface SemanticHeading {
   readonly kind: 'heading';
   readonly level: 1 | 2 | 3 | 4;
   readonly runs: readonly SemanticRun[];
+  /** 量出来的段后距；原文里标题前后的空白已经在相邻块的间距里，不再另加 */
+  readonly spaceAfterPt?: number;
   readonly sourceElementIds: readonly string[];
   readonly origin?: BlockOrigin;
 }

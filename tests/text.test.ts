@@ -104,7 +104,8 @@ describe('matchSectionNumber', () => {
   });
 
   it('不把小数当章节号', () => {
-    expect(matchSectionNumber('3.14159 是圆周率')).toBe(2);
+    expect(matchSectionNumber('3.14159 是圆周率')).toBeNull();
+    expect(matchSectionNumber('1001258780269367 孖展')).toBeNull();
     expect(matchSectionNumber('普通段落')).toBeNull();
   });
 });

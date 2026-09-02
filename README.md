@@ -47,7 +47,7 @@
 | Multi-column reading order           | XY-cut page segmentation, cross-column headings handled                     |
 | CJK-aware text joining               | No stray spaces between Chinese characters; hyphenated Latin words rejoined |
 | Headers, footers, page numbers       | Detected across pages; page numbers become a Word `PAGE` field              |
-| Scanned pages (OCR)                  | PaddleOCR PP-OCRv6, decided per page; native text always wins               |
+| Scanned pages (OCR)                  | PaddleOCR PP-OCRv6, decided per page; native text always wins; ruled tables in scans are rebuilt; oversized scans and phone screenshots are scaled to A4 |
 | Interface languages                  | 简体中文 · 繁體中文 · English · 日本語                                      |
 | Password-protected PDFs, batch queue | Progress, cancellation, per-file conversion report                          |
 

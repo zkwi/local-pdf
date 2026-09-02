@@ -16,7 +16,13 @@ export interface Rule {
   readonly position: number;
   readonly start: number;
   readonly end: number;
+  /** 全部来自扫描图像素（没有矢量依据）的线 */
+  readonly raster?: boolean;
 }
+
+/** 扫描图上找出来的网格，至少要有这么多单元格有字，否则是图表网格、装饰框 */
+const RASTER_MIN_FILLED = 0.35;
+const RASTER_MIN_CELLS = 6;
 
 export interface TableDetectionResult {
   readonly tables: TableBlock[];
@@ -33,18 +39,19 @@ export function mergeRules(segments: readonly PrimitiveSegment[]): Rule[] {
   const rules: Rule[] = [];
   for (const cluster of clusters) {
     const members = cluster.indices.map((i) => segments[i]).sort((a, b) => a.start - b.start);
+    const raster = members.every((m) => m.source === 'raster');
     let start = members[0].start;
     let end = members[0].end;
     for (const m of members.slice(1)) {
       if (m.start <= end + COVER_TOLERANCE) {
         end = Math.max(end, m.end);
       } else {
-        rules.push({ position: cluster.value, start, end });
+        rules.push({ position: cluster.value, start, end, raster });
         start = m.start;
         end = m.end;
       }
     }
-    rules.push({ position: cluster.value, start, end });
+    rules.push({ position: cluster.value, start, end, raster });
   }
   return rules;
 }
@@ -158,6 +165,8 @@ function buildTable(
   const nRows = rowLines.length - 1;
   const nCols = colLines.length - 1;
   if (nRows < 1 || nCols < 1) return null;
+  // 只有一格的是带边框的文本框、装饰框，按段落输出比一格的表好用
+  if (nRows * nCols < 2) return null;
   if (nRows * nCols > 4000) return null; // 明显不是表格，多半是图表网格
 
   const bbox = makeBBox(colLines[0], rowLines[0], colLines[nCols], rowLines[nRows]);
@@ -219,7 +228,10 @@ function buildTable(
   }
 
   const hasText = cells.some((cell) => cell.lines.length > 0);
-  if (!hasText) {
+  // 扫描图上找出来的网格，字很少的是图表的网格线和坐标轴，不是表
+  const raster = hRules.every((r) => r.raster === true) && vRules.every((r) => r.raster === true);
+  const filled = cells.filter((cell) => cell.lines.length > 0).length / cells.length;
+  if (!hasText || (raster && cells.length >= RASTER_MIN_CELLS && filled < RASTER_MIN_FILLED)) {
     for (const cell of cells)
       for (const line of cell.lines) for (const id of line.spanIds) consumed.delete(id);
     return null;

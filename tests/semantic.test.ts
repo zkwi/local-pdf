@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildLines } from '../src/core/layout/lines.ts';
-import { linesToRuns } from '../src/core/semantic/build.ts';
+import { lineSpacingFor, linesToRuns } from '../src/core/semantic/build.ts';
 import { ptToHalfPoint, ptToPx96, ptToTwip } from '../src/core/geometry/units.ts';
 import { cleanFontName, mapFont } from '../src/core/docx/fonts.ts';
 import { isSparseOcr, mergeOcrSpans, shouldRunOcr } from '../src/core/ocr/engine.ts';
@@ -171,5 +171,31 @@ describe('isSparseOcr', () => {
         ),
       ]),
     ).toBe(false);
+  });
+});
+
+describe('lineSpacingFor', () => {
+  it('多行段落按量到的基线间距精确排；行里有明显更大的字时不用 exact', () => {
+    const { lines } = buildLines([
+      line('第一行第一行第一行', 72, 100, 200),
+      line('第二行第二行第二行', 72, 117, 200),
+      line('第三行第三行第三行', 72, 134, 200),
+    ]);
+    expect(lineSpacingFor(lines, 0)).toEqual({ lineSpacing: 1.7, lineRule: 'exact' });
+
+    const mixed = buildLines([
+      line('正文正文', 72, 100, 100),
+      span({ text: '大字', x: 180, baseline: 100, fontSize: 16 }),
+      line('第二行第二行', 72, 112, 200),
+    ]).lines;
+    expect(lineSpacingFor(mixed, 0).lineRule).toBe('atLeast');
+  });
+
+  it('单行段落借用本页正文行距；字号差得远或没有本页行距时退回 1.15 倍', () => {
+    const { lines } = buildLines([line('单独一行', 72, 100, 80)]);
+    expect(lineSpacingFor(lines, 17)).toEqual({ lineSpacing: 1.7, lineRule: 'exact' });
+    expect(lineSpacingFor(lines, 0)).toEqual({ lineSpacing: 1.15, lineRule: 'atLeast' });
+    const big = buildLines([line('大标题', 72, 100, 80, { fontSize: 24 })]).lines;
+    expect(lineSpacingFor(big, 17)).toEqual({ lineSpacing: 1.15, lineRule: 'atLeast' });
   });
 });

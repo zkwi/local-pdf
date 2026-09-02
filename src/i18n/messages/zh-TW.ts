@@ -182,6 +182,8 @@ export const zhTW: Messages = {
   'warning.page-limit-exceeded': '文件共 {total} 頁，按設定只轉換前 {limit} 頁',
   'warning.page-size-clamped':
     '第 {page} 頁尺寸超出 Word 上限（長圖），已按 A4 排版，內容順延到多頁',
+  'warning.scan-page-resized':
+    '第 {page} 頁是尺寸異常的掃描頁（超大幅面掃描或手機截圖），已按 A4 比例縮放，讓文字保持正常大小',
   'warning.no-text-found': '第 {page} 頁沒有擷取到任何文字',
 
   'meta.description':

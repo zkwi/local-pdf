@@ -4,7 +4,15 @@ import { languageSpec, OCR_LANGUAGES } from '../src/core/ocr/languages.ts';
 import { paddleItemsToSpans } from '../src/core/ocr/paddle.ts';
 import { localModelUrl, selectPaddleModels } from '../src/core/ocr/paddle-models.ts';
 import type { PrimitivePage, PrimitiveTextSpan } from '../src/core/contracts/primitives.ts';
-import { isScanWithTextLayer, shouldRunOcr, snapFontSizes } from '../src/core/ocr/engine.ts';
+import {
+  estimateOcrFontSize,
+  isScanWithTextLayer,
+  normalizeOcrBullets,
+  shouldRunOcr,
+  snapFontSizes,
+  unifyOcrFontSizes,
+} from '../src/core/ocr/engine.ts';
+import { span } from './helpers.ts';
 
 const item = (poly: [number, number][], text: string, score = 0.95): OcrResultItem => ({
   poly,
@@ -14,13 +22,14 @@ const item = (poly: [number, number][], text: string, score = 0.95): OcrResultIt
 
 describe('paddleItemsToSpans', () => {
   it('四边形框按渲染倍率换算回页面坐标', () => {
+    // 六个汉字、20pt 高、120pt 宽：中文行的字号按框宽 / 字数估（20），不按框高（18）
     const spans = paddleItemsToSpans(
       [
         item(
           [
             [300, 600],
-            [900, 600],
-            [900, 660],
+            [660, 600],
+            [660, 660],
             [300, 660],
           ],
           '这是一行中文',
@@ -33,11 +42,11 @@ describe('paddleItemsToSpans', () => {
     const s = spans[0];
     expect(s.bbox.x).toBeCloseTo(100);
     expect(s.bbox.y).toBeCloseTo(200);
-    expect(s.bbox.width).toBeCloseTo(200);
+    expect(s.bbox.width).toBeCloseTo(120);
     expect(s.bbox.height).toBeCloseTo(20);
     expect(s.baseline).toBeGreaterThan(s.bbox.y + s.bbox.height * 0.7);
     expect(s.baseline).toBeLessThan(s.bbox.y + s.bbox.height);
-    expect(s.fontSize).toBeCloseTo(18);
+    expect(s.fontSize).toBeCloseTo(20);
     expect(s.pageIndex).toBe(4);
     expect(s.source).toBe('ocr');
     expect(s.confidence).toBeCloseTo(0.95);
@@ -250,5 +259,108 @@ describe('snapFontSizes', () => {
 
   it('没有文字时原样返回', () => {
     expect(snapFontSizes([])).toEqual([]);
+  });
+});
+
+describe('estimateOcrFontSize', () => {
+  it('中文为主的行按框宽 / 字数估，不受勾选框把框撑高的影响', () => {
+    // 14 个全角字 140pt 宽 → 10pt；按框高会估成 17
+    expect(estimateOcrFontSize('功能模块：文本生成、图片合成', 140, 19, false)).toBeCloseTo(10);
+  });
+
+  it('西文行和字太少的短行仍按框高估', () => {
+    expect(estimateOcrFontSize('XMP-tc260', 51, 11, false)).toBeCloseTo(9.9);
+    expect(estimateOcrFontSize('图片', 24, 14, false)).toBeCloseTo(12.6);
+  });
+
+  it('竖排按框宽估', () => {
+    expect(estimateOcrFontSize('竖排的一行文字', 20, 140, true)).toBeCloseTo(18);
+  });
+});
+
+describe('normalizeOcrBullets', () => {
+  const ocr = (init: Parameters<typeof span>[0], confidence = 1): PrimitiveTextSpan => ({
+    ...span(init),
+    source: 'ocr',
+    confidence,
+  });
+
+  it('行首很小的 "O" 改成实心圆点，字号和置信度跟着它那一行', () => {
+    const spans = [
+      ocr({
+        text: '使用“AI生成”提示文字，位于图片、视频下方。',
+        x: 79,
+        baseline: 645,
+        fontSize: 12.3,
+      }),
+      ocr({ text: 'O', x: 101, baseline: 667, fontSize: 4.5, width: 4.7 }, 0.44),
+      ocr({ text: '显式标识位置示例图', x: 128.3, baseline: 670.3, fontSize: 12.3 }, 0.99),
+    ];
+    const out = normalizeOcrBullets(spans);
+    expect(out[1].text).toBe('• ');
+    expect(out[1].fontSize).toBe(12.3);
+    expect(out[1].confidence).toBe(0.99);
+    expect(out[0]).toBe(spans[0]);
+  });
+
+  it('正常大小的 "o"、不在行首的、右边没有文字的都不动', () => {
+    const spans = [
+      ocr({ text: '这是一行正文的内容', x: 79, baseline: 100, fontSize: 12 }),
+      ocr({ text: 'o', x: 79, baseline: 122, fontSize: 12 }),
+      ocr({ text: '接口', x: 79, baseline: 144, fontSize: 12 }),
+      ocr({ text: 'o', x: 110, baseline: 144, fontSize: 4 }),
+      ocr({ text: 'o', x: 79, baseline: 166, fontSize: 4 }),
+    ];
+    const out = normalizeOcrBullets(spans);
+    expect(out.map((s) => s.text)).toEqual(spans.map((s) => s.text));
+  });
+});
+
+describe('unifyOcrFontSizes', () => {
+  const page = (index: number, size: number, chars: number, ocrApplied: boolean): PrimitivePage => {
+    const s: PrimitiveTextSpan = {
+      ...span({ text: '字'.repeat(chars), x: 72, baseline: 100, fontSize: size }),
+      source: ocrApplied ? 'ocr' : 'native-pdf',
+    };
+    return {
+      index,
+      width: 595,
+      height: 842,
+      rotation: 0,
+      spans: [s, { ...s, id: `${index}-title`, text: '标题', fontSize: size * 1.6 }],
+      images: [],
+      segments: [],
+      links: [],
+      textHealth: {
+        charCount: chars,
+        printableRatio: 1,
+        replacementRatio: 0,
+        imageCoverage: 1,
+        textCoverage: 0.3,
+        suspicious: false,
+        hiddenText: false,
+      },
+      ocrApplied,
+    };
+  };
+
+  it('相近的页正文字号统一成文档主流字号，差得远的页和原生页不动', () => {
+    const pages = unifyOcrFontSizes([
+      page(0, 14.4, 100, true),
+      page(1, 12.3, 300, true),
+      page(2, 9, 50, true),
+      page(3, 14.4, 200, false),
+    ]);
+    expect(pages[0].spans[0].fontSize).toBe(12.3);
+    // 标题不是主流字号，保持原值
+    expect(pages[0].spans[1].fontSize).toBeCloseTo(14.4 * 1.6);
+    expect(pages[1].spans[0].fontSize).toBe(12.3);
+    expect(pages[2].spans[0].fontSize).toBe(9);
+    expect(pages[3].spans[0].fontSize).toBe(14.4);
+  });
+
+  it('没有 OCR 页时原样返回', () => {
+    const input = [page(0, 12, 100, false)];
+    expect(unifyOcrFontSizes(input)[0]).toBe(input[0]);
   });
 });

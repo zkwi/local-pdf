@@ -28,6 +28,8 @@ const CELL_GAP_EM = 1.3;
 const MIN_CELL_GAP = 7;
 /** 列对齐：左边或右边相差不超过这个值就算同一列 */
 const ALIGN_TOLERANCE = 4;
+/** 叠在一起的横线长度要相近：页宽的标题线和图表里的短网格线不是同一张表 */
+const MIN_LENGTH_RATIO = 0.6;
 
 interface RuleStack {
   readonly rules: Rule[];
@@ -56,7 +58,8 @@ function stackRules(rules: readonly Rule[]): RuleStack[] {
       const last = current.rules[current.rules.length - 1];
       const overlap = Math.min(current.x1, rule.end) - Math.max(current.x0, rule.start);
       const shorter = Math.min(current.x1 - current.x0, rule.end - rule.start);
-      const aligned = overlap >= shorter * 0.8;
+      const longer = Math.max(current.x1 - current.x0, rule.end - rule.start);
+      const aligned = overlap >= shorter * 0.8 && shorter >= longer * MIN_LENGTH_RATIO;
       const gap = rule.position - last.position;
       if (aligned && gap <= MAX_LONG_GAP) {
         current.rules.push(rule);

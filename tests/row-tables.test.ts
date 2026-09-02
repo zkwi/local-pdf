@@ -127,3 +127,23 @@ describe('detectRowRuledTables · 只有两条线但隔得远', () => {
     expect(detectRowRuledTables(segments, spans, 0, order(), new Set())).toHaveLength(0);
   });
 });
+
+describe('detectRowRuledTables：长度悬殊的横线不叠在一起', () => {
+  it('页宽的标题线和侧栏图表的短网格线之间的正文不会被当成表', () => {
+    const segments = [
+      hRule(100, 50, 545),
+      hRule(200, 380, 540),
+      hRule(220, 380, 540),
+      hRule(240, 380, 540),
+    ];
+    const spans = [
+      line('行为金融学的一个重要假设是市场参与者会受到认知偏差的影响', 50, 130, 320),
+      line('即市场参与者是非理性的。在这种假设下，股票价格不止由内在', 50, 144, 320),
+      line('价值决定，很大程度上还受市场参与者的非理性因素影响。', 50, 158, 320),
+      line('10%', 385, 210, 20),
+      line('5%', 385, 230, 20),
+    ];
+    const tables = detectRowRuledTables(segments, spans, 0, order(), new Set());
+    expect(tables).toHaveLength(0);
+  });
+});

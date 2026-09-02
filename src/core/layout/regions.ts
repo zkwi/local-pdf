@@ -52,6 +52,7 @@ export function segmentRegions(
   lines: readonly TextLine[],
   pageWidth: number,
   minColumnGap?: number,
+  knownGutters: readonly { start: number; end: number }[] = [],
 ): RegionResult {
   if (lines.length === 0) {
     return { regions: [], columnCount: 1, confidence: 1 };
@@ -70,11 +71,14 @@ export function segmentRegions(
     }
     const bounds = unionBBox(input.map((l) => l.bbox));
 
+    // 行聚类阶段已经确认过的栏间空隙（研报正文和侧栏之间往往只有十来 pt）不论宽窄都认
     const vGaps = findGaps(
       input.map((l) => [l.bbox.x, right(l.bbox)] as const),
       bounds.x,
       right(bounds),
-    ).filter((g) => g.size >= colGap);
+    ).filter(
+      (g) => g.size >= colGap || knownGutters.some((k) => g.start <= k.end && g.end >= k.start),
+    );
 
     if (vGaps.length > 0) {
       const widest = vGaps.reduce((a, b) => (b.size > a.size ? b : a));
@@ -83,7 +87,9 @@ export function segmentRegions(
       const rightLines = input.filter((l) => l.bbox.x + l.bbox.width / 2 >= split);
       if (leftLines.length > 0 && rightLines.length > 0) {
         maxFanout = Math.max(maxFanout, 2);
-        confidence = Math.min(confidence, clamp(widest.size / (colGap * 1.8), 0.5, 1));
+        // 行聚类阶段确认过的栏间空隙再窄也是可信的，不按宽度打折
+        const known = knownGutters.some((k) => widest.start <= k.end && widest.end >= k.start);
+        if (!known) confidence = Math.min(confidence, clamp(widest.size / (colGap * 1.8), 0.5, 1));
         return [...cut(leftLines, depth + 1), ...cut(rightLines, depth + 1)];
       }
     }
@@ -112,14 +118,19 @@ export function segmentRegions(
     region.lines.sort((a, b) => a.baseline - b.baseline || a.bbox.x - b.bbox.x);
   }
 
-  const columnCount = countColumns(regions, pageWidth, colGap);
+  const columnCount = countColumns(regions, pageWidth, colGap, knownGutters);
   if (columnCount > 3) confidence = Math.min(confidence, 0.5);
 
   return { regions, columnCount, confidence: clamp(confidence, 0, 1) };
 }
 
 /** 用区域的横向投影估计栏数：互不重叠的横向簇即为栏 */
-function countColumns(regions: readonly Region[], pageWidth: number, colGap: number): number {
+function countColumns(
+  regions: readonly Region[],
+  pageWidth: number,
+  colGap: number,
+  knownGutters: readonly { start: number; end: number }[],
+): number {
   const wide = regions.filter((r) => r.bbox.width > pageWidth * 0.55);
   if (wide.length > 0 && regions.length <= wide.length + 1) return 1;
 
@@ -132,7 +143,8 @@ function countColumns(regions: readonly Region[], pageWidth: number, colGap: num
   let count = 1;
   let reach = intervals[0][1];
   for (const [s, e] of intervals.slice(1)) {
-    if (s - reach >= colGap) count++;
+    const gutter = knownGutters.some((k) => reach <= k.end && s >= k.start);
+    if (s - reach >= colGap || (s > reach && gutter)) count++;
     reach = Math.max(reach, e);
   }
   return count;

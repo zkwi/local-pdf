@@ -184,6 +184,8 @@ export const zhCN = {
   'warning.page-limit-exceeded': '文档共 {total} 页，按设置只转换前 {limit} 页',
   'warning.page-size-clamped':
     '第 {page} 页尺寸超出 Word 上限（长图），已按 A4 排版，内容顺延到多页',
+  'warning.scan-page-resized':
+    '第 {page} 页是尺寸异常的扫描页（超大幅面扫描或手机截图），已按 A4 比例缩放，让文字保持正常大小',
   'warning.no-text-found': '第 {page} 页没有提取到任何文字',
 
   'meta.description':

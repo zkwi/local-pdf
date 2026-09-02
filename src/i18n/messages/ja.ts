@@ -190,6 +190,8 @@ export const ja: Messages = {
     '文書は {total} ページありますが、設定により先頭 {limit} ページのみ変換しました',
   'warning.page-size-clamped':
     '{page} ページは Word のページサイズ上限を超えるため（縦長画像）、A4 に流し込みました',
+  'warning.scan-page-resized':
+    '{page} ページはサイズが特殊なスキャン（大判スキャンやスマートフォンの画面）のため、文字が通常の大きさになるよう A4 の比率に合わせました',
   'warning.no-text-found': '{page} ページから文字を取り出せませんでした',
 
   'meta.description':

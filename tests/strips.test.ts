@@ -78,3 +78,11 @@ describe('mapSymbolFontText', () => {
     expect(mapSymbolFontText('Wingdings', '')).toBe('•');
   });
 });
+
+describe('wordPageSize：长条页', () => {
+  it('又宽又长的网页截图也在 A4 上重排，而不是等比缩成一条', () => {
+    const size = wordPageSize(1090, 8170);
+    expect(size.clamped).toBe(true);
+    expect(size.width).toBeCloseTo(595.28, 1);
+  });
+});

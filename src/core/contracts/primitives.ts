@@ -46,6 +46,8 @@ export interface PrimitiveSegment {
   /** 垂直于线方向的位置（horizontal 时是 y，vertical 时是 x） */
   readonly position: number;
   readonly thickness: number;
+  /** 从扫描图像素里找出来的线；没有这个字段的是矢量线段 */
+  readonly source?: 'raster';
 }
 
 export interface PrimitiveLink {
