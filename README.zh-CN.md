@@ -67,6 +67,7 @@ npm run dev
 npm run build       # 类型检查 + 打包到 dist/
 npm run preview     # 本地预览 dist/
 npm test            # 单测（版面引擎、OCR 坐标换算、Markdown、文案表）
+npm run check       # 与 CI 相同的完整质量门禁
 npm run ocr-models  # 可选：把 OCR 模型下载到 public/ocr-models/ 自托管
 ```
 
@@ -145,12 +146,15 @@ docs/               # 架构、中间模型、ADR
 ## 开发
 
 - TypeScript strict，`npm run typecheck` 兼作 lint；格式化 `npm run format`。
+- 推送前运行 `npm run check`；CI 使用同一套格式、测试、类型与构建门禁。
 - 测试 `npm test`。版面算法直接喂手搓的 span，不需要 PDF。
   `tests/fixtures/` 里的 PDF 由 `make_fixtures.py` 生成（本机需要 PyMuPDF，不是项目依赖）。
 - 新增警告或进度文案要同时改 `src/i18n/messages/` 四张表，类型检查会逼你改全。
 - CI 在每次推送时跑格式检查、类型检查、测试和构建。
-- 页面上「试试示例 PDF」用的 `public/samples/demo.pdf` 由 `scripts/make-demo-pdf.py` 生成（本机需要 PyMuPDF）。
+- 四种界面语言共用一份全英文中立示例 `public/samples/demo.pdf`，由 `scripts/make-demo-pdf.py` 生成（本机需要 PyMuPDF）。
 - `docs/social-card.png` 和 `public/og.png` 由 `scripts/make-social-card.py` 生成（同样需要 PyMuPDF）。
+
+项目边界和提交约定见 [CONTRIBUTING.md](CONTRIBUTING.md)，夹具分层、浏览器回归和私有样本规则见 [docs/TESTING.md](docs/TESTING.md)。
 
 欢迎提 Issue 和 PR。改动请尽量小而聚焦——这是个人项目，简单本身就是功能。
 

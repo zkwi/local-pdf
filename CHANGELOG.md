@@ -5,6 +5,32 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-09-02
+
+### Added
+
+- The shared demo PDF is now a polished, language-neutral English document covering paragraphs, lists,
+  a ruled table with a merged row, an embedded image, and repeating headers, footers, and page numbers.
+  A regression test opens the shipped binary and prevents CJK content or missing sample sections from
+  returning unnoticed.
+- `npm run check` is the single local and CI quality gate. Contributor and testing guides now document
+  architecture boundaries, generated-file checks, browser coverage, and privacy rules for real samples.
+
+### Changed
+
+- Desktop content uses a wider working column and a tighter vertical rhythm. The tool switcher, title,
+  primary input panel, and the start of the feature section now fit in a common laptop viewport without
+  reducing control sizes.
+- Empty drop zones, feature cards, and explanatory sections use more deliberate internal spacing. Mobile
+  layouts keep their large action targets and avoid horizontal overflow.
+- CI now runs the same canonical quality command contributors use locally, removing duplicated gate
+  definitions.
+
+### Fixed
+
+- The old bilingual demo no longer produces stretched CJK glyphs, overlapping table text, or font
+  substitution noise when rendered on systems without the expected Chinese display fonts.
+
 ## [0.5.0] — 2026-09-02
 
 ### Added

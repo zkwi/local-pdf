@@ -23,6 +23,8 @@ PyMuPDF 是 AGPL/商业双许可，不能进产品链路（见 `docs/adr/001-per
 单元测试（`npm test`）基本不依赖这些 PDF——版面算法是纯函数，测试里直接构造 span；
 只有 `tests/scan-layer.test.ts` 会用 pdf.js 真的打开 `scan-text-layer-rot270.pdf`。其余夹具用于人工端到端验证。
 
+完整的测试分层、真实浏览器矩阵和私有样本处理规则见 [`docs/TESTING.md`](../../docs/TESTING.md)。
+
 ## 还没覆盖的场景
 
 真实语料里还应该补上：加密 PDF、损坏 PDF、旋转页面、竖排文字、

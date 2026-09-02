@@ -1,150 +1,217 @@
-# -*- coding: utf-8 -*-
-"""
-生成页面上"试试示例 PDF"用的 public/samples/demo.pdf：两页，中英混排，
-含标题、段落、列表、有框线表格、图片和页眉页脚，覆盖转换器能识别的每一类元素。
+"""Generate ``public/samples/demo.pdf`` for the in-app sample action.
 
-依赖 PyMuPDF，只在本机生成时用，不是项目依赖（PyMuPDF 是 AGPL/商业双许可）。
+The sample is intentionally English-only so the same binary is neutral across all
+four interface locales. It uses built-in PDF fonts and covers the structures the
+converter should recognise: headings, paragraphs, lists, a ruled table, an image,
+and repeating headers and footers.
+
+PyMuPDF is a local authoring dependency only. It is not part of the web app.
 
     python scripts/make-demo-pdf.py
 """
-import os
+
+from pathlib import Path
 
 import fitz
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT = os.path.join(ROOT, "public", "samples", "demo.pdf")
+ROOT = Path(__file__).resolve().parent.parent
+OUT = ROOT / "public" / "samples" / "demo.pdf"
 
 A4 = (595, 842)
-LATIN = "helv"
-LATIN_BOLD = "hebo"
-CJK = "china-s"
-GREY = (0.45, 0.45, 0.45)
+REGULAR = "helv"
+BOLD = "hebo"
+INK = (0.12, 0.105, 0.085)
+MUTED = (0.40, 0.37, 0.32)
+LINE = (0.78, 0.74, 0.67)
+PAPER = (0.98, 0.965, 0.94)
 ACCENT = (0.706, 0.278, 0.122)
 
 
-def text(page, x, y, s, size=10.5, font=CJK, color=(0, 0, 0)):
-    page.insert_text((x, y), s, fontname=font, fontsize=size, color=color)
+def write(page, x, y, value, size=10.5, font=REGULAR, color=INK):
+    page.insert_text((x, y), value, fontname=font, fontsize=size, color=color)
 
 
-def header_footer(page, n):
-    text(page, 72, 40, "Local PDF · 示例文档 / Sample document", size=8.5, color=GREY)
-    page.draw_line((72, 46), (523, 46), color=(0.8, 0.8, 0.8), width=0.5)
-    text(page, 290, 810, f"- {n} -", size=9, font=LATIN, color=GREY)
+def header_footer(page, number):
+    write(page, 72, 39, "LOCAL PDF  /  SAMPLE DOCUMENT", size=8, font=BOLD, color=MUTED)
+    page.draw_line((72, 47), (523, 47), color=LINE, width=0.5)
+    write(page, 72, 810, "Files stay on your device", size=8, color=MUTED)
+    write(page, 500, 810, f"{number} / 2", size=8, font=BOLD, color=MUTED)
 
 
-def page_one(doc):
-    page = doc.new_page(width=A4[0], height=A4[1])
+def page_one(document):
+    page = document.new_page(width=A4[0], height=A4[1])
     header_footer(page, 1)
-    text(page, 72, 95, "把 PDF 变成可编辑的 Word", size=22)
-    text(page, 72, 118, "Turn a PDF into editable Word and Markdown, in your browser", size=11, font=LATIN, color=GREY)
 
-    y = 155
-    for row in [
-        "这是一份用来试用的示例文档。它包含标题、段落、项目列表、一张有框线的表格和一",
-        "张图片。转换完成后，可以在 Word 或 Markdown 里检查每一种元素的还原效果。",
-    ]:
-        text(page, 72, y, row)
-        y += 17
+    write(page, 72, 99, "Turn PDFs into editable documents", size=23, font=BOLD)
+    write(
+        page,
+        72,
+        124,
+        "A compact sample for Word, Markdown, and image export",
+        size=11,
+        color=MUTED,
+    )
 
-    y += 8
-    for row in [
-        "This sample mixes Chinese and English so you can see how the converter joins",
-        "lines, keeps list markers and rebuilds tables. Nothing in this file ever leaves",
-        "your computer: parsing, layout analysis and file generation all run locally.",
-    ]:
-        text(page, 72, y, row, font=LATIN)
-        y += 15
-
-    y += 14
-    text(page, 72, y, "转换器会识别的元素 / What gets recognised", size=13)
-    y += 22
-    for item in [
-        "标题、段落和阅读顺序 / Headings, paragraphs and reading order",
-        "项目列表，包括中文和西文的编号方式 / Lists with Chinese or Latin markers",
-        "有框线的表格，含合并单元格 / Ruled tables, merged cells included",
-        "图片，按页面上的位置裁剪 / Images cropped where they appear",
-        "跨页重复的页眉页脚与页码 / Repeating headers, footers and page numbers",
-    ]:
-        text(page, 80, y, "• " + item)
-        y += 17
-
-    y += 16
-    text(page, 72, y, "示例表格 / Sample table", size=13)
-    y += 14
-    cols = [72, 200, 400, 523]
-    rows = [y, y + 22, y + 44, y + 66, y + 88]
-    for r in rows:
-        page.draw_line((cols[0], r), (cols[-1], r), color=(0.2, 0.2, 0.2), width=0.6)
-    for c in cols:
-        page.draw_line((c, rows[0]), (c, rows[-1]), color=(0.2, 0.2, 0.2), width=0.6)
-    cells = [
-        ["项目 / Item", "说明 / Description", "状态 / Status"],
-        ["文字层 / Text layer", "直接读取，精确到字符 / Read directly", "支持 / Yes"],
-        ["扫描页 / Scanned page", "PaddleOCR 逐页识别 / OCR per page", "支持 / Yes"],
-        ["无线表格 / Unruled table", "误判代价高，暂不识别 / Not detected", "计划中 / Planned"],
+    paragraphs = [
+        "This document lets you try Local PDF without choosing one of your own files. It",
+        "contains common document structures and a clean text layer, so you can compare",
+        "the source with the editable result after conversion.",
+        "Everything runs in your browser. The file, extracted text, and generated output",
+        "remain on this device throughout the conversion.",
     ]
-    for i, row in enumerate(cells):
-        for j, cell in enumerate(row):
-            text(page, cols[j] + 6, rows[i] + 15, cell, size=9.5)
+    y = 164
+    for line in paragraphs:
+        write(page, 72, y, line)
+        y += 16
+
+    write(page, 72, 265, "What this sample covers", size=14, font=BOLD)
+    items = [
+        ("01", "Headings, paragraphs, and natural reading order"),
+        ("02", "Numbered items and line wrapping across a paragraph"),
+        ("03", "A ruled table with a merged note row"),
+        ("04", "An embedded image in the correct document position"),
+        ("05", "Repeating headers, footers, and page numbers"),
+    ]
+    y = 292
+    for number, label in items:
+        write(page, 74, y, number, size=9, font=BOLD, color=ACCENT)
+        write(page, 104, y, label)
+        y += 20
+
+    write(page, 72, 420, "Sample table", size=14, font=BOLD)
+    left, right = 72, 523
+    columns = [left, 207, 427, right]
+    rows = [440, 466, 492, 518, 547]
+    for row_y in rows:
+        page.draw_line((left, row_y), (right, row_y), color=(0.28, 0.26, 0.23), width=0.6)
+    for column_x in (left, right):
+        page.draw_line(
+            (column_x, rows[0]),
+            (column_x, rows[-1]),
+            color=(0.28, 0.26, 0.23),
+            width=0.6,
+        )
+    for column_x in columns[1:-1]:
+        page.draw_line(
+            (column_x, rows[0]),
+            (column_x, rows[-2]),
+            color=(0.28, 0.26, 0.23),
+            width=0.6,
+        )
+    page.draw_rect(fitz.Rect(left, rows[0], right, rows[1]), color=None, fill=PAPER)
+
+    cells = [
+        ("Element", "Expected result", "Ready"),
+        ("Text layer", "Selectable paragraphs", "Yes"),
+        ("Ruled table", "Rows and columns rebuilt", "Yes"),
+    ]
+    for row_index, row in enumerate(cells):
+        font = BOLD if row_index == 0 else REGULAR
+        baseline = rows[row_index] + 17
+        write(page, columns[0] + 7, baseline, row[0], size=9.5, font=font)
+        write(page, columns[1] + 7, baseline, row[1], size=9.5, font=font)
+        write(page, columns[2] + 7, baseline, row[2], size=9.5, font=font)
+    write(
+        page,
+        left + 7,
+        rows[-2] + 19,
+        "Merged note: complex layouts may need a quick review after conversion.",
+        size=9.5,
+        color=MUTED,
+    )
+
+    page.draw_rect(
+        fitz.Rect(72, 584, 523, 653),
+        color=LINE,
+        fill=PAPER,
+        width=0.6,
+        radius=0.12,
+    )
+    write(page, 90, 611, "LOCAL-FIRST BY DESIGN", size=9, font=BOLD, color=ACCENT)
+    write(page, 90, 635, "No account, upload endpoint, watermark, or usage limit.", size=11)
     return page
 
 
 def chart_pixmap():
-    """画一张简单的柱状图，渲染成位图，让示例里有一张真正的图片。"""
-    tmp = fitz.open()
-    p = tmp.new_page(width=300, height=180)
-    p.draw_rect(fitz.Rect(0, 0, 300, 180), color=None, fill=(0.98, 0.97, 0.95))
-    base = 150
-    values = [42, 68, 55, 90, 73]
-    for i, v in enumerate(values):
-        x = 30 + i * 52
-        p.draw_rect(fitz.Rect(x, base - v, x + 32, base), color=None, fill=ACCENT)
-        p.insert_text((x + 4, base + 16), f"Q{i + 1}", fontname=LATIN, fontsize=9, color=GREY)
-        p.insert_text((x + 4, base - v - 6), str(v), fontname=LATIN, fontsize=8, color=(0.3, 0.3, 0.3))
-    p.draw_line((24, base), (290, base), color=GREY, width=0.8)
-    p.insert_text((24, 22), "Conversions per quarter", fontname=LATIN_BOLD, fontsize=10)
-    pix = p.get_pixmap(matrix=fitz.Matrix(2, 2))
-    tmp.close()
-    return pix
+    """Render a small chart as a bitmap so the sample contains a real image."""
+    temporary = fitz.open()
+    page = temporary.new_page(width=330, height=180)
+    page.draw_rect(fitz.Rect(0, 0, 330, 180), color=None, fill=PAPER)
+    write(page, 22, 25, "CONVERSIONS COMPLETED", size=9, font=BOLD, color=MUTED)
+    baseline = 148
+    values = [44, 70, 57, 96, 78]
+    for index, value in enumerate(values):
+        x = 30 + index * 57
+        page.draw_rect(
+            fitz.Rect(x, baseline - value, x + 34, baseline),
+            color=None,
+            fill=ACCENT,
+        )
+        write(page, x + 8, baseline + 16, f"Q{index + 1}", size=8, color=MUTED)
+        write(page, x + 9, baseline - value - 7, str(value), size=8, font=BOLD, color=INK)
+    page.draw_line((24, baseline), (310, baseline), color=MUTED, width=0.8)
+    pixmap = page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False)
+    temporary.close()
+    return pixmap
 
 
-def page_two(doc):
-    page = doc.new_page(width=A4[0], height=A4[1])
+def page_two(document):
+    page = document.new_page(width=A4[0], height=A4[1])
     header_footer(page, 2)
-    text(page, 72, 95, "图片与页眉页脚 / Images, headers and footers", size=16)
-    y = 125
-    for row in [
-        "下面这张图是位图，转换后会按原位置放进 Word；页顶的灰色小字和页脚的页码在每一页重复，",
-        "会被识别成页眉页脚，页码写成 Word 的页码域，而不是把 1、2 写死。",
-    ]:
-        text(page, 72, y, row)
-        y += 17
 
-    page.insert_image(fitz.Rect(72, 175, 372, 355), pixmap=chart_pixmap())
-    text(page, 72, 372, "图 1  示例图表 / Figure 1  A sample chart", size=9, color=GREY)
+    write(page, 72, 99, "Images, headers, and footers", size=20, font=BOLD)
+    write(
+        page,
+        72,
+        129,
+        "The chart below is an embedded raster image. Its placement and caption should",
+    )
+    write(page, 72, 145, "remain in reading order when the document is converted.")
 
-    y = 410
-    text(page, 72, y, "接下来 / What next", size=13)
-    y += 22
-    for row in [
-        "把自己的 PDF 拖进页面即可。扫描件会自动识别文字，第一次需要下载识别组件。",
-        "转换完成后打开「转换报告」，把握度低的页面建议对照原件核对。",
-        "Drop your own PDF onto the page. Scanned pages are recognised automatically;",
-        "the first time downloads the recognition components. Check the report when done.",
-    ]:
-        text(page, 72, y, row, font=LATIN if row[0].isascii() else CJK)
-        y += 16
+    page.insert_image(fitz.Rect(72, 178, 402, 358), pixmap=chart_pixmap())
+    write(page, 72, 376, "Figure 1. A simple embedded chart", size=9, color=MUTED)
+
+    write(page, 72, 430, "Before you convert", size=14, font=BOLD)
+    checklist = [
+        "Choose Word for an editable document with reconstructed structure.",
+        "Choose Markdown for portable text plus extracted image files.",
+        "Choose Images to render selected pages as PNG or JPEG.",
+        "Review low-confidence pages against the original document.",
+    ]
+    y = 460
+    for item in checklist:
+        write(page, 76, y, "-", font=BOLD, color=ACCENT)
+        write(page, 94, y, item)
+        y += 22
+
+    page.draw_rect(
+        fitz.Rect(72, 572, 523, 674),
+        color=ACCENT,
+        fill=(0.995, 0.975, 0.96),
+        width=0.8,
+        radius=0.08,
+    )
+    write(page, 92, 604, "READY TO TRY YOUR OWN FILE?", size=10, font=BOLD, color=ACCENT)
+    write(page, 92, 632, "Drop it anywhere on the page. Local PDF will route it to the", size=10.5)
+    write(page, 92, 649, "matching tool while keeping every byte on this device.", size=10.5)
     return page
 
 
 def main():
-    os.makedirs(os.path.dirname(OUT), exist_ok=True)
-    doc = fitz.open()
-    page_one(doc)
-    page_two(doc)
-    doc.set_metadata({"title": "Local PDF sample document", "author": "Local PDF"})
-    doc.save(OUT, garbage=4, deflate=True)
-    print(f"written {OUT} ({os.path.getsize(OUT) / 1024:.0f} KB)")
+    OUT.parent.mkdir(parents=True, exist_ok=True)
+    document = fitz.open()
+    page_one(document)
+    page_two(document)
+    document.set_metadata(
+        {
+            "title": "Local PDF sample document",
+            "author": "Local PDF",
+            "subject": "A language-neutral conversion sample",
+        }
+    )
+    document.save(OUT, garbage=4, deflate=True)
+    document.close()
+    print(f"written {OUT} ({OUT.stat().st_size / 1024:.0f} KB)")
 
 
 if __name__ == "__main__":

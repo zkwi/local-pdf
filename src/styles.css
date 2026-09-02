@@ -159,18 +159,18 @@ h3 {
 /* ---------- 页面骨架 ---------- */
 
 .app {
-  max-width: 960px;
+  max-width: 1080px;
   margin: 0 auto;
-  padding: var(--s-5) var(--s-5) var(--s-8);
+  padding: var(--s-4) var(--s-5) var(--s-7);
   display: flex;
   flex-direction: column;
-  gap: var(--s-7);
+  gap: var(--s-6);
 }
 
-/* 主栏里的大区块（首屏、卖点、设置、队列、说明）之间留一大档 */
+/* 首屏操作要在常见笔记本视口里完整露出，后续内容仍留出清楚的分区节奏。 */
 .main {
   display: grid;
-  gap: var(--s-7);
+  gap: var(--s-6);
 }
 
 /* ---------- 顶栏 ---------- */
@@ -287,10 +287,9 @@ h3 {
 
 .hero {
   display: grid;
-  gap: var(--s-3);
+  gap: var(--s-2);
   justify-items: center;
   text-align: center;
-  padding-top: var(--s-3);
 }
 
 .hero__title {
@@ -305,7 +304,7 @@ h3 {
   margin: 0;
   max-width: 560px;
   font-size: 16px;
-  line-height: 1.7;
+  line-height: 1.55;
   color: var(--text-dim);
   text-wrap: balance;
 }
@@ -314,7 +313,7 @@ h3 {
 
 .panel {
   width: 100%;
-  margin-top: var(--s-4);
+  margin-top: var(--s-2);
   text-align: left;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -409,7 +408,7 @@ h3 {
 .panel__body {
   display: grid;
   gap: 12px;
-  padding: 18px 18px 16px;
+  padding: 14px 14px 12px;
 }
 
 .dropzone {
@@ -437,7 +436,7 @@ h3 {
 .dropzone__picker {
   display: block;
   width: 100%;
-  padding: 40px var(--s-5) 34px;
+  padding: 26px var(--s-5) 22px;
   border: 0;
   border-radius: inherit;
   background: transparent;
@@ -510,13 +509,13 @@ h3 {
   position: relative;
   display: grid;
   place-items: center;
-  width: 72px;
-  height: 72px;
+  width: 58px;
+  height: 58px;
   margin: 0 auto;
   border-radius: 50%;
   background: var(--accent-soft);
   color: var(--accent);
-  box-shadow: 0 0 0 8px color-mix(in srgb, var(--accent) 6%, transparent);
+  box-shadow: 0 0 0 7px color-mix(in srgb, var(--accent) 6%, transparent);
   transition:
     transform 0.35s var(--ease),
     box-shadow 0.35s var(--ease),
@@ -524,8 +523,8 @@ h3 {
 }
 
 .dropzone__icon {
-  width: 32px;
-  height: 32px;
+  width: 27px;
+  height: 27px;
   transition: transform 0.35s var(--ease);
 }
 
@@ -533,8 +532,8 @@ h3 {
 .app[data-dragging] .dropzone__orb {
   background: var(--accent);
   color: var(--on-accent);
-  box-shadow: 0 0 0 14px color-mix(in srgb, var(--accent) 10%, transparent);
-  transform: translateY(-4px);
+  box-shadow: 0 0 0 11px color-mix(in srgb, var(--accent) 10%, transparent);
+  transform: translateY(-3px);
 }
 
 .dropzone:hover .dropzone__icon {
@@ -543,7 +542,7 @@ h3 {
 
 .dropzone__title {
   display: block;
-  margin: 18px 0 6px;
+  margin: 14px 0 5px;
   font-weight: 700;
   font-size: 19px;
   letter-spacing: -0.015em;
@@ -563,15 +562,20 @@ h3 {
 
 .dropzone__button {
   display: inline-block;
-  margin-top: 18px;
+  margin-top: 14px;
   padding: 10px 22px;
   font-size: 15px;
   pointer-events: none;
 }
 
 .dropzone__sample {
-  display: block;
-  margin: 12px auto 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-height: 36px;
+  margin: 4px auto 14px;
+  padding: 6px 4px;
   font-size: 13.5px;
 }
 
@@ -579,7 +583,7 @@ h3 {
 
 .features {
   display: grid;
-  gap: var(--s-4);
+  gap: var(--s-3);
 }
 
 .features__list {
@@ -588,15 +592,15 @@ h3 {
   padding: 0;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--s-4);
+  gap: var(--s-3);
 }
 
 .features__item {
   display: grid;
-  gap: 14px;
+  gap: 10px;
   align-content: start;
   min-width: 0;
-  padding: 22px 20px;
+  padding: 18px 17px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -616,8 +620,8 @@ h3 {
 .features__icon {
   display: grid;
   place-items: center;
-  width: 42px;
-  height: 42px;
+  width: 40px;
+  height: 40px;
   border-radius: 12px;
   background: var(--accent-soft);
   color: var(--accent);
@@ -1363,14 +1367,14 @@ h3 {
 
 .content {
   display: grid;
-  gap: var(--s-4);
+  gap: var(--s-3);
 }
 
 .seo {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 28px 30px;
+  padding: 24px 26px;
   box-shadow: var(--shadow-sm);
 }
 
@@ -1382,7 +1386,7 @@ h3 {
 .seo p {
   margin: 0;
   font-size: 14.5px;
-  line-height: 1.8;
+  line-height: 1.7;
   color: var(--text);
 }
 
@@ -1877,11 +1881,11 @@ h3 {
 @media (width <= 560px) {
   .app {
     padding: var(--s-4) 14px var(--s-7);
-    gap: var(--s-6);
+    gap: var(--s-5);
   }
 
   .main {
-    gap: var(--s-6);
+    gap: var(--s-5);
   }
 
   .masthead__actions {
@@ -1898,7 +1902,7 @@ h3 {
   }
 
   .dropzone__picker {
-    padding: var(--s-6) var(--s-4) var(--s-5);
+    padding: 22px var(--s-4) 18px;
   }
 
   .dropzone--with-sample .dropzone__picker {
@@ -1906,7 +1910,7 @@ h3 {
   }
 
   .dropzone__sample {
-    margin-bottom: var(--s-5);
+    margin-bottom: 12px;
   }
 
   .dropzone__title {
