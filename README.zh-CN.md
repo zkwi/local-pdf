@@ -1,10 +1,34 @@
-# Local PDF
+<p align="center">
+  <a href="https://localpdfconverter.com"><img src="docs/social-card.png" alt="Local PDF" width="720"></a>
+</p>
 
-**在浏览器里把 PDF 转成 Word 和 Markdown。不上传，免费，开源。**
+<h1 align="center">Local PDF</h1>
 
-你的 PDF 不出本机：解析、OCR、版面分析、文件生成全部在浏览器里完成，代码里根本没有上传接口。
+<p align="center">
+  <b>在浏览器里把 PDF 转成 Word 和 Markdown。</b><br>
+  不上传 · 无需注册 · 免费开源
+</p>
 
-[English](README.md) · 在线版：<https://localpdfconverter.com>
+<p align="center">
+  <a href="https://localpdfconverter.com"><b>在线使用 →</b></a> ·
+  <a href="README.md">English</a> ·
+  <a href="CHANGELOG.md">更新日志</a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/zkwi/local-pdf/actions/workflows/ci.yml"><img src="https://github.com/zkwi/local-pdf/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-b4471f.svg" alt="MIT"></a>
+  <img src="https://img.shields.io/badge/%E5%85%A8%E7%A8%8B%E5%9C%A8%E6%B5%8F%E8%A7%88%E5%99%A8%E9%87%8C%E8%BF%90%E8%A1%8C-2f7d4f.svg" alt="全程在浏览器里运行">
+</p>
+
+## 为什么选 Local PDF
+
+- **从结构上就不可能泄露。** 没有可以上传的服务器，解析、版面分析、OCR、文件生成全部在浏览器里跑，网络面板里可以自己确认。合同、对账单、论文不会离开你的电脑。
+- **转出来的是真正的 Word，不是页面截图。** 段落、标题、列表、有线表格（含合并单元格）、图片、页眉页脚、页码域都会重建，可以接着编辑。
+- **扫描件直接可用。** 没有文字层的页面用 PaddleOCR（PP-OCRv6）在浏览器里逐页识别，支持中、英、日等 50 多种语言；微信里常见的"长图"PDF 也能处理。
+- **顺便给你 Markdown。** 同一份识别结果可以导出 Markdown，连图片和坐标、置信度清单一起打包。
+- **对质量说实话。** 每份文件附一份转换报告：逐页把握度、元素统计、提示，告诉你哪些页面该再看一眼。
+- **免安装、可离线。** 纯静态站，四种界面语言，模型第一次用后就缓存在本地。
 
 ![界面](docs/screenshot.png)
 
@@ -68,6 +92,9 @@ npm run ocr-models  # 可选：把 OCR 模型下载到 public/ocr-models/ 自托
 产物目录 `dist/`，并绑定自定义域名；Node 22 来自 `.node-version`。`public/_headers` 里有缓存头，
 多线程 OCR 需要的 COOP/COEP 以注释形式放在里面。其他静态托管把 `dist/` 当输出目录即可。
 
+站点地址在几处 SEO 相关文件里写死了：`index.html` 的 canonical / hreflang / Open Graph、`public/robots.txt`、
+`public/sitemap.xml`、`src/ui/SeoContent.tsx` 里的 `SITE_URL`。换域名部署时记得一起改。
+
 ## 隐私
 
 - 没有任何上传代码，可以在网络面板自行确认：对外请求只有可选的 OCR 模型和运行时下载。
@@ -116,6 +143,8 @@ docs/               # 架构、中间模型、ADR
   `tests/fixtures/` 里的 PDF 由 `make_fixtures.py` 生成（本机需要 PyMuPDF，不是项目依赖）。
 - 新增警告或进度文案要同时改 `src/i18n/messages/` 四张表，类型检查会逼你改全。
 - CI 在每次推送时跑格式检查、类型检查、测试和构建。
+- 页面上「试试示例 PDF」用的 `public/samples/demo.pdf` 由 `scripts/make-demo-pdf.py` 生成（本机需要 PyMuPDF）。
+- `docs/social-card.png` 和 `public/og.png` 由 `scripts/make-social-card.py` 生成（同样需要 PyMuPDF）。
 
 欢迎提 Issue 和 PR。改动请尽量小而聚焦——这是个人项目，简单本身就是功能。
 
