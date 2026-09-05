@@ -22,8 +22,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
   problem" next to Retry, the conversion report ends with "Output looks wrong? Report it", and the crash
   page does the same. The link carries the version, browser, error code, settings and statistics, never
   the file or its name, and everything stays editable on GitHub before submitting.
-- Issue templates for bug reports, conversion quality and feature requests, in English and Chinese, with
-  a reminder not to attach private documents. The footer link now lands on the template chooser.
+- Issue templates for bug reports, conversion quality and feature requests, with a reminder not to
+  attach private documents. The footer link now lands on the template chooser.
 
 ## [0.6.0] — 2026-09-02
 
