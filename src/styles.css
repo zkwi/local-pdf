@@ -1260,6 +1260,17 @@ h3 {
   min-width: 0;
 }
 
+.report__feedback {
+  margin: 0;
+  font-size: 13px;
+}
+
+.report__feedback a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .report__stats {
   display: flex;
   flex-wrap: wrap;

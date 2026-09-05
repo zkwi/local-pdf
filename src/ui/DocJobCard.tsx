@@ -2,6 +2,7 @@ import type { DocJob } from '../hooks/useToPdfQueue.ts';
 import { useI18n } from '../i18n/index.tsx';
 import type { MessageKey } from '../i18n/index.tsx';
 import { formatClock } from './eta.ts';
+import { browserEnvironment, docJobDiagnostics, feedbackUrl } from './feedback.ts';
 import { formatSize } from './format.ts';
 
 interface DocJobCardProps {
@@ -13,8 +14,9 @@ interface DocJobCardProps {
 
 /** Word / Markdown 转 PDF 的任务卡：进度、结果、下载；比 PDF 那边简单，没有报告和密码 */
 export function DocJobCard({ job, onCancel, onRetry, onRemove }: DocJobCardProps) {
-  const { t, tn } = useI18n();
+  const { t, tn, locale } = useI18n();
   const running = job.status === 'running' || job.status === 'queued';
+  const tool = job.source === 'word' ? 'word-to-pdf' : 'markdown-to-pdf';
 
   let status: string;
   switch (job.status) {
@@ -75,6 +77,25 @@ export function DocJobCard({ job, onCancel, onRetry, onRemove }: DocJobCardProps
             <button className="btn btn--ghost" type="button" onClick={() => onRetry(job.id)}>
               {t('job.retry')}
             </button>
+          )}
+          {job.status === 'error' && (
+            <a
+              className="btn btn--ghost"
+              href={feedbackUrl(
+                {
+                  kind: 'bug',
+                  title: `${tool}: conversion failed`,
+                  tool,
+                  diagnostics: docJobDiagnostics(job),
+                },
+                browserEnvironment(locale),
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={t('feedback.hint')}
+            >
+              {t('feedback.report')}
+            </a>
           )}
           {!running && (
             <button

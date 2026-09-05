@@ -38,6 +38,9 @@ export const zhTW: Messages = {
   'footer.issues': '回報問題',
   'footer.version': '版本 {version}',
   'footer.builtWith': '基於 pdf.js · docx.js · PaddleOCR.js · remark',
+  'feedback.report': '回報這個問題',
+  'feedback.quality': '結果不對？去回報',
+  'feedback.hint': '開啟 GitHub 的問題表單，自動附上版本、瀏覽器和錯誤資訊；不包含你的檔案。',
 
   'output.label': '轉換成',
   'output.docx': 'Word',

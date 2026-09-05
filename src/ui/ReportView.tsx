@@ -5,6 +5,8 @@ interface ReportViewProps {
   readonly report: ConversionReport;
   /** 图片模式：没有文字、表格这些统计，只看页数、用时和提示 */
   readonly imagesOnly?: boolean;
+  /** "结果不对？"的反馈链接，带着报告里的统计去 GitHub */
+  readonly feedbackHref?: string;
 }
 
 function confidenceClass(value: number): string {
@@ -13,7 +15,7 @@ function confidenceClass(value: number): string {
   return 'pill pill--bad';
 }
 
-export function ReportView({ report, imagesOnly = false }: ReportViewProps) {
+export function ReportView({ report, imagesOnly = false, feedbackHref }: ReportViewProps) {
   const { t, warningText } = useI18n();
   const pageWarnings = report.pages.flatMap((p) => p.warnings);
   // 少见的提示排前面：几百条"旋转文字"不该把唯一一条"图片超限"挤到看不见的地方
@@ -106,6 +108,19 @@ export function ReportView({ report, imagesOnly = false }: ReportViewProps) {
             </table>
           </div>
         </details>
+      )}
+
+      {feedbackHref !== undefined && (
+        <p className="report__feedback">
+          <a
+            href={feedbackHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={t('feedback.hint')}
+          >
+            {t('feedback.quality')}
+          </a>
+        </p>
       )}
     </div>
   );

@@ -38,6 +38,10 @@ export const ja: Messages = {
   'footer.issues': '問題を報告',
   'footer.version': 'バージョン {version}',
   'footer.builtWith': 'pdf.js · docx.js · PaddleOCR.js · remark で構築',
+  'feedback.report': 'この問題を報告',
+  'feedback.quality': '結果がおかしい？報告する',
+  'feedback.hint':
+    'GitHub の報告フォームを開きます。バージョン、ブラウザー、エラー情報は自動で入りますが、ファイルは含まれません。',
 
   'output.label': '変換先',
   'output.docx': 'Word',

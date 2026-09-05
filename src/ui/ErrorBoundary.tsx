@@ -1,6 +1,6 @@
 import { Component } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
-import { SITE } from '../site.ts';
+import { browserEnvironment, crashDiagnostics, feedbackUrl } from './feedback.ts';
 
 interface State {
   readonly error: Error | null;
@@ -40,7 +40,15 @@ export class ErrorBoundary extends Component<{ readonly children: ReactNode }, S
             </button>
             <a
               className="btn btn--ghost"
-              href={SITE.issues}
+              href={feedbackUrl(
+                {
+                  kind: 'bug',
+                  title: `Page crashed: ${error.message.slice(0, 80)}`,
+                  tool: location.pathname,
+                  diagnostics: crashDiagnostics(error),
+                },
+                browserEnvironment(document.documentElement.lang || 'en'),
+              )}
               target="_blank"
               rel="noopener noreferrer"
             >

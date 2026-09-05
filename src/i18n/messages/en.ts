@@ -38,6 +38,10 @@ export const en: Messages = {
   'footer.issues': 'Report an issue',
   'footer.version': 'Version {version}',
   'footer.builtWith': 'Built with pdf.js · docx.js · PaddleOCR.js · remark',
+  'feedback.report': 'Report this problem',
+  'feedback.quality': 'Output looks wrong? Report it',
+  'feedback.hint':
+    'Opens a GitHub issue form prefilled with the version, browser and error details. Your file is not included.',
 
   'output.label': 'Convert to',
   'output.docx': 'Word',

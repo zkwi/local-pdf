@@ -40,6 +40,9 @@ export const zhCN = {
   'footer.issues': '反馈问题',
   'footer.version': '版本 {version}',
   'footer.builtWith': '基于 pdf.js · docx.js · PaddleOCR.js · remark',
+  'feedback.report': '反馈这个问题',
+  'feedback.quality': '结果不对？去反馈',
+  'feedback.hint': '打开 GitHub 的问题表单，自动带上版本、浏览器和错误信息；不包含你的文件。',
 
   'output.label': '转换成',
   'output.docx': 'Word',

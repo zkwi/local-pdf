@@ -1,0 +1,49 @@
+name: Conversion quality · 转换效果
+description: The conversion finished, but the output does not look right · 转换完成了，但结果不对
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. Everything on this page is public: please do not attach private documents. Describe them instead, or build a small file that shows the same problem.
+
+        感谢反馈。这个页面是公开的，请不要附上私密文件；可以描述文件的特征，或者做一个能复现问题的小样本。
+  - type: textarea
+    id: what
+    attributes:
+      label: What looks wrong? · 哪里不对？
+      description: >-
+        For example lost or broken tables, wrong column order, broken lists, OCR mistakes, missing
+        images, headers or footers in the body text. · 比如表格丢了或错位、分栏顺序不对、列表断开、OCR 认错字、图片丢失、页眉页脚混进正文。
+    validations:
+      required: true
+  - type: input
+    id: pages
+    attributes:
+      label: Pages affected · 受影响的页码
+      placeholder: e.g. 3, 7-9
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment · 环境
+      description: >-
+        Filled in automatically when you come from the app. Otherwise please give the version (page
+        footer), the tool and your browser. · 从应用里点「反馈」进来会自动填好；否则请写版本（页脚）、工具和浏览器。
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics · 诊断信息
+      description: >-
+        Filled in automatically by the app from the conversion report: statistics, warnings and
+        settings, never the file or its name. · 由应用按转换报告自动填写：统计、警告和设置，不含文件本身和文件名。
+      render: text
+  - type: textarea
+    id: sample
+    attributes:
+      label: Sample file · 样本文件
+      description: >-
+        Drag a file into this box to attach it. Only attach files you may share publicly; a small
+        synthetic file that reproduces the problem is best. · 把文件拖进这个框就能附上。只附可以公开的文件，最好是能复现问题的小样本。

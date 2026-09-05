@@ -96,10 +96,16 @@ export function useConversionQueue() {
       patch(id, (job) => ({
         ...job,
         status: error.code === 'cancelled' ? 'cancelled' : 'error',
+        // 失败时留下走到哪一页、共几页：反馈链接要带上；界面对失败任务不再读这几个字段
         progress:
           error.code === 'cancelled'
             ? { stage: 'cancelled', fraction: 0, key: 'cancelled' }
-            : FAILED_PROGRESS,
+            : {
+                ...FAILED_PROGRESS,
+                pageIndex: job.progress.pageIndex,
+                totalPages: job.progress.totalPages,
+                documentPages: job.progress.documentPages,
+              },
         finishedAt: Date.now(),
         error,
       }));
@@ -155,7 +161,12 @@ export function useConversionQueue() {
             ? {
                 ...job,
                 status: 'error',
-                progress: FAILED_PROGRESS,
+                progress: {
+                  ...FAILED_PROGRESS,
+                  pageIndex: job.progress.pageIndex,
+                  totalPages: job.progress.totalPages,
+                  documentPages: job.progress.documentPages,
+                },
                 finishedAt: Date.now(),
                 error: { code: 'worker-crashed', detail },
               }

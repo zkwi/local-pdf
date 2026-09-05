@@ -7,6 +7,13 @@ import { formatPageRange } from '../core/util/page-range.ts';
 import { useI18n } from '../i18n/index.tsx';
 import type { I18n, MessageKey } from '../i18n/index.tsx';
 import { estimateRemainingMs, formatClock } from './eta.ts';
+import {
+  browserEnvironment,
+  feedbackUrl,
+  jobDiagnostics,
+  pdfToolId,
+  reportDiagnostics,
+} from './feedback.ts';
 import { formatSize } from './format.ts';
 import { ReportView } from './ReportView.tsx';
 import { useShell } from './shell.tsx';
@@ -25,7 +32,7 @@ const LARGE_FILE_BYTES = 100 * 1024 * 1024;
 const SLOW_ETA_MS = 90_000;
 
 export function JobCard({ job, onCancel, onRetry, onRemove }: JobCardProps) {
-  const { t, tn, stageLabel, progressText, errorText } = useI18n();
+  const { t, tn, locale, stageLabel, progressText, errorText } = useI18n();
   const { toast } = useShell();
   const [password, setPassword] = useState('');
   const [showReport, setShowReport] = useState(false);
@@ -114,6 +121,8 @@ export function JobCard({ job, onCancel, onRetry, onRemove }: JobCardProps) {
   // 图片模式没有"只要文字"可退：内存不够只能降清晰度或拆文件
   const canRetryPlain =
     !imagesOnly && (job.options.mode !== 'plain-text' || job.options.extractImages);
+  /** 反馈链接按输出格式归到对应的工具页 */
+  const tool = pdfToolId(job.options.output);
 
   return (
     <article className={`job job--${job.status}`}>
@@ -158,6 +167,25 @@ export function JobCard({ job, onCancel, onRetry, onRemove }: JobCardProps) {
             <button className="btn btn--ghost" type="button" onClick={() => onRetry(job.id)}>
               {t('job.retry')}
             </button>
+          )}
+          {job.status === 'error' && !needsPassword && (
+            <a
+              className="btn btn--ghost"
+              href={feedbackUrl(
+                {
+                  kind: 'bug',
+                  title: `${tool}: conversion failed (${job.error?.code ?? 'unknown'})`,
+                  tool,
+                  diagnostics: jobDiagnostics(job),
+                },
+                browserEnvironment(locale),
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={t('feedback.hint')}
+            >
+              {t('feedback.report')}
+            </a>
           )}
           {!running && (
             <button
@@ -265,7 +293,21 @@ export function JobCard({ job, onCancel, onRetry, onRemove }: JobCardProps) {
           >
             {showReport ? t('job.report.hide') : t('job.report.show')}
           </button>
-          {showReport && <ReportView report={job.result.report} imagesOnly={imagesOnly} />}
+          {showReport && (
+            <ReportView
+              report={job.result.report}
+              imagesOnly={imagesOnly}
+              feedbackHref={feedbackUrl(
+                {
+                  kind: 'quality',
+                  title: `${tool}: output quality`,
+                  tool,
+                  diagnostics: reportDiagnostics(job.result.report, job.options, job.file.size),
+                },
+                browserEnvironment(locale),
+              )}
+            />
+          )}
         </>
       )}
     </article>
