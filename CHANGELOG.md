@@ -5,16 +5,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
-### Fixed
-
-- Open-ended page ranges no longer expand while typing. Invalid or empty selections now stop with an
-  actionable error instead of exporting every page.
-- Markdown is cleaned before mounting, and document layout blocks network access. Image decoding,
-  font waits and image reads support cancellation and bounded resource waits.
-- Long scanned regions keep their images without duplicate OCR text; scan reports flag the layout
-  limitations instead of claiming high confidence. Unsupported Word images and supplementary Unicode
-  characters now have placeholders and visible warnings.
-- Tool navigation wraps on narrow screens when batch counts are present.
+## [0.7.0] — 2026-09-05
 
 ### Added
 
@@ -33,9 +24,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 - Page titles put the tool first and the brand last ("Word to PDF in your browser · Local PDF"); Open
   Graph gains locale and image alt tags.
+- Unknown paths now answer with a real 404 status on Cloudflare (the app still loads from `404.html`), and
+  every response carries `X-Content-Type-Options`, `Referrer-Policy` and `X-Frame-Options` headers.
 - The README is English-first with an English screenshot and social card; the Chinese README has its own
   (`docs/screenshot.zh-CN.png`, `docs/social-card.zh-CN.png`). Both link every tool directly and mention
   the in-app feedback buttons.
+
+### Fixed
+
+- Open-ended page ranges no longer expand while typing. Invalid or empty selections now stop with an
+  actionable error instead of exporting every page.
+- Markdown is cleaned before mounting, and document layout blocks network access. Image decoding,
+  font waits and image reads support cancellation and bounded resource waits.
+- Long scanned regions keep their images without duplicate OCR text; scan reports flag the layout
+  limitations instead of claiming high confidence. Unsupported Word images and supplementary Unicode
+  characters now have placeholders and visible warnings.
+- Tool navigation wraps on narrow screens when batch counts are present.
 
 ## [0.6.0] — 2026-09-02
 

@@ -1,8 +1,8 @@
 {
   "name": "local-pdf",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
-  "description": "Local PDF — convert PDF to Word and Markdown entirely in your browser. Private, free, open source.",
+  "description": "Local PDF — convert PDF to Word, Markdown and images, and Word, Markdown and images to PDF, entirely in your browser. Private, free, open source.",
   "keywords": [
     "pdf",
     "docx",

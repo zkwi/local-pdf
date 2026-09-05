@@ -93,7 +93,10 @@ const param = (url: string, name: string): string => new URL(url).searchParams.g
 describe('Issue 模板', () => {
   it('应用引用的模板文件存在，且带有要预填的字段', () => {
     for (const name of Object.values(ISSUE_TEMPLATES)) {
-      const yaml = readFileSync(`.github/ISSUE_TEMPLATE/${name}`, 'utf-8');
+      const yaml = readFileSync(
+        new URL(`../.github/ISSUE_TEMPLATE/${name}`, import.meta.url),
+        'utf-8',
+      );
       for (const field of ISSUE_FIELDS) expect(yaml, name).toContain(`id: ${field}`);
     }
   });

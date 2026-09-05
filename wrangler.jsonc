@@ -6,8 +6,11 @@
   "compatibility_date": "2026-09-02",
   "assets": {
     "directory": "./dist",
-    // 未知路径回到首页；应用探测本地模型/wasm 时会检查 content-type，不会被这个兜底骗到
-    "not_found_handling": "single-page-application",
+    // /word-to-pdf 映射到构建生成的 word-to-pdf.html（带尾斜杠的地址会跳转过去），六个工具页各有自己的静态 HTML
+    "html_handling": "auto-trailing-slash",
+    // 未知路径用 404 状态返回 dist/404.html（内容就是应用本身，路由会回到首页），
+    // 搜索引擎不会把不存在的地址当成正常页面收录；应用探测本地模型/wasm 时会检查 content-type，不受影响
+    "not_found_handling": "404-page",
   },
   // 部署时自动把域名指到这个 Worker（域名必须在同一个 Cloudflare 账号下）
   "routes": [{ "pattern": "localpdfconverter.com", "custom_domain": true }],

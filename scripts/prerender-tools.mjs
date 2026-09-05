@@ -4,6 +4,7 @@
  * 这里把标题、描述、canonical、hreflang、Open Graph、首屏 h1 和启动脚本里的多语言标题换成对应工具的。
  * Cloudflare 静态资源默认把 /word-to-pdf 映射到 word-to-pdf.html，其他静态托管大多同理；
  * 映射不上的托管仍然回落到 index.html，应用照常工作。
+ * 另外复制一份 index.html 作为 404.html：Cloudflare 对未知路径返回 404 状态时用它，应用照常加载。
  * 文案直接从 src/i18n/messages/ 的四张表读，tests/prerender.test.ts 核对读出来的值和表一致。
  */
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -101,7 +102,8 @@ if (process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(
   for (const slug of TOOL_SLUGS) {
     writeFileSync(join(dist, `${slug}.html`), renderToolPage(html, slug, messages));
   }
+  writeFileSync(join(dist, '404.html'), html);
   console.log(
-    `已生成 ${TOOL_SLUGS.length} 个工具页：${TOOL_SLUGS.map((s) => `${s}.html`).join('、')}`,
+    `已生成 ${TOOL_SLUGS.length} 个工具页（${TOOL_SLUGS.map((s) => `${s}.html`).join('、')}）和 404.html`,
   );
 }

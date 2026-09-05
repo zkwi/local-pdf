@@ -12,6 +12,12 @@
 /ocr-models/*
   Cache-Control: public, max-age=86400
 
+# 基础安全头：不按内容嗅探类型、只把来源域名带给第三方、不允许别的站点嵌入本站页面
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: SAMEORIGIN
+
 # 想开启多线程 OCR 推理时取消下面两行的注释（见 README「多线程推理」，模型必须同源自托管）
 # /*
 #   Cross-Origin-Opener-Policy: same-origin

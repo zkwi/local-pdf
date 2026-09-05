@@ -114,7 +114,8 @@ npm run ocr-models  # 可选：把 OCR 模型下载到 public/ocr-models/ 自托
 
 `npm run build` 还会给每个工具页生成一份静态 HTML（`dist/word-to-pdf.html` 等），带各自的标题、描述、canonical
 和 hreflang，由 `scripts/prerender-tools.mjs` 从文案表生成。能把 `/word-to-pdf` 映射到 `word-to-pdf.html` 的托管
-（Cloudflare 默认如此）会把它给爬虫；映射不上的仍回落到 `index.html`，应用照常工作。
+（Cloudflare 默认如此）会把它给爬虫；映射不上的仍回落到 `index.html`，应用照常工作。构建还会把 `index.html`
+复制成 `dist/404.html`，`wrangler.jsonc` 对不存在的地址用真正的 404 状态返回它。
 
 站点地址在几处 SEO 相关文件里写死了：`index.html` 的 canonical / hreflang / Open Graph、`public/robots.txt`、
 `public/sitemap.xml`、`src/ui/SeoContent.tsx` 和 `scripts/prerender-tools.mjs` 里的 `SITE_URL`。换域名部署时记得一起改。
@@ -171,7 +172,7 @@ docs/               # 架构、中间模型、ADR
 - 四种界面语言共用一份全英文中立示例 `public/samples/demo.pdf`，由 `scripts/make-demo-pdf.py` 生成（本机需要 PyMuPDF）。
 - `docs/social-card.png`（英文，同时复制为 `public/og.png`）和 `docs/social-card.zh-CN.png` 由 `scripts/make-social-card.py` 生成（同样需要 PyMuPDF）。
 - README 里的截图是预览站 1100×860 的截图，默认英文：
-  `playwright screenshot --viewport-size="1100,860" --wait-for-timeout=3000 "http://localhost:4174/?lang=en" docs/screenshot.png`，
+  `playwright screenshot --viewport-size="1100,860" --wait-for-timeout=3000 "http://localhost:4173/?lang=en" docs/screenshot.png`，
   中文版换成 `?lang=zh-CN` 输出到 `docs/screenshot.zh-CN.png`。
 
 项目边界和提交约定见 [CONTRIBUTING.md](CONTRIBUTING.md)，夹具分层、浏览器回归和私有样本规则见 [docs/TESTING.md](docs/TESTING.md)。

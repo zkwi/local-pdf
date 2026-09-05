@@ -44,6 +44,8 @@ describe('index.html 的静态 SEO 内容', () => {
     }
     expect(html).toContain('rel="canonical"');
     expect(html).toContain('property="og:title"');
+    expect(html).toContain('property="og:locale"');
+    expect(html).toContain('property="og:image:alt"');
   });
 
   it('meta description 与英文文案表一致', () => {
