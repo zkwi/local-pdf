@@ -44,7 +44,32 @@ export function analyzeDocument(
   const warnings: ConversionWarning[] = [];
   const bodyFontSize = estimateBodyFontSize(doc);
 
-  const pageLines = doc.pages.map((page) => {
+  // 只有实际裁出并保留的扫描区域才去掉重复文字；裁图失败时仍保留文字层。
+  const textPages = doc.pages.map((page) => {
+    const kept =
+      options.extractImages && options.mode !== 'plain-text'
+        ? scanImageFallbacks(page, images)
+        : [];
+    if (kept.length === 0) return page;
+    return {
+      ...page,
+      spans: page.spans.filter(
+        (span) =>
+          !kept.some((image) => {
+            const x = span.bbox.x + span.bbox.width / 2;
+            const y = span.bbox.y + span.bbox.height / 2;
+            return (
+              x >= image.bbox.x &&
+              x <= right(image.bbox) &&
+              y >= image.bbox.y &&
+              y <= bottom(image.bbox)
+            );
+          }),
+      ),
+    };
+  });
+
+  const pageLines = textPages.map((page) => {
     const built = buildLines(page.spans, page.width);
     // 一两个竖排片段多半是水印、二维码旁的装饰字，不值得打扰用户
     if (built.verticalSpanCount >= 3) {
@@ -97,6 +122,7 @@ export function analyzeDocument(
       images,
       options,
       bodyFontSize,
+      textPages[i].spans,
     ),
   );
 
@@ -153,6 +179,7 @@ function analyzePage(
   images: ImageStore,
   options: ConvertOptions,
   bodyFontSize: number,
+  tableSpans = page.spans,
 ): LayoutPage {
   const warnings: ConversionWarning[] = [];
   const headerLines = allLines.filter((l) => headerIds.has(l.id));
@@ -165,12 +192,12 @@ function analyzePage(
   let tables: LayoutBlock[] = [];
   let consumed: ReadonlySet<string> = new Set<string>();
   if (options.detectTables && options.mode !== 'plain-text') {
-    const result = detectTables(page.segments, page.spans, page.index, nextOrder);
+    const result = detectTables(page.segments, tableSpans, page.index, nextOrder);
     // 有框线的先认；剩下的文字再看有没有"只有横线"的表（三线表、对账单）
     const consumedSet = new Set(result.consumedSpanIds);
     const rowTables = detectRowRuledTables(
       page.segments,
-      page.spans,
+      tableSpans,
       page.index,
       nextOrder,
       consumedSet,
@@ -189,9 +216,26 @@ function analyzePage(
   }
 
   const flowLines = bodyLines.filter((line) => !line.spanIds.every((id) => consumed.has(id)));
-  const { regions, columnCount, confidence } = options.detectColumns
+  const {
+    regions,
+    columnCount,
+    confidence: readingConfidence,
+  } = options.detectColumns
     ? segmentRegions(flowLines, page.width, undefined, gutters)
     : segmentRegions(flowLines, page.width, Number.POSITIVE_INFINITY);
+  const scan = page.ocrApplied || isScanWithTextLayer(page);
+  const confidence = scan ? Math.min(readingConfidence, 0.59) : readingConfidence;
+  if (scan) {
+    const kept =
+      options.extractImages && options.mode !== 'plain-text'
+        ? scanImageFallbacks(page, images)
+        : [];
+    warnings.push({
+      code: kept.length > 0 ? 'scan-image-fallback' : 'scan-layout-review',
+      pageIndex: page.index,
+      params: { page: page.index + 1 },
+    });
+  }
 
   const noisy = page.textHealth.hiddenText || page.ocrApplied;
   // OCR 页各页的正文字号本来就不一样（通知正文 16 号，附表 10 号），标题阈值按本页自己的正文算；
@@ -235,7 +279,7 @@ function analyzePage(
     (block.meta as { readingOrder: number }).readingOrder = i;
   });
 
-  if (confidence < 0.6) {
+  if (readingConfidence < 0.6) {
     warnings.push({
       code: 'low-confidence-reading-order',
       pageIndex: page.index,
@@ -306,12 +350,23 @@ function insertByPosition(blocks: LayoutBlock[], item: LayoutBlock): void {
   else blocks.splice(idx, 0, item);
 }
 
-/** 盖住页宽 85% 以上的图：扫描页的整页图 */
+/** 宽高都覆盖页面才算整页图；长图中的横向图表和扫描分片不能丢掉。 */
 export function isFullPageImage(
-  image: { readonly bbox: { readonly width: number } },
-  page: { readonly width: number },
+  image: { readonly bbox: { readonly width: number; readonly height: number } },
+  page: { readonly width: number; readonly height: number },
 ): boolean {
-  return image.bbox.width > page.width * 0.85;
+  return image.bbox.width > page.width * 0.85 && image.bbox.height > page.height * 0.85;
+}
+
+function scanImageFallbacks(page: PrimitivePage, images: ImageStore) {
+  if (!(page.ocrApplied || isScanWithTextLayer(page))) return [];
+  return page.images.filter(
+    (image) =>
+      images.has(image.id) &&
+      !isFullPageImage(image, page) &&
+      image.bbox.width >= MIN_IMAGE_SIDE &&
+      image.bbox.height >= MIN_IMAGE_SIDE,
+  );
 }
 
 function buildImageBlocks(
@@ -327,7 +382,11 @@ function buildImageBlocks(
     if (image.bbox.width < MIN_IMAGE_SIDE || image.bbox.height < MIN_IMAGE_SIDE) continue;
     // 扫描页整页图已经被 OCR 成文字（或自带的文字层就是它的识别结果），再插一张原图只会重复
     if ((page.ocrApplied || isScanWithTextLayer(page)) && isFullPageImage(image, page)) continue;
-    if (tables.some((t) => contains(t.meta.bbox, image.bbox, 2))) continue;
+    if (
+      !(page.ocrApplied || isScanWithTextLayer(page)) &&
+      tables.some((t) => contains(t.meta.bbox, image.bbox, 2))
+    )
+      continue;
 
     out.push({
       kind: 'image',
@@ -354,7 +413,7 @@ function computeMargins(
 ): { top: number; right: number; bottom: number; left: number } {
   // 整页图（扫描页、背景图）贴着纸边，不能拿它算页边距；只有它时才用
   const framing = blocks.filter(
-    (b) => !(b.kind === 'image' && isFullPageImage({ bbox: b.meta.bbox }, { width })),
+    (b) => !(b.kind === 'image' && isFullPageImage({ bbox: b.meta.bbox }, { width, height })),
   );
   const measured = framing.length > 0 ? framing : blocks;
   if (measured.length === 0) {

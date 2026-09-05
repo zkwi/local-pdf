@@ -8,11 +8,18 @@ import {
   repeatingFragmenter,
 } from './dom-extract.ts';
 import type { DrawOp, TextRun } from './dom-extract.ts';
-import { canonicalStack, classifyFamily, encodeUcs2, encodeWinAnsi } from './fonts.ts';
+import {
+  canonicalStack,
+  classifyFamily,
+  encodeUcs2,
+  encodeWinAnsi,
+  replaceUnsupportedCharacters,
+} from './fonts.ts';
 import type { CjkFont, FontFamilyClass } from './fonts.ts';
 import { isJpeg, parseJpeg } from './jpeg.ts';
 import { PX_TO_PT } from './page-layout.ts';
 import { encodeDrawable } from './raster.ts';
+import { isLocalImageSource, unsupportedImageFormat, waitForResource } from './resources.ts';
 
 /**
  * HTML → PDF：让浏览器在隐藏 iframe 里排版，用多栏布局切页，再按量到的坐标写成矢量 PDF。
@@ -62,6 +69,9 @@ export interface HtmlToPdfResult {
   readonly pages: number;
   /** 没能嵌入的图片数量 */
   readonly imagesSkipped: number;
+  readonly unsupportedImageFormats: readonly string[];
+  readonly charactersReplaced: number;
+  readonly blockedContent: number;
 }
 
 const PT_TO_PX = 96 / 72;
@@ -82,14 +92,61 @@ export async function htmlToPdf(
   options: HtmlToPdfOptions,
   hooks: HtmlToPdfHooks = {},
 ): Promise<HtmlToPdfResult> {
-  const frame = await openFrame();
+  hooks.signal?.throwIfAborted();
+  const frame = await openFrame(hooks.signal);
   try {
     const doc = frame.contentDocument;
     if (doc === null) throw new Error('iframe document unavailable');
     hooks.onProgress?.('render', 0, 1);
-    const sections = await produce(doc, hooks.signal);
+    const sections = await waitForResource(produce(doc, hooks.signal), hooks.signal, 60_000);
     hooks.signal?.throwIfAborted();
-    await settle(doc);
+    const roots = sections.flatMap((s) =>
+      [s.body, s.header, s.footer].filter((el): el is HTMLElement => el != null),
+    );
+    let blockedContent = roots.reduce(
+      (n, root) => n + Number(root.dataset.lpBlockedContent ?? 0),
+      0,
+    );
+    let charactersReplaced = 0;
+    const formats = new Set<string>();
+    // Word 的节此时可能还未挂载；解码、字体替换和测量必须在同一个文档里进行。
+    for (const root of roots) {
+      for (const img of root.querySelectorAll('img')) {
+        const src = img.getAttribute('src') ?? '';
+        const format = unsupportedImageFormat(src);
+        if (format !== null) {
+          formats.add(format);
+          img.dataset.lpImageFormat = format;
+        }
+        if (src !== '' && !isLocalImageSource(src)) {
+          img.removeAttribute('src');
+          if (format === null) blockedContent++;
+        }
+        img.removeAttribute('srcset');
+      }
+      doc.body.append(root);
+    }
+    await settle(doc, hooks.signal);
+    let imagesSkipped = 0;
+    for (const root of roots) {
+      for (const img of root.querySelectorAll('img')) {
+        if (img.naturalWidth > 0 && img.naturalHeight > 0) continue;
+        const placeholder = doc.createElement('span');
+        placeholder.textContent = `[${img.dataset.lpImageFormat ?? img.alt ?? ''}]`;
+        if (placeholder.textContent === '[]') placeholder.textContent = '[×]';
+        img.replaceWith(placeholder);
+        imagesSkipped++;
+      }
+      // 图片失败后的替代文字也要检查，不能漏掉 alt 里的罕见字符。
+      const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      while (walker.nextNode() !== null) {
+        const node = walker.currentNode as Text;
+        if (node.parentElement?.closest('style,script,template')) continue;
+        const replaced = replaceUnsupportedCharacters(node.data);
+        charactersReplaced += replaced.count;
+        node.data = replaced.text;
+      }
+    }
     canonicalize(doc.body);
     const ratios = baselineRatios(doc);
 
@@ -107,14 +164,14 @@ export async function htmlToPdf(
         pages.flatMap((p) => p.ops.flatMap((op) => (op.kind === 'image' ? [op.image] : []))),
       ),
     ];
-    let imagesSkipped = 0;
     for (let i = 0; i < imageElements.length; i++) {
       hooks.onProgress?.('images', i, imageElements.length);
       hooks.signal?.throwIfAborted();
       const img = imageElements[i];
       try {
-        images.set(img, pdf.addImage(`img${i}`, await encodeImage(img)));
+        images.set(img, pdf.addImage(`img${i}`, await encodeImage(img, hooks.signal)));
       } catch {
+        hooks.signal?.throwIfAborted();
         images.set(img, null);
         imagesSkipped++;
       }
@@ -132,37 +189,54 @@ export async function htmlToPdf(
         links,
       });
     });
-    return { bytes: pdf.finish(), pages: pages.length, imagesSkipped };
+    hooks.signal?.throwIfAborted();
+    return {
+      bytes: pdf.finish(),
+      pages: pages.length,
+      imagesSkipped,
+      unsupportedImageFormats: [...formats],
+      charactersReplaced,
+      blockedContent,
+    };
   } finally {
     frame.remove();
   }
 }
 
-function openFrame(): Promise<HTMLIFrameElement> {
-  return new Promise((resolve, reject) => {
-    const frame = document.createElement('iframe');
+async function openFrame(signal?: AbortSignal): Promise<HTMLIFrameElement> {
+  const frame = document.createElement('iframe');
+  const ready = new Promise<HTMLIFrameElement>((resolve, reject) => {
     // 只要同源（好读 DOM），不给脚本：Markdown 里的原始 HTML 不能在这里执行
     frame.setAttribute('sandbox', 'allow-same-origin');
     frame.setAttribute('aria-hidden', 'true');
     frame.tabIndex = -1;
     frame.style.cssText =
       'position:fixed;left:-100000px;top:0;width:1400px;height:1000px;border:0;visibility:hidden';
-    frame.srcdoc =
-      '<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;padding:0}img{max-width:100%;height:auto}table{max-width:100%}tr,img{break-inside:avoid}h1,h2,h3,h4,h5,h6{break-after:avoid}</style></head><body></body></html>';
+    frame.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data: blob:; style-src 'unsafe-inline'; connect-src data: blob:; base-uri 'none'; form-action 'none'"><style>html,body{margin:0;padding:0}img{max-width:100%;height:auto}table{max-width:100%}tr,img{break-inside:avoid}h1,h2,h3,h4,h5,h6{break-after:avoid}</style></head><body></body></html>`;
     frame.onload = () => resolve(frame);
     frame.onerror = () => reject(new Error('render frame failed to load'));
     document.body.append(frame);
   });
+  try {
+    return await waitForResource(ready, signal);
+  } catch (error) {
+    frame.remove();
+    throw error;
+  }
 }
 
 /** 图片没解码完之前尺寸是 0，排版会错 */
-async function settle(doc: Document): Promise<void> {
-  await Promise.all(
-    [...doc.images].map((img) =>
-      img.complete ? Promise.resolve() : img.decode().catch(() => undefined),
+async function settle(doc: Document, signal?: AbortSignal): Promise<void> {
+  await waitForResource(
+    Promise.all(
+      [...doc.images].map((img) =>
+        img.complete ? Promise.resolve() : img.decode().catch(() => undefined),
+      ),
     ),
-  );
-  await doc.fonts.ready.catch(() => undefined);
+    signal,
+  ).catch(() => signal?.throwIfAborted());
+  await waitForResource(doc.fonts.ready, signal).catch(() => signal?.throwIfAborted());
+  signal?.throwIfAborted();
 }
 
 /**
@@ -274,11 +348,16 @@ function paginate(doc: Document, section: Section, ratios: BaselineRatio): PageB
 }
 
 /** 原始 JPEG 直接嵌；其他的（含 EXIF 需要旋转的）从已解码的元素重新编码 */
-async function encodeImage(img: HTMLImageElement): Promise<PdfImageSource> {
+async function encodeImage(img: HTMLImageElement, signal?: AbortSignal): Promise<PdfImageSource> {
   const src = img.currentSrc || img.src;
+  if (!isLocalImageSource(src)) throw new Error('image source is not local');
   if (src !== '') {
     try {
-      const bytes = new Uint8Array(await (await fetch(src)).arrayBuffer());
+      const buffer = await waitForResource(
+        fetch(src, { signal }).then((r) => r.arrayBuffer()),
+        signal,
+      );
+      const bytes = new Uint8Array(buffer);
       if (isJpeg(bytes)) {
         const info = parseJpeg(bytes);
         if (
@@ -296,6 +375,7 @@ async function encodeImage(img: HTMLImageElement): Promise<PdfImageSource> {
         }
       }
     } catch {
+      signal?.throwIfAborted();
       /* 取不到字节就走画布 */
     }
   }

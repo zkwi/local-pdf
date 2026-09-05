@@ -11,6 +11,7 @@ export function classifyError(error: unknown, aborted: boolean): WorkerError {
   if (name === 'CancelledError' || aborted) return { code: 'cancelled' };
 
   const raw = error instanceof Error ? error.message : String(error);
+  if (name === 'PageRangeError') return { code: 'invalid-page-range' };
   if (name === 'PasswordException') {
     return { code: /incorrect/i.test(raw) ? 'password-incorrect' : 'password-required' };
   }

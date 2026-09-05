@@ -9,7 +9,6 @@ import type {
   PageImageFormat,
 } from '../../core/contracts/options.ts';
 import { OCR_LANGUAGES } from '../../core/ocr/languages.ts';
-import { parsePageRange } from '../../core/util/page-range.ts';
 import type { useConversionQueue } from '../../hooks/useConversionQueue.ts';
 import { useI18n } from '../../i18n/index.tsx';
 import type { MessageKey } from '../../i18n/index.tsx';
@@ -109,9 +108,6 @@ export function PdfConvertTool({ tool, active, queue, ocrAvailable }: PdfConvert
       output: also && output !== 'images' ? 'both' : output,
       locale,
       ocr: ocrAvailable ? base.ocr : 'off',
-      // 看不懂的页码范围按全部页转，界面上已经标红提示过
-      pageRange:
-        parsePageRange(base.pageRange, Number.MAX_SAFE_INTEGER) === null ? '' : base.pageRange,
     }),
     [also, locale, ocrAvailable, output],
   );

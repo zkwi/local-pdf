@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { formatPageRange, parsePageRange } from '../src/core/util/page-range.ts';
+import { formatPageRange, isPageRangeValid, parsePageRange } from '../src/core/util/page-range.ts';
 
 describe('页码范围', () => {
+  it('界面验证开区间和巨大范围时不展开页号', () => {
+    for (const input of ['8-', '-4', '1-9007199254740991', '3-1', ''])
+      expect(isPageRangeValid(input)).toBe(true);
+    for (const input of ['9007199254740992', '1e9', '0-', ',', '1-2-3'])
+      expect(isPageRangeValid(input)).toBe(false);
+    expect(parsePageRange('8-', 3)).toBeNull();
+    expect(parsePageRange('1-9007199254740991', 3)).toEqual([0, 1, 2]);
+    expect(parsePageRange('2-1', 1)).toEqual([0]);
+  });
   it('空白表示全部页', () => {
     expect(parsePageRange('', 10)).toEqual([]);
     expect(parsePageRange('   ', 10)).toEqual([]);

@@ -167,6 +167,18 @@ export const ja: Messages = {
   'topdf.download': 'PDF をダウンロード',
   'topdf.imagesSkipped.one': '画像 1 件を埋め込めませんでした',
   'topdf.imagesSkipped.other': '画像 {count} 件を埋め込めませんでした',
+  'topdf.unsupportedImages':
+    '{formats} 画像は未対応です。Word で PNG/JPEG に置き換えて再試行してください',
+  'topdf.charactersReplaced':
+    '珍しい文字や絵文字 {count} 個を □ に置き換えました。原文と照合してください',
+  'topdf.blockedContent':
+    '外部または安全でない内容 {count} 件をブロックしました。画像は端末から追加してください',
+  'error.invalid-page-range':
+    'ページ範囲が無効、または対象ページがありません。範囲を修正して再試行してください',
+  'warning.scan-image-fallback':
+    '{page} ページのスキャン領域を画像で保持しました。画像内の文字は編集できません。文字が必要な場合は「画像を保持」をオフにして再試行してください',
+  'warning.scan-layout-review':
+    '{page} ページはスキャン文字を使用しています。図表やレイアウトが復元されない場合があるため、原文と照合してください',
   'topdf.pastedName': '貼り付けた Markdown',
   'topdf.assetsAdded.one': '画像 1 件を保持しました。.md の変換時に使います',
   'topdf.assetsAdded.other': '画像 {count} 件を保持しました。.md の変換時に使います',
@@ -456,7 +468,6 @@ export const ja: Messages = {
   'images.range.placeholder': '全ページ',
   'images.range.hint':
     '空欄なら全ページ。例：1-3, 5, 8- は 1〜3 ページ、5 ページ、8 ページ以降を指します。',
-  'images.range.invalid':
-    'ページ範囲を読み取れないため全ページを変換します。1-3, 5, 8- のように書いてください。',
+  'images.range.invalid': 'ページ範囲が無効です。1-3, 5, 8- のように修正してから変換してください。',
   'summary.pageRange': '{range} ページ',
 };

@@ -5,6 +5,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Fixed
+
+- Open-ended page ranges no longer expand while typing. Invalid or empty selections now stop with an
+  actionable error instead of exporting every page.
+- Markdown is cleaned before mounting, and document layout blocks network access. Image decoding,
+  font waits and image reads support cancellation and bounded resource waits.
+- Long scanned regions keep their images without duplicate OCR text; scan reports flag the layout
+  limitations instead of claiming high confidence. Unsupported Word images and supplementary Unicode
+  characters now have placeholders and visible warnings.
+- Tool navigation wraps on narrow screens when batch counts are present.
+
 ### Added
 
 - Feedback entry points that open a prefilled GitHub issue form. A failed conversion offers "Report this

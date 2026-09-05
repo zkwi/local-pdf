@@ -131,6 +131,23 @@ export function DocJobCard({ job, onCancel, onRetry, onRemove }: DocJobCardProps
               {tn('topdf.imagesSkipped', job.result.imagesSkipped)}
             </span>
           )}
+          {job.result.unsupportedImageFormats.length > 0 && (
+            <span className="pill pill--warn">
+              {t('topdf.unsupportedImages', {
+                formats: job.result.unsupportedImageFormats.join(', '),
+              })}
+            </span>
+          )}
+          {job.result.charactersReplaced > 0 && (
+            <span className="pill pill--warn">
+              {t('topdf.charactersReplaced', { count: job.result.charactersReplaced })}
+            </span>
+          )}
+          {job.result.blockedContent > 0 && (
+            <span className="pill pill--warn">
+              {t('topdf.blockedContent', { count: job.result.blockedContent })}
+            </span>
+          )}
         </p>
       )}
     </article>

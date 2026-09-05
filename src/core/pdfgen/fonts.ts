@@ -112,12 +112,21 @@ export function encodeWinAnsi(text: string): string {
   return `<${hexBytes(bytes.subarray(0, n))}>`;
 }
 
-/** UCS-2 大端（预定义 UCS2 CMap 的输入）；基本平面之外的字符（emoji）写不了，丢掉 */
+/** 当前预定义字体只接受 BMP；先放占位符，避免姓名、编号或 emoji 无声消失。 */
+export function replaceUnsupportedCharacters(text: string): { text: string; count: number } {
+  let count = 0;
+  const replaced = text.replace(/[\u{10000}-\u{10ffff}\ud800-\udfff]/gu, () => {
+    count++;
+    return '□';
+  });
+  return { text: replaced, count };
+}
+
+/** UCS-2 大端（预定义 UCS2 CMap 的输入）。 */
 export function encodeUcs2(text: string): string {
   const units: number[] = [];
-  for (let i = 0; i < text.length; i++) {
-    const code = text.charCodeAt(i);
-    if (code >= 0xd800 && code <= 0xdfff) continue;
+  for (const ch of replaceUnsupportedCharacters(text).text) {
+    const code = ch.charCodeAt(0);
     units.push(code >> 8, code & 0xff);
   }
   return `<${hexBytes(Uint8Array.from(units))}>`;

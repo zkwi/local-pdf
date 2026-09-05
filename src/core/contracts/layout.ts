@@ -29,6 +29,8 @@ export type WarningCode =
   | 'page-limit-exceeded'
   | 'image-budget-exceeded'
   | 'scan-text-layer'
+  | 'scan-image-fallback'
+  | 'scan-layout-review'
   | 'page-size-clamped'
   | 'scan-page-resized'
   | 'no-text-found';

@@ -156,6 +156,13 @@ export const zhTW: Messages = {
   'topdf.download': '下載 PDF',
   'topdf.imagesSkipped.one': '1 張圖片沒能嵌入',
   'topdf.imagesSkipped.other': '{count} 張圖片沒能嵌入',
+  'topdf.unsupportedImages': '不支援 {formats} 圖片；請在 Word 中換成 PNG/JPEG 後重試',
+  'topdf.charactersReplaced': '{count} 個罕見字元或表情已用 □ 佔位，請對照原文核對',
+  'topdf.blockedContent': '已阻止 {count} 處外部或不安全內容；圖片請從本機加入',
+  'error.invalid-page-range': '頁碼範圍無效或未選中任何可轉換頁，請修改範圍後重試',
+  'warning.scan-image-fallback':
+    '第 {page} 頁的掃描區域已按圖片保留，圖內文字不可編輯；如需文字，可關閉「保留圖片」後重試',
+  'warning.scan-layout-review': '第 {page} 頁來自掃描文字層，圖表和排版可能未還原，請對照原文核對',
   'topdf.pastedName': '貼上的 Markdown',
   'topdf.assetsAdded.one': '已記住 1 張圖片，轉換 .md 時會用上',
   'topdf.assetsAdded.other': '已記住 {count} 張圖片，轉換 .md 時會用上',
@@ -421,6 +428,6 @@ export const zhTW: Messages = {
   'images.range.label': '頁碼範圍',
   'images.range.placeholder': '全部頁',
   'images.range.hint': '留空轉換全部頁。例如 1-3, 5, 8- 表示第 1 到 3 頁、第 5 頁和第 8 頁到末頁。',
-  'images.range.invalid': '頁碼範圍看不懂，將轉換全部頁。請寫成 1-3, 5, 8- 這樣。',
+  'images.range.invalid': '頁碼範圍無效，請寫成 1-3, 5, 8- 這樣，再開始轉換。',
   'summary.pageRange': '第 {range} 頁',
 };

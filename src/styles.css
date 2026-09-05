@@ -203,6 +203,7 @@ h3 {
 
 .masthead__actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
 }
@@ -2363,6 +2364,9 @@ h3 {
 
   .toolnav__group {
     width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
   }
 
   .toolnav__label {
@@ -2371,6 +2375,7 @@ h3 {
 
   .toolnav__list {
     flex: 1;
+    flex-wrap: wrap;
   }
 
   .toolnav__list li {
@@ -2379,7 +2384,7 @@ h3 {
 
   .toolnav__item {
     justify-content: center;
-    padding: 7px 8px;
+    padding: 7px 6px;
     min-height: 38px;
   }
 

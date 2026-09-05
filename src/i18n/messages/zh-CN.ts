@@ -158,6 +158,13 @@ export const zhCN = {
   'topdf.download': '下载 PDF',
   'topdf.imagesSkipped.one': '1 张图片没能嵌入',
   'topdf.imagesSkipped.other': '{count} 张图片没能嵌入',
+  'topdf.unsupportedImages': '不支持 {formats} 图片；请在 Word 中换成 PNG/JPEG 后重试',
+  'topdf.charactersReplaced': '{count} 个罕见字符或表情已用 □ 占位，请对照原文核对',
+  'topdf.blockedContent': '已阻止 {count} 处外部或不安全内容；图片请从本机添加',
+  'error.invalid-page-range': '页码范围无效或未选中任何可转换页，请修改范围后重试',
+  'warning.scan-image-fallback':
+    '第 {page} 页的扫描区域已按图片保留，图内文字不可编辑；如需文字，可关闭“保留图片”后重试',
+  'warning.scan-layout-review': '第 {page} 页来自扫描文字层，图表和排版可能未还原，请对照原文核对',
   'topdf.pastedName': '粘贴的 Markdown',
   'topdf.assetsAdded.one': '已记住 1 张图片，转换 .md 时会用上',
   'topdf.assetsAdded.other': '已记住 {count} 张图片，转换 .md 时会用上',
@@ -423,7 +430,7 @@ export const zhCN = {
   'images.range.label': '页码范围',
   'images.range.placeholder': '全部页',
   'images.range.hint': '留空转换全部页。例如 1-3, 5, 8- 表示第 1 到 3 页、第 5 页和第 8 页到末页。',
-  'images.range.invalid': '页码范围看不懂，将转换全部页。请写成 1-3, 5, 8- 这样。',
+  'images.range.invalid': '页码范围无效，请写成 1-3, 5, 8- 这样，再开始转换。',
   'summary.pageRange': '第 {range} 页',
 } as const;
 

@@ -26,6 +26,26 @@ const TARGET_BODY_PT = 10.5;
 /** 缩小整页时正文字号不低于这个值 */
 const MIN_BODY_PT = 8;
 
+/** 超长单张扫描图按可读的段高保留，避免塞进 Word 后整张缩成细线。 */
+export function splitTallScanImages(page: PrimitivePage): PrimitivePage {
+  if (page.height <= page.width * 2) return page;
+  return {
+    ...page,
+    images: page.images.flatMap((image) => {
+      const box = image.bbox;
+      if (box.width <= 0 || box.height <= box.width * 2) return [image];
+      // 同转换页数上限一样限制分段数，异常尺寸不能造成无界展开。
+      const height = Math.max(box.width * 1.3, box.height / 1000);
+      const count = Math.ceil(box.height / height);
+      return Array.from({ length: count }, (_, i) => ({
+        ...image,
+        id: `${image.id}-strip-${i}`,
+        bbox: { ...box, y: box.y + i * height, height: Math.min(height, box.height - i * height) },
+      }));
+    }),
+  };
+}
+
 /** 这一页要缩放的倍率；1 表示不动 */
 export function scanPageScale(page: PrimitivePage): number {
   if (!(page.ocrApplied || isScanWithTextLayer(page))) return 1;

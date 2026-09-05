@@ -6,6 +6,7 @@ import { unified } from 'unified';
 import { bulletFor } from './counters.ts';
 import type { PageGeometry, Section } from './html-to-pdf.ts';
 import { PAPER } from './page-layout.ts';
+import { isLocalImageSource } from './resources.ts';
 
 export type DocMargin = 'narrow' | 'normal' | 'wide';
 
@@ -30,7 +31,7 @@ export function documentGeometry(pageSize: 'a4' | 'letter', margin: DocMargin): 
   };
 }
 
-/** 去掉 BOM 和 YAML front matter，剩下的交给 remark；原始 HTML 原样透传（iframe 不执行脚本） */
+/** 原始 HTML 先保留，挂载前统一清理；合并单元格等安全 HTML 仍可使用。 */
 export async function markdownToHtml(markdown: string): Promise<string> {
   const source = markdown
     .replace(/^﻿/, '')
@@ -90,22 +91,70 @@ export async function prepareMarkdown(
   html: string,
   assets: AssetMap,
   options: MarkdownPdfOptions,
+  signal?: AbortSignal,
 ): Promise<Section[]> {
   const style = doc.createElement('style');
   style.textContent = markdownCss((options.fontSize * 96) / 72);
   doc.head.append(style);
 
-  const body = doc.createElement('div');
-  body.innerHTML = html;
-  doc.body.append(body);
-
-  for (const img of body.querySelectorAll('img')) {
-    const src = img.getAttribute('src') ?? '';
-    if (/^(https?:|data:|blob:)/i.test(src)) continue;
-    const name = decodeURIComponent(src.split(/[\\/]/).pop() ?? '');
-    const blob = assets.get(name) ?? assets.get(name.toLowerCase());
-    if (blob !== undefined) img.src = await readAsDataUrl(blob);
+  // template 的内容不加载资源，必须清理完再挂到活动文档。
+  const template = doc.createElement('template');
+  template.innerHTML = html;
+  let blocked = 0;
+  const tags = new Set(
+    'a p div span section article h1 h2 h3 h4 h5 h6 ul ol li table thead tbody tfoot tr th td caption colgroup col pre code blockquote strong em b i u s del sub sup br hr img input dl dt dd'.split(
+      ' ',
+    ),
+  );
+  const attributes = new Set(
+    'href src alt title width height colspan rowspan span start value type checked disabled align'.split(
+      ' ',
+    ),
+  );
+  for (const el of template.content.querySelectorAll('*')) {
+    if (!tags.has(el.tagName.toLowerCase())) {
+      el.remove();
+      blocked++;
+      continue;
+    }
+    for (const attr of [...el.attributes]) {
+      if (!attributes.has(attr.name)) el.removeAttribute(attr.name);
+    }
+    if (el.tagName === 'A' && !/^(https?:|mailto:|#)/i.test(el.getAttribute('href') ?? ''))
+      el.removeAttribute('href');
+    if (el.tagName === 'INPUT') {
+      el.setAttribute('type', 'checkbox');
+      el.setAttribute('disabled', '');
+      el.parentElement?.classList.add('task-list-item');
+    }
   }
+  for (const img of template.content.querySelectorAll('img')) {
+    signal?.throwIfAborted();
+    const src = img.getAttribute('src') ?? '';
+    if (isLocalImageSource(src)) continue;
+    img.removeAttribute('src');
+    if (/^[a-z][a-z\d+.-]*:|^[\\/]{2}/i.test(src.trim())) {
+      blocked++;
+      continue;
+    }
+    let name = src.split(/[\\/]/).pop() ?? '';
+    try {
+      name = decodeURIComponent(name);
+    } catch {
+      /* 文件名里的独立 % 按原样匹配 */
+    }
+    const blob = assets.get(name) ?? assets.get(name.toLowerCase());
+    if (blob !== undefined) {
+      const data = await readAsDataUrl(blob);
+      if (isLocalImageSource(data)) img.src = data;
+      else blocked++;
+    }
+  }
+  signal?.throwIfAborted();
+  const body = doc.createElement('div');
+  body.dataset.lpBlockedContent = String(blocked);
+  body.append(template.content);
+  doc.body.append(body);
 
   // 浏览器的 ::marker 读不出来，编号和圆点写成真正的文字
   for (const li of body.querySelectorAll('li')) {

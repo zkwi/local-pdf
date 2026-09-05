@@ -15,7 +15,7 @@ import type {
 import { writeDocx } from '../docx/writer.ts';
 import type { ExtractedImage } from '../layout/analyze.ts';
 import { analyzeDocument, isFullPageImage, MIN_IMAGE_SIDE } from '../layout/analyze.ts';
-import { normalizeScanPages } from '../layout/scan-size.ts';
+import { normalizeScanPages, splitTallScanImages } from '../layout/scan-size.ts';
 import { createOcrEngine } from '../ocr/create.ts';
 import type { OcrEngine } from '../ocr/engine.ts';
 import {
@@ -109,12 +109,11 @@ export async function convert(
     // 图片模式只渲染页面，后面的文字抽取、OCR 和版面分析都不需要
     if (options.output === 'images') {
       stageStart = now();
-      // 页码范围写错或一页都没落在文档里时按全部页转，界面那边已经提示过了
       const selected = parsePageRange(options.pageRange, totalPages);
+      if (selected === null)
+        throw Object.assign(new Error('invalid page range'), { name: 'PageRangeError' });
       const pageIndices =
-        selected === null || selected.length === 0
-          ? Array.from({ length: totalPages }, (_, i) => i)
-          : selected;
+        selected.length === 0 ? Array.from({ length: totalPages }, (_, i) => i) : selected;
       const images = await renderPageImages(session, pageIndices, options, { check, report });
       durations.rendering = now() - stageStart;
 
@@ -201,6 +200,13 @@ export async function convert(
       }
 
       const needsOcr = shouldRunOcr(page, options.ocr);
+      if (
+        options.extractImages &&
+        options.mode !== 'plain-text' &&
+        (needsOcr || isScanWithTextLayer(page))
+      ) {
+        page = splitTallScanImages(page);
+      }
       // 自带文字层的扫描页：整页扫描图会被文字替代，不渲染也不裁剪，省下大半时间和图片预算
       const cropTargets = isScanWithTextLayer(page)
         ? page.images.filter((image) => !isFullPageImage(image, page))

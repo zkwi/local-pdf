@@ -23,6 +23,14 @@ npm test -- tests/sample-pdf.test.ts
 
 单元测试通过不代表输出版式正确。PDF、DOCX 或页面样式有变化时，必须额外做视觉检查。
 
+文档安全和取消的合成浏览器回归已放在 `tests/browser/document-safety.js`。启动 Vite 开发站后，用已有的 `playwright-cli` 打开该站，再执行：
+
+```bash
+playwright-cli run-code --filename tests/browser/document-safety.js
+```
+
+使用命名浏览器会话时，命令带上相同的 `-s=会话名`。脚本检查远程图片、srcset、CSS、iframe、页面跳转、合并单元格、罕见字符占位，以及解码等待取消后的后续转换和 iframe 清理。它不需要新增测试框架或私有样本。
+
 ## 浏览器回归矩阵
 
 每次发布至少检查：

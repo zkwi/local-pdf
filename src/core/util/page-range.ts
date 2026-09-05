@@ -7,6 +7,23 @@
 const SEPARATOR = /[,，、;；\s]+/;
 const TOKEN = /^(\d+)?([-–—~])?(\d+)?$/;
 
+/** 只检查写法，不展开页码；输入框尚不知道文档页数。 */
+export function isPageRangeValid(text: string): boolean {
+  if (text.trim() === '') return true;
+  const tokens = text.trim().split(SEPARATOR).filter(Boolean);
+  return (
+    tokens.length > 0 &&
+    tokens.every((token) => {
+      const match = TOKEN.exec(token);
+      if (match === null || (match[1] === undefined && match[3] === undefined)) return false;
+      return [match[1], match[3]].every(
+        (value) =>
+          value === undefined || (Number.isSafeInteger(Number(value)) && Number(value) > 0),
+      );
+    })
+  );
+}
+
 /**
  * 解析成 0 起的页索引，升序去重。
  * 空白文本返回 []，表示"全部页"；写法不对或一页都没选中返回 null。
@@ -14,6 +31,7 @@ const TOKEN = /^(\d+)?([-–—~])?(\d+)?$/;
 export function parsePageRange(text: string, total: number): number[] | null {
   const trimmed = text.trim();
   if (trimmed === '') return [];
+  if (!isPageRangeValid(text) || !Number.isSafeInteger(total) || total < 1) return null;
   const picked = new Set<number>();
   for (const token of trimmed.split(SEPARATOR)) {
     if (token === '') continue;
@@ -24,7 +42,8 @@ export function parsePageRange(text: string, total: number): number[] | null {
     let start = first === undefined ? 1 : Number(first);
     let end = dash === undefined ? start : second === undefined ? total : Number(second);
     if (start < 1 || end < 1) return null;
-    if (start > end) [start, end] = [end, start];
+    // 开区间的起点超过末页时没有交集，不能反转成“末页到起点”。
+    if (start > end && second !== undefined) [start, end] = [end, start];
     end = Math.min(end, total);
     for (let page = start; page <= end; page++) picked.add(page - 1);
   }

@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_OPTIONS } from '../src/core/contracts/options.ts';
 import { convert } from '../src/core/converter/convert.ts';
+import { classifyError } from '../src/worker/classify.ts';
 import { isScanWithTextLayer } from '../src/core/ocr/engine.ts';
 import { normalizeSquashedSpan, PdfSession } from '../src/core/pdf/extractor.ts';
 
@@ -48,6 +49,17 @@ describe('normalizeSquashedSpan', () => {
 });
 
 describe('可搜索扫描件：/Rotate 270 的页面、不可见的压扁文字层', () => {
+  it('图片输出的越界范围和无效写法必须报错，不能转成全部页', async () => {
+    for (const pageRange of ['999', '8-', 'bad']) {
+      const error = await convert({
+        data: fixtureBytes(),
+        fileName: 'scan.pdf',
+        options: { ...DEFAULT_OPTIONS, output: 'images', pageRange },
+        assetBase: ASSET_BASE,
+      }).catch((e: unknown) => e);
+      expect(classifyError(error, false).code).toBe('invalid-page-range');
+    }
+  });
   it('抽取出来是横排小字号，文字层标记为不可见', async () => {
     const session = await PdfSession.open(fixtureBytes(), 'scan.pdf', { assetBase: ASSET_BASE });
     const page = await session.extractPage(0);
@@ -72,6 +84,8 @@ describe('可搜索扫描件：/Rotate 270 的页面、不可见的压扁文字�
     });
     const page = result.report.pages[0];
     expect(page?.images).toBe(0);
+    expect(page?.confidence).toBeLessThan(0.6);
+    expect(page?.warnings.map((w) => w.code)).toContain('scan-layout-review');
     expect(page?.characters).toBeGreaterThan(500);
     expect((page?.paragraphs ?? 0) + (page?.headings ?? 0)).toBeGreaterThanOrEqual(2);
     expect(result.report.warnings.map((w) => w.code)).toContain('scan-text-layer');

@@ -11,7 +11,7 @@ import type {
 import { OCR_LANGUAGES, resolveOcrLanguage } from '../core/ocr/languages.ts';
 import { cachedModelBytes, clearModelCache } from '../core/ocr/model-cache.ts';
 import { formatMegabytes, selectPaddleModels } from '../core/ocr/paddle-models.ts';
-import { parsePageRange } from '../core/util/page-range.ts';
+import { isPageRangeValid } from '../core/util/page-range.ts';
 import { useI18n } from '../i18n/index.tsx';
 import type { MessageKey } from '../i18n/index.tsx';
 
@@ -216,7 +216,7 @@ function ImageOptions({ options, set }: ImageOptionsProps) {
   const { t } = useI18n();
   const scale = options.pageImageDpi / 72;
   // 这里还不知道文档有几页，只查写法；超出页数的部分转换时会自动忽略
-  const rangeInvalid = parsePageRange(options.pageRange, Number.MAX_SAFE_INTEGER) === null;
+  const rangeInvalid = !isPageRangeValid(options.pageRange);
   return (
     <fieldset className="field">
       <legend className="field__label">{t('images.label')}</legend>

@@ -166,6 +166,17 @@ export const en: Messages = {
   'topdf.download': 'Download PDF',
   'topdf.imagesSkipped.one': '1 image could not be embedded',
   'topdf.imagesSkipped.other': '{count} images could not be embedded',
+  'topdf.unsupportedImages':
+    '{formats} images are unsupported; replace them with PNG/JPEG in Word and retry',
+  'topdf.charactersReplaced':
+    '{count} rare characters or emoji were replaced with □; check against the original',
+  'topdf.blockedContent': '{count} external or unsafe items blocked; add images from your device',
+  'error.invalid-page-range':
+    'The page range is invalid or selects no available pages. Adjust it and retry',
+  'warning.scan-image-fallback':
+    'Scanned regions on page {page} were kept as images; their text is not editable. Turn off “Keep images” and retry for text',
+  'warning.scan-layout-review':
+    'Page {page} uses scanned text; charts and layout may not be reconstructed. Check against the original',
   'topdf.pastedName': 'Pasted Markdown',
   'topdf.assetsAdded.one': '1 image kept; it will be used when a .md file is converted',
   'topdf.assetsAdded.other': '{count} images kept; they will be used when a .md file is converted',
@@ -456,7 +467,6 @@ export const en: Messages = {
   'images.range.placeholder': 'All pages',
   'images.range.hint':
     'Leave empty for every page. For example 1-3, 5, 8- means pages 1 to 3, page 5, and page 8 to the end.',
-  'images.range.invalid':
-    'The page range could not be read, so every page will be converted. Write it like 1-3, 5, 8-.',
+  'images.range.invalid': 'Invalid page range. Write it like 1-3, 5, 8- before converting.',
   'summary.pageRange': 'Pages {range}',
 };

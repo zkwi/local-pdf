@@ -64,6 +64,14 @@ font embedding, editable formulas, vertical text (flattened with a warning), tex
 Page counts are not preserved either: every PDF page ends with a page break, so text that overflows after font
 substitution spills onto an extra page.
 
+Long scan regions are kept as images so charts survive; duplicate OCR text in those regions is omitted.
+The report marks their text as non-editable. Turn off “Keep images” and retry when you need text instead.
+Scanned text and layout still need checking against the original.
+
+Word / Markdown to PDF only reads local images; external images and unsafe HTML are blocked. Unsupported
+EMF/WMF images get a placeholder and advice to replace them with PNG/JPEG. Supplementary-plane characters
+and emoji get a `□` placeholder and a visible count; these fonts are not embedded.
+
 ## Quick start
 
 ```bash

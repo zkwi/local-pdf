@@ -29,6 +29,9 @@ export interface DocJobResult {
   readonly size: number;
   readonly pages: number;
   readonly imagesSkipped: number;
+  readonly unsupportedImageFormats: readonly string[];
+  readonly charactersReplaced: number;
+  readonly blockedContent: number;
   /** 打包下载要读内容 */
   readonly blob: Blob;
 }
@@ -67,9 +70,9 @@ async function producerFor(job: DocJob): Promise<Producer> {
     return (doc, signal) => prepareDocx(doc, job.file, signal);
   }
   const { markdownToHtml, prepareMarkdown } = await import('../core/pdfgen/markdown.ts');
-  return async (doc) => {
+  return async (doc, signal) => {
     const html = await markdownToHtml(await job.file.text());
-    return prepareMarkdown(doc, html, job.assets, job.options);
+    return prepareMarkdown(doc, html, job.assets, job.options, signal);
   };
 }
 
@@ -93,6 +96,7 @@ export function useToPdfQueue() {
       chain.current = chain.current.then(async () => {
         if (controller.signal.aborted) {
           patch(job.id, (j) => ({ ...j, status: 'cancelled', finishedAt: Date.now() }));
+          controllers.current.delete(job.id);
           return;
         }
         patch(job.id, (j) => ({
@@ -131,6 +135,9 @@ export function useToPdfQueue() {
               size: blob.size,
               pages: result.pages,
               imagesSkipped: result.imagesSkipped,
+              unsupportedImageFormats: result.unsupportedImageFormats,
+              charactersReplaced: result.charactersReplaced,
+              blockedContent: result.blockedContent,
               blob,
             },
           }));

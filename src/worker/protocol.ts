@@ -10,6 +10,7 @@ export type WorkerErrorCode =
   | 'password-required'
   | 'password-incorrect'
   | 'invalid-pdf'
+  | 'invalid-page-range'
   /** 流水线里抛出的内存分配失败 */
   | 'out-of-memory'
   /** Worker 整个崩了（主线程收到 onerror），多半也是内存耗尽 */
