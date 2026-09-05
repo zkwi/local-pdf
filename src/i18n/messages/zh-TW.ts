@@ -7,7 +7,7 @@ export const zhTW: Messages = {
   'app.badgeLocal': '本機轉換',
   'app.badgeLocalTitle': '沒有任何上傳介面，離線也能用',
   'app.language': '介面語言',
-  'app.docTitle': 'Local PDF · PDF 轉 Word / Markdown，本機轉換',
+  'app.docTitle': 'PDF 轉 Word / Markdown，本機轉換 · Local PDF',
 
   'drop.title': '把 PDF 拖到這裡，或點擊選擇',
   'drop.hint': '支援多個檔案 · 檔案不會離開這台電腦',
@@ -76,7 +76,7 @@ export const zhTW: Messages = {
   'nav.images': '圖片',
   'nav.activity.saved': '{tool}，已保留 {count} 項',
   'nav.activity.busy': '{tool}，正在處理 {count} 項',
-  'tool.docTitle': 'Local PDF · {tool}，本機轉換',
+  'tool.docTitle': '{tool}，本機轉換 · Local PDF',
   'tool.pdf-to-word.title': 'PDF 轉 Word',
   'tool.pdf-to-word.lede':
     '把 PDF 變成可以接著編輯的 .docx：段落、表格、圖片、頁首頁尾都重建，掃描件自動辨識。',
@@ -345,6 +345,7 @@ export const zhTW: Messages = {
 
   'meta.description':
     'Local PDF：在瀏覽器裡把 PDF 轉成 Word、Markdown 和圖片，也把 Word、Markdown 和圖片轉成 PDF。不上傳、免費、開源，掃描件自動 OCR，支援中英日多語言。',
+  'meta.suffix': '全部在瀏覽器裡完成：不上傳、無需註冊、免費開源。',
   'seo.how.title': '三步完成',
   'seo.how.1': '把 PDF 拖進頁面，或按 Ctrl+V 貼上，或先試試示例檔案。',
   'seo.how.2': '文字擷取、版面分析、掃描頁 OCR 全部在你的瀏覽器裡完成，檔案不會送到任何地方。',

@@ -7,7 +7,7 @@ export const en: Messages = {
   'app.badgeLocal': 'Runs locally',
   'app.badgeLocalTitle': 'There is no upload endpoint at all; works offline too',
   'app.language': 'Language',
-  'app.docTitle': 'Local PDF · PDF to Word / Markdown in your browser',
+  'app.docTitle': 'PDF to Word / Markdown in your browser · Local PDF',
 
   'drop.title': 'Drop PDF files here, or click to choose',
   'drop.hint': 'Multiple files supported · files never leave this computer',
@@ -79,7 +79,7 @@ export const en: Messages = {
   'nav.images': 'Images',
   'nav.activity.saved': '{tool}, {count} items kept',
   'nav.activity.busy': '{tool}, processing {count} items',
-  'tool.docTitle': 'Local PDF · {tool} in your browser',
+  'tool.docTitle': '{tool} in your browser · Local PDF',
   'tool.pdf-to-word.title': 'PDF to Word',
   'tool.pdf-to-word.lede':
     'Turn a PDF into an editable .docx: paragraphs, tables, images, headers and footers are rebuilt, scans are recognised automatically.',
@@ -373,6 +373,8 @@ export const en: Messages = {
 
   'meta.description':
     'Local PDF converts PDF to Word, Markdown and images, and Word, Markdown and images to PDF, entirely in your browser. Nothing is uploaded, free and open source, with automatic OCR for scanned pages in Chinese, English, Japanese and more.',
+  'meta.suffix':
+    'Everything runs in your browser: nothing is uploaded, no sign-up, free and open source.',
   'seo.how.title': 'How it works',
   'seo.how.1': 'Drop a PDF onto the page, paste it with Ctrl+V, or try the sample file first.',
   'seo.how.2':

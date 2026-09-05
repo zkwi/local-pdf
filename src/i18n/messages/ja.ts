@@ -7,7 +7,7 @@ export const ja: Messages = {
   'app.badgeLocal': 'ローカル変換',
   'app.badgeLocalTitle': 'アップロード機能はありません。オフラインでも使えます',
   'app.language': '表示言語',
-  'app.docTitle': 'Local PDF · ブラウザで PDF → Word / Markdown',
+  'app.docTitle': 'ブラウザで PDF → Word / Markdown · Local PDF',
 
   'drop.title': 'PDF をここにドロップ、またはクリックして選択',
   'drop.hint': '複数ファイル対応 · ファイルはこのパソコンから出ません',
@@ -77,7 +77,7 @@ export const ja: Messages = {
   'nav.images': '画像',
   'nav.activity.saved': '{tool}、{count} 件を保持',
   'nav.activity.busy': '{tool}、{count} 件を処理中',
-  'tool.docTitle': 'Local PDF · ブラウザで {tool}',
+  'tool.docTitle': 'ブラウザで {tool} · Local PDF',
   'tool.pdf-to-word.title': 'PDF → Word',
   'tool.pdf-to-word.lede':
     'PDF を編集できる .docx にします。段落・表・画像・ヘッダーとフッターを再構成し、スキャンは自動で認識します。',
@@ -374,6 +374,7 @@ export const ja: Messages = {
 
   'meta.description':
     'Local PDF はブラウザ内で PDF を Word・Markdown・画像に、Word・Markdown・画像を PDF に変換します。アップロードなし、無料、オープンソース。スキャン文書は自動 OCR、中国語・英語・日本語ほか多言語対応。',
+  'meta.suffix': 'すべてブラウザ内で完結：アップロードなし、登録不要、無料でオープンソース。',
   'seo.how.title': '使い方は 3 ステップ',
   'seo.how.1': 'PDF をページにドロップするか、Ctrl+V で貼り付けるか、まずサンプルを試します。',
   'seo.how.2':

@@ -24,6 +24,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
   the file or its name, and everything stays editable on GitHub before submitting.
 - Issue templates for bug reports, conversion quality and feature requests, with a reminder not to
   attach private documents. The footer link now lands on the template chooser.
+- One static HTML per tool page at build time (`dist/word-to-pdf.html` and friends) with its own title,
+  description, canonical, hreflang and Open Graph tags, so crawlers no longer see the home page on every
+  URL. The app also keeps description, hreflang and Open Graph tags in sync when switching tools or
+  languages.
+
+### Changed
+
+- Page titles put the tool first and the brand last ("Word to PDF in your browser · Local PDF"); Open
+  Graph gains locale and image alt tags.
+- The README is English-first with an English screenshot and social card; the Chinese README has its own
+  (`docs/screenshot.zh-CN.png`, `docs/social-card.zh-CN.png`). Both link every tool directly and mention
+  the in-app feedback buttons.
 
 ## [0.6.0] — 2026-09-02
 

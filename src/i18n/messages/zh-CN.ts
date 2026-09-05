@@ -9,7 +9,7 @@ export const zhCN = {
   'app.badgeLocal': '本地转换',
   'app.badgeLocalTitle': '没有任何上传接口，断网也能用',
   'app.language': '界面语言',
-  'app.docTitle': 'Local PDF · PDF 转 Word / Markdown，本地转换',
+  'app.docTitle': 'PDF 转 Word / Markdown，本地转换 · Local PDF',
 
   'drop.title': '把 PDF 拖到这里，或点击选择',
   'drop.hint': '支持多个文件 · 文件不会离开这台电脑',
@@ -78,7 +78,7 @@ export const zhCN = {
   'nav.images': '图片',
   'nav.activity.saved': '{tool}，已保留 {count} 项',
   'nav.activity.busy': '{tool}，正在处理 {count} 项',
-  'tool.docTitle': 'Local PDF · {tool}，本地转换',
+  'tool.docTitle': '{tool}，本地转换 · Local PDF',
   'tool.pdf-to-word.title': 'PDF 转 Word',
   'tool.pdf-to-word.lede':
     '把 PDF 变成可以接着编辑的 .docx：段落、表格、图片、页眉页脚都重建，扫描件自动识别。',
@@ -347,6 +347,7 @@ export const zhCN = {
 
   'meta.description':
     'Local PDF：在浏览器里把 PDF 转成 Word、Markdown 和图片，也把 Word、Markdown 和图片转成 PDF。不上传、免费、开源，扫描件自动 OCR，支持中英日多语言。',
+  'meta.suffix': '全部在浏览器里完成：不上传、无需注册、免费开源。',
   'seo.how.title': '三步完成',
   'seo.how.1': '把 PDF 拖进页面，或按 Ctrl+V 粘贴，或先试试示例文件。',
   'seo.how.2': '文字提取、版面分析、扫描页 OCR 全部在你的浏览器里完成，文件不会发到任何地方。',

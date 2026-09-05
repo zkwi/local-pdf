@@ -76,6 +76,9 @@ export function App() {
   );
 
   const toolTitle = t(`tool.${tool.id}.title` as MessageKey);
+  /** 标签页标题和 og:title 共用的基础标题 */
+  const baseTitle =
+    tool.id === 'pdf-to-word' ? t('app.docTitle') : t('tool.docTitle', { tool: toolTitle });
 
   /**
    * 文件先问当前工具收不收；一个都收不下的话，找能收的工具切过去再交给它。
@@ -211,36 +214,44 @@ export function App() {
 
   // 标签页标题跟着工具走；转换中带进度，关页面前拦一下
   useEffect(() => {
-    const base =
-      tool.id === 'pdf-to-word' ? t('app.docTitle') : t('tool.docTitle', { tool: toolTitle });
+    const base = baseTitle;
     const total = pdfJobs.length + docJobs.length;
     const settled = pdfSettled + docSettled;
     if (busy && total > 0) document.title = `⏳ ${settled}/${total} · ${base}`;
     else if (busy) document.title = `⏳ ${base}`;
     else if (attention) document.title = `${t('app.titleDone')} · ${base}`;
     else document.title = base;
-  }, [
-    attention,
-    busy,
-    docJobs.length,
-    docSettled,
-    pdfJobs.length,
-    pdfSettled,
-    t,
-    tool.id,
-    toolTitle,
-  ]);
+  }, [attention, busy, docJobs.length, docSettled, pdfJobs.length, pdfSettled, baseTitle, t]);
 
-  // history.pushState 不会触发语言 Provider 的 effect，canonical 必须跟当前工具主动同步。
+  // history.pushState 不会触发语言 Provider 的 effect：canonical、hreflang、描述和 Open Graph
+  // 都要跟着当前工具和语言主动同步，搜索引擎渲染 ?lang= 版本时拿到的才是对应语言的描述。
   useEffect(() => {
-    const canonical = new URL(location.pathname, location.origin);
+    const page = new URL(location.pathname, location.origin);
+    const canonical = new URL(page);
     if (new URLSearchParams(location.search).get('lang') === locale) {
       canonical.searchParams.set('lang', locale);
     }
-    document.head
-      .querySelector<HTMLLinkElement>('link[rel="canonical"]')
-      ?.setAttribute('href', canonical.href);
-  }, [locale, tool.id]);
+    const description =
+      tool.id === 'pdf-to-word'
+        ? t('meta.description')
+        : `${t(`tool.${tool.id}.lede` as MessageKey)} ${t('meta.suffix')}`;
+    const head = document.head;
+    const set = (selector: string, attribute: string, value: string): void => {
+      head.querySelector(selector)?.setAttribute(attribute, value);
+    };
+    set('link[rel="canonical"]', 'href', canonical.href);
+    set('meta[name="description"]', 'content', description);
+    set('meta[property="og:title"]', 'content', baseTitle);
+    set('meta[property="og:description"]', 'content', description);
+    set('meta[property="og:url"]', 'content', canonical.href);
+    // hreflang：路径换成当前工具，各语言保留自己的 ?lang=
+    for (const link of head.querySelectorAll<HTMLLinkElement>('link[rel="alternate"][hreflang]')) {
+      const lang = new URL(link.href).searchParams.get('lang');
+      const url = new URL(page);
+      if (lang !== null) url.searchParams.set('lang', lang);
+      link.href = url.href;
+    }
+  }, [baseTitle, locale, t, tool.id]);
 
   useEffect(() => {
     if (!busy) return;

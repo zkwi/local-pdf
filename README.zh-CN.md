@@ -1,16 +1,16 @@
 <p align="center">
-  <a href="https://localpdfconverter.com"><img src="docs/social-card.png" alt="Local PDF" width="720"></a>
+  <a href="https://localpdfconverter.com/?lang=zh-CN"><img src="docs/social-card.zh-CN.png" alt="Local PDF" width="720"></a>
 </p>
 
 <h1 align="center">Local PDF</h1>
 
 <p align="center">
-  <b>在浏览器里把 PDF 转成 Word 和 Markdown。</b><br>
+  <b>在浏览器里把 PDF 转成 Word、Markdown 和图片，也把 Word、Markdown 和图片转成 PDF。</b><br>
   不上传 · 无需注册 · 免费开源
 </p>
 
 <p align="center">
-  <a href="https://localpdfconverter.com"><b>在线使用 →</b></a> ·
+  <a href="https://localpdfconverter.com/?lang=zh-CN"><b>在线使用 →</b></a> ·
   <a href="README.md">English</a> ·
   <a href="CHANGELOG.md">更新日志</a>
 </p>
@@ -19,6 +19,15 @@
   <a href="https://github.com/zkwi/local-pdf/actions/workflows/ci.yml"><img src="https://github.com/zkwi/local-pdf/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-b4471f.svg" alt="MIT"></a>
   <img src="https://img.shields.io/badge/%E5%85%A8%E7%A8%8B%E5%9C%A8%E6%B5%8F%E8%A7%88%E5%99%A8%E9%87%8C%E8%BF%90%E8%A1%8C-2f7d4f.svg" alt="全程在浏览器里运行">
+</p>
+
+<p align="center">
+  <a href="https://localpdfconverter.com/?lang=zh-CN">PDF 转 Word</a> ·
+  <a href="https://localpdfconverter.com/pdf-to-markdown?lang=zh-CN">PDF 转 Markdown</a> ·
+  <a href="https://localpdfconverter.com/pdf-to-images?lang=zh-CN">PDF 转图片</a> ·
+  <a href="https://localpdfconverter.com/word-to-pdf?lang=zh-CN">Word 转 PDF</a> ·
+  <a href="https://localpdfconverter.com/markdown-to-pdf?lang=zh-CN">Markdown 转 PDF</a> ·
+  <a href="https://localpdfconverter.com/images-to-pdf?lang=zh-CN">图片转 PDF</a>
 </p>
 
 ## 为什么选 Local PDF
@@ -31,7 +40,7 @@
 - **对质量说实话。** 每份文件附一份转换报告：逐页把握度、元素统计、提示，告诉你哪些页面该再看一眼。
 - **免安装、可离线。** 纯静态站，四种界面语言，模型第一次用后就缓存在本地。
 
-![界面](docs/screenshot.png)
+![Local PDF 中文界面：PDF 转 Word](docs/screenshot.zh-CN.png)
 
 ## 能做什么
 
@@ -103,8 +112,12 @@ npm run ocr-models  # 可选：把 OCR 模型下载到 public/ocr-models/ 自托
 产物目录 `dist/`，并绑定自定义域名；Node 22 来自 `.node-version`。`public/_headers` 里有缓存头，
 多线程 OCR 需要的 COOP/COEP 以注释形式放在里面。其他静态托管把 `dist/` 当输出目录即可。
 
+`npm run build` 还会给每个工具页生成一份静态 HTML（`dist/word-to-pdf.html` 等），带各自的标题、描述、canonical
+和 hreflang，由 `scripts/prerender-tools.mjs` 从文案表生成。能把 `/word-to-pdf` 映射到 `word-to-pdf.html` 的托管
+（Cloudflare 默认如此）会把它给爬虫；映射不上的仍回落到 `index.html`，应用照常工作。
+
 站点地址在几处 SEO 相关文件里写死了：`index.html` 的 canonical / hreflang / Open Graph、`public/robots.txt`、
-`public/sitemap.xml`、`src/ui/SeoContent.tsx` 里的 `SITE_URL`。换域名部署时记得一起改。
+`public/sitemap.xml`、`src/ui/SeoContent.tsx` 和 `scripts/prerender-tools.mjs` 里的 `SITE_URL`。换域名部署时记得一起改。
 
 ## 隐私
 
@@ -156,11 +169,15 @@ docs/               # 架构、中间模型、ADR
 - 新增警告或进度文案要同时改 `src/i18n/messages/` 四张表，类型检查会逼你改全。
 - CI 在每次推送时跑格式检查、类型检查、测试和构建。
 - 四种界面语言共用一份全英文中立示例 `public/samples/demo.pdf`，由 `scripts/make-demo-pdf.py` 生成（本机需要 PyMuPDF）。
-- `docs/social-card.png` 和 `public/og.png` 由 `scripts/make-social-card.py` 生成（同样需要 PyMuPDF）。
+- `docs/social-card.png`（英文，同时复制为 `public/og.png`）和 `docs/social-card.zh-CN.png` 由 `scripts/make-social-card.py` 生成（同样需要 PyMuPDF）。
+- README 里的截图是预览站 1100×860 的截图，默认英文：
+  `playwright screenshot --viewport-size="1100,860" --wait-for-timeout=3000 "http://localhost:4174/?lang=en" docs/screenshot.png`，
+  中文版换成 `?lang=zh-CN` 输出到 `docs/screenshot.zh-CN.png`。
 
 项目边界和提交约定见 [CONTRIBUTING.md](CONTRIBUTING.md)，夹具分层、浏览器回归和私有样本规则见 [docs/TESTING.md](docs/TESTING.md)。
 
-欢迎提 Issue 和 PR。改动请尽量小而聚焦——这是个人项目，简单本身就是功能。
+欢迎提 Issue 和 PR。转换失败的任务卡上有「反馈这个问题」，每份转换报告末尾有「结果不对？去反馈」，
+点开就是预填好版本、浏览器和诊断信息的 GitHub Issue，不会带上你的文件。改动请尽量小而聚焦——这是个人项目，简单本身就是功能。
 
 ## 许可
 
