@@ -47,7 +47,7 @@ export async function markdownToHtml(markdown: string): Promise<string> {
 
 export function markdownCss(fontPx: number): string {
   return `
-body { font-family: Arial, sans-serif; font-size: ${fontPx}px; line-height: 1.6; color: #1f2328; }
+body { font-family: Arial, sans-serif; font-size: ${fontPx}px; line-height: 1.6; color: #1f2328; overflow-wrap: anywhere; }
 h1, h2, h3, h4, h5, h6 { font-weight: 700; line-height: 1.25; margin: 1.4em 0 0.6em; }
 h1 { font-size: 2em; padding-bottom: 0.3em; border-bottom: 1px solid #d0d7de; margin-top: 0.4em; }
 h2 { font-size: 1.5em; padding-bottom: 0.3em; border-bottom: 1px solid #d0d7de; }
@@ -59,7 +59,7 @@ code { font-family: 'Courier New', monospace; font-size: 0.9em; background: #f0f
 pre { background: #f5f6f8; border: 1px solid #e3e5e8; border-radius: 6px; padding: 0.9em 1em; margin: 0 0 1em; white-space: pre-wrap; word-break: break-all; font-size: 0.875em; line-height: 1.5; }
 pre code { background: none; padding: 0; font-size: 1em; }
 blockquote { margin: 0 0 1em; padding: 0.1em 1em; color: #57606a; border-left: 0.25em solid #d0d7de; }
-table { border-collapse: collapse; margin: 0 0 1em; max-width: 100%; }
+table { border-collapse: collapse; margin: 0 0 1em; width: 100%; max-width: 100%; table-layout: fixed; }
 th, td { border: 1px solid #d0d7de; padding: 0.35em 0.8em; vertical-align: top; text-align: left; }
 th { background: #f5f6f8; font-weight: 700; }
 hr { border: 0; border-top: 2px solid #d0d7de; margin: 1.5em 0; }

@@ -5,6 +5,27 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+## [0.7.1] — 2026-09-06
+
+### Fixed
+
+- Word documents with page-number fields inside nested text boxes no longer fail with malformed XML.
+  Field replacement now follows XML nodes and preserves surrounding drawings, text and formatting.
+- Word and Markdown pagination uses the browser's measured column width, preventing rounding errors
+  from moving the beginning of later pages into the previous page's right margin in long documents.
+- Half-width spaces next to CJK text retain their measured spacing instead of being emitted as full-width
+  glyphs, fixing stretched headings and preformatted text.
+- Simulated bold and character spacing no longer carry over into subsequent text runs.
+- Markdown tables stay within the page width, and long URLs and other unbroken strings can wrap.
+- Legacy Word VML images now reach the normal image pipeline. Supported bitmaps are preserved, while
+  unsupported EMF/WMF images receive the existing placeholder and warning instead of disappearing silently.
+
+### Added
+
+- A browser regression covering nested page fields, 240-page pagination, CJK spacing and wide tables.
+  Release validation also covers a new stratified set of 46 private files; only anonymous aggregate
+  results are documented in the repository.
+
 ## [0.7.0] — 2026-09-05
 
 ### Added

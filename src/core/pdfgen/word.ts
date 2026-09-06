@@ -101,31 +101,80 @@ function fieldKind(instruction: string): 'page' | 'pages' | null {
  * 连结果都没有，页码就成了空白。先在 XML 里把页码域换成带书签的普通文字 "1"，
  * 渲染后靠书签认出它，写 PDF 时再逐页替换成真正的页码。
  */
-function patchPageFields(xml: string, counter: { n: number }): string {
-  const bookmark = (kind: 'page' | 'pages', rPr: string): string => {
+export function patchPageFields(xml: string, counter: { n: number }): string {
+  const ns = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+  const doc = new DOMParser().parseFromString(xml, 'application/xml');
+  if (doc.querySelector('parsererror') !== null) return xml;
+  let changed = false;
+  const bookmark = (kind: 'page' | 'pages', style: Element | null): DocumentFragment => {
     const id = 90000 + counter.n++;
-    return `<w:bookmarkStart w:id="${id}" w:name="lp-field-${kind}-${id}"/><w:r>${rPr}<w:t>1</w:t></w:r><w:bookmarkEnd w:id="${id}"/>`;
+    const fragment = doc.createDocumentFragment();
+    const start = doc.createElementNS(ns, 'w:bookmarkStart');
+    start.setAttributeNS(ns, 'w:id', String(id));
+    start.setAttributeNS(ns, 'w:name', `lp-field-${kind}-${id}`);
+    const run = doc.createElementNS(ns, 'w:r');
+    if (style !== null) run.append(style.cloneNode(true));
+    const text = doc.createElementNS(ns, 'w:t');
+    text.textContent = '1';
+    run.append(text);
+    const end = doc.createElementNS(ns, 'w:bookmarkEnd');
+    end.setAttributeNS(ns, 'w:id', String(id));
+    fragment.append(start, run, end);
+    changed = true;
+    return fragment;
   };
-  const firstRPr = (chunk: string): string => /<w:rPr>[\s\S]*?<\/w:rPr>/.exec(chunk)?.[0] ?? '';
-  let out = xml.replace(
-    /<w:fldSimple\b[^>]*\bw:instr="([^"]*)"[^>]*>([\s\S]*?)<\/w:fldSimple>/g,
-    (match, instr: string, inner: string) => {
-      const kind = fieldKind(instr);
-      return kind === null ? match : bookmark(kind, firstRPr(inner));
-    },
-  );
-  // 复杂域：从带 begin 的那个 run 到带 end 的那个 run
-  out = out.replace(
-    /<w:r\b(?:(?!<\/w:r>)[\s\S])*?fldCharType="begin"[\s\S]*?fldCharType="end"(?:(?!<\/w:r>)[\s\S])*?<\/w:r>/g,
-    (match) => {
-      const instr = [...match.matchAll(/<w:instrText\b[^>]*>([\s\S]*?)<\/w:instrText>/g)]
-        .map((m) => m[1])
-        .join('');
-      const kind = fieldKind(instr);
-      return kind === null ? match : bookmark(kind, firstRPr(match));
-    },
-  );
-  return out;
+  const firstStyle = (element: Element): Element | null =>
+    element.getElementsByTagNameNS(ns, 'rPr')[0] ?? null;
+  for (const field of [...doc.getElementsByTagNameNS(ns, 'fldSimple')]) {
+    const kind = fieldKind(field.getAttributeNS(ns, 'instr') ?? '');
+    if (kind !== null) field.replaceWith(bookmark(kind, firstStyle(field)));
+  }
+  // 文本框里也有嵌套的 run。只沿同一段落的兄弟节点处理，不能用跨 XML 标签的正则删域。
+  for (const paragraph of [...doc.getElementsByTagNameNS(ns, 'p')]) {
+    let start: Element | null = null;
+    let instruction = '';
+    let depth = 0;
+    let separated = false;
+    for (const run of [...paragraph.children]) {
+      if (run.namespaceURI !== ns || run.localName !== 'r') continue;
+      for (const node of [...run.children]) {
+        if (node.namespaceURI !== ns) continue;
+        if (node.localName === 'fldChar') {
+          const type = node.getAttributeNS(ns, 'fldCharType');
+          if (type === 'begin') {
+            if (depth++ === 0) {
+              start = run;
+              instruction = '';
+              separated = false;
+            }
+          } else if (type === 'separate' && depth === 1) {
+            separated = true;
+          } else if (type === 'end' && depth > 0 && --depth === 0 && start !== null) {
+            const kind = fieldKind(instruction);
+            // 同一个 run 夹着普通正文时保留原域，避免连带删掉域前后的文字。
+            const hasText = (el: Element): boolean =>
+              [...el.children].some(
+                (child) => child.namespaceURI === ns && child.localName === 't',
+              );
+            if (kind !== null && !hasText(start) && !hasText(run)) {
+              start.before(bookmark(kind, firstStyle(start)));
+              let current: ChildNode | null = start;
+              while (current !== null) {
+                const next: ChildNode | null = current.nextSibling;
+                current.remove();
+                if (current === run) break;
+                current = next;
+              }
+            }
+            start = null;
+          }
+        } else if (node.localName === 'instrText' && depth === 1 && !separated) {
+          instruction += node.textContent ?? '';
+        }
+      }
+    }
+  }
+  return changed ? new XMLSerializer().serializeToString(doc) : xml;
 }
 
 async function withPageFields(file: Blob): Promise<Blob> {
@@ -192,6 +241,19 @@ export async function prepareDocx(
     renderComments: false,
   });
   signal?.throwIfAborted();
+
+  // 旧式 VML 图片会被预览器包在 SVG 中，抽取器不画 SVG；转回 img 后也能沿用 EMF 等格式的占位和提示。
+  for (const svg of container.querySelectorAll('svg')) {
+    const image = svg.firstElementChild;
+    const src = image?.getAttribute('href');
+    if (svg.children.length !== 1 || image?.localName !== 'image' || !src) continue;
+    const img = doc.createElement('img');
+    img.src = src;
+    img.style.cssText = svg.style.cssText;
+    if (!img.style.width) img.style.width = `${svg.width.baseVal.value}px`;
+    if (!img.style.height) img.style.height = `${svg.height.baseVal.value}px`;
+    svg.replaceWith(img);
+  }
 
   // docx-preview 在渲染完 500 ms 后才按制表位给 tab 定宽（setTimeout）；
   // 先把字体换成排版用的那套，让它按最终字体算，再等它算完，否则 tab 后面的文字会叠在一起

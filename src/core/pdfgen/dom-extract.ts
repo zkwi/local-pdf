@@ -235,9 +235,8 @@ export function extractOps(root: Element, options: ExtractOptions): DrawOp[] {
       const ws = /\s/.test(ch);
       if (r.width === 0 && (ws || r.height === 0)) continue;
       const at = options.fragmenter.locate(r);
-      // 空格跟着前一个片段的文种走；TS 在循环里把 cur 收窄成了 null，断言回真实类型
-      const previous = cur as Run | null;
-      const cjk: boolean = ws ? (previous?.cjk ?? false) : cls === 'cjk';
+      // 半角空格不能并入 CID 字体的片段：PDF 的默认字宽会把它按全角输出，撑开代码和表头。
+      const cjk = cls === 'cjk';
       const sameLine =
         cur !== null &&
         cur.page === at.page &&
@@ -289,7 +288,7 @@ export function extractOps(root: Element, options: ExtractOptions): DrawOp[] {
       const cls = classifyChar(ch);
       if (cls === 'skip') hasSkip = true;
       else if (cls === 'cjk') allLatin = false;
-      else if (ch !== ' ' && ch !== ' ') allCjk = false;
+      else allCjk = false;
     }
     const fieldAttr = parent.closest('[data-lp-field]')?.getAttribute('data-lp-field');
     const field: FieldKind | undefined =

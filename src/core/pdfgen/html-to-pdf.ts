@@ -317,7 +317,14 @@ function paginate(doc: Document, section: Section, ratios: BaselineRatio): PageB
   doc.body.append(stage);
 
   const bodyOps = extractOps(pager, {
-    fragmenter: columnFragmenter(pager, contentWidth, COLUMN_GAP, left, top * PT_TO_PX),
+    // 浏览器把宽度量化到布局像素；用未量化的 pt 换算值会在百页后累计错分到上一页。
+    fragmenter: columnFragmenter(
+      pager,
+      pager.getBoundingClientRect().width,
+      COLUMN_GAP,
+      left,
+      top * PT_TO_PX,
+    ),
     baselineRatio: ratios,
   });
   let pageCount = 1;

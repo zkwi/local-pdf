@@ -73,6 +73,9 @@ font embedding, editable formulas, vertical text (flattened with a warning), tex
 Page counts are not preserved either: every PDF page ends with a page break, so text that overflows after font
 substitution spills onto an extra page.
 
+Complex vector charts in native PDFs are not fully reconstructed in Word or Markdown. Use PDF to images
+when the complete chart appearance matters, and check editable output against the original.
+
 Long scan regions are kept as images so charts survive; duplicate OCR text in those regions is omitted.
 The report marks their text as non-editable. Turn off “Keep images” and retry when you need text instead.
 Scanned text and layout still need checking against the original.

@@ -54,12 +54,13 @@ export class ContentStream {
 
   text(op: TextOp): void {
     this.fonts.add(op.font);
-    const parts = [`BT ${op.font} ${fmt(op.size)} Tf ${rgb(op.color)} rg`];
+    // BT/ET 不会重置描边模式和字距；每段保存并恢复，避免标题的粗体污染后续正文。
+    const parts = [`q BT ${op.font} ${fmt(op.size)} Tf ${rgb(op.color)} rg`];
     if (op.charSpacing !== undefined && op.charSpacing !== 0)
       parts.push(`${fmt(op.charSpacing)} Tc`);
     if (op.fakeBold === true) parts.push(`2 Tr ${fmt(op.size * 0.035)} w ${rgb(op.color)} RG`);
     const skew = op.skew === true ? fmt(0.22) : '0';
-    parts.push(`1 0 ${skew} 1 ${fmt(op.x)} ${fmt(op.y)} Tm ${op.hex} Tj ET`);
+    parts.push(`1 0 ${skew} 1 ${fmt(op.x)} ${fmt(op.y)} Tm ${op.hex} Tj ET Q`);
     this.#ops.push(parts.join(' '));
   }
 

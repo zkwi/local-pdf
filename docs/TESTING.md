@@ -31,6 +31,14 @@ playwright-cli run-code --filename tests/browser/document-safety.js
 
 使用命名浏览器会话时，命令带上相同的 `-s=会话名`。脚本检查远程图片、srcset、CSS、iframe、页面跳转、合并单元格、罕见字符占位，以及解码等待取消后的后续转换和 iframe 清理。它不需要新增测试框架或私有样本。
 
+`tests/browser/document-pagination.js` 使用同样的运行方式，验证文本框内的页码域、普通域的保留、240 页文档逐页文字归属、中文半角空格、宽表格，以及旧式 Word 图片的保留和 EMF 提示。修改转换模块后先刷新开发页面再执行，避免直接动态导入仍命中旧模块缓存。
+
+```bash
+playwright-cli run-code --filename tests/browser/document-pagination.js
+```
+
+0.7.1 的 46 份真实样本分布、修复前后对比和质量边界见 [2026-09-06 真实语料验证](audits/2026-09-06-corpus-validation.md)。
+
 ## 浏览器回归矩阵
 
 每次发布至少检查：
