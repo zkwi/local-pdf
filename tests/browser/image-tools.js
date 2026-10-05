@@ -113,10 +113,13 @@ async (page) => {
     const tool = [...document.querySelectorAll('.tool')].find((el) => !el.hidden);
     const rows = () => [...tool.querySelectorAll('.imgrow')];
     const statuses = () => rows().map((r) => r.className.replace('imgrow imgrow--', ''));
+    // 顺带记下同时在处理的最多张数：桌面端应该并行
+    let parallel = 0;
     const settle = async (ms) => {
       const t0 = performance.now();
       while (performance.now() - t0 < ms) {
-        await wait(50);
+        await wait(20);
+        parallel = Math.max(parallel, statuses().filter((s) => s === 'processing').length);
         if (!statuses().some((s) => s === 'ready' || s === 'processing')) return true;
       }
       return false;
@@ -153,7 +156,7 @@ async (page) => {
     const resumeLabel = resume?.textContent ?? '';
     resume?.click();
     const resumed = await settle(60000);
-    return { before, invalidated, rerun, after, stopped, paused, resumeLabel, resumed, final: statuses() };
+    return { before, invalidated, rerun, after, stopped, paused, resumeLabel, resumed, final: statuses(), parallel, cores: navigator.hardwareConcurrency };
   });
   // 分段单选的键盘约定：只有选中的那项能 Tab 到，方向键切换选项、焦点跟着走
   batch.stops = await page.evaluate(() => {
@@ -165,6 +168,7 @@ async (page) => {
   await page.keyboard.press('ArrowLeft');
   batch.arrow = await page.evaluate(() => `${document.activeElement?.textContent}:${document.activeElement?.getAttribute('aria-checked')}`);
   await page.evaluate(() => localStorage.removeItem('local-pdf.compress-images'));
+  if (batch.cores >= 4 && batch.parallel < 2) throw new Error(`Parallel processing regression: ${JSON.stringify(batch)}`);
   if (batch.stops !== '-1,-1,0,-1' || batch.arrow !== 'Standard:true') throw new Error(`Radio keyboard regression: ${JSON.stringify(batch)}`);
   if (!batch.invalidated.every((s) => s === 'ready' || s === 'processing') || !batch.rerun) throw new Error(`Settings re-run regression: ${JSON.stringify(batch)}`);
   if (!batch.after.every((size, i) => size <= batch.before[i]) || batch.after[0] >= batch.before[0]) throw new Error(`Re-run result regression: ${JSON.stringify(batch)}`);

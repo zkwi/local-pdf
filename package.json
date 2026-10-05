@@ -1,6 +1,6 @@
 {
   "name": "local-pdf",
-  "version": "0.8.3",
+  "version": "0.8.4",
   "private": true,
   "description": "Local PDF — convert PDF to Word, Markdown and images, Word, Markdown and images to PDF, and compress, convert or resize images, entirely in your browser. Private, free, open source.",
   "keywords": [

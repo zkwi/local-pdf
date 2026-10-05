@@ -144,8 +144,9 @@ OCR 是例外：PaddleOCR.js 的直连模式依赖 `document`，只能用它的 
 
 ## 图片工具
 
-压缩、格式转换、改尺寸是同一条流水线（`core/image/compress.ts`），跑在单独的图片 Worker 里，三个工具页共用，
-一次只处理一张，内存里同时只有一张大图：
+压缩、格式转换、改尺寸是同一条流水线（`core/image/compress.ts`），跑在三个工具页共用的图片 Worker 池里（`ui/image-client.ts`）。
+桌面端最多同时处理 3 张（核数的一半），正在处理的图加起来不超过单张的像素上限，峰值内存和只处理一张最大的图一样；
+排头放不下就等，不让小图插队。手机一张一张来。每张图走的步骤：
 
 ```text
 文件头识别（格式、尺寸、动图） → createImageBitmap 解码并按 EXIF 摆正 → 等比缩放 / 裁切 / 留边
@@ -163,5 +164,5 @@ OCR 是例外：PaddleOCR.js 的直连模式依赖 `document`，只能用它的 
   这套状态在 `hooks/useImageBatch.ts`；`ImageTool.tsx` 只负责拼界面，设置栏是 `ImageOptions.tsx`，列表的一行是 `ImageRow.tsx`。
 - **不变大保护。** 格式和尺寸都没要求改、结果又不比原图小，就给原文件。转换和改尺寸遇到本来就符合设置的图直接原样保留，不白白重新编码。
 - **SVG** 交给 `<img>` 在主线程按最终尺寸栅格化（createImageBitmap 解不了 SVG），再进 Worker；图片转 PDF 也走同一个函数。
-- **取消**直接 terminate 图片 Worker，下一张需要时再起一个；Worker 崩溃（多半是内存）只算当前这张失败。
+- **取消**直接 terminate 那张图所在的 Worker，下一张需要时再起一个；Worker 崩溃（多半是内存）只算它手上这张失败。
 - 手机浏览器单张按约 1600 万像素的上限解码和输出，避开 iOS 的画布面积限制。

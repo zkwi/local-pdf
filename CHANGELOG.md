@@ -5,6 +5,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+## [0.8.4] — 2026-10-06
+
+### Changed
+
+- The image tools process several images at once on computers (up to three, half the CPU cores), so large
+  batches finish two to three times faster; PNG colour reduction gains the most. The images being processed
+  together never add up to more pixels than the single-image limit, so peak memory stays the same as before.
+  Phones still process one image at a time.
+
 ## [0.8.3] — 2026-10-06
 
 ### Changed

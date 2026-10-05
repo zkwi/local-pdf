@@ -37,7 +37,8 @@ playwright-cli run-code --filename tests/browser/document-safety.js
 
 `tests/browser/image-tools.js` 用同样方式运行，用画布现做的合成图片检查压缩、按目标大小、等比缩放、JPEG 铺底色、PNG 减色、
 透明留边、SVG 转 PDF，再在图片压缩页走一遍拖入、自动处理、对比和打包下载，最后检查改画质后自动重做（「最小体积」不比「标准」大）、
-处理中停止后不再自动开始、点「继续」处理完剩下的，以及分段单选的键盘操作（只有选中项能 Tab 到，方向键切换）。
+处理中停止后不再自动开始、点「继续」处理完剩下的，桌面端确实多张并行，以及分段单选的键盘操作（只有选中项能 Tab 到，方向键切换）。
+Worker 池的排队规则（像素预算、先来后到、取消、崩溃）由 `tests/image-client.test.ts` 用假 Worker 覆盖。
 
 ```bash
 playwright-cli run-code --filename tests/browser/image-tools.js

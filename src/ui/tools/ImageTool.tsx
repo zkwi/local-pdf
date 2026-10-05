@@ -27,6 +27,10 @@ const ZIP_NAMES: Record<ImageToolId, string> = {
 const MAX_PIXELS_DESKTOP = 50_000_000;
 const MAX_PIXELS_MOBILE = 16_000_000;
 
+/** 桌面端同时处理几张：核数的一半，最多 3 张（PNG 减色是纯计算，几乎按核数线性变快）；手机一张一张来 */
+const desktopLanes = (): number =>
+  Math.min(3, Math.max(1, Math.floor((navigator.hardwareConcurrency || 2) / 2)));
+
 interface ImageToolProps {
   readonly tool: Tool & { readonly id: ImageToolId };
   readonly active: boolean;
@@ -55,6 +59,7 @@ export function ImageTool({ tool, active, onActivity }: ImageToolProps) {
     prefix: `img-${tool.id}`,
     job,
     maxPixels: caps.mobile ? MAX_PIXELS_MOBILE : MAX_PIXELS_DESKTOP,
+    lanes: caps.mobile ? 1 : desktopLanes(),
   });
   const { items, finished, busy, pending, settled } = batch;
 

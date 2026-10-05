@@ -62,14 +62,16 @@ interface Options {
   /** 这一批的处理参数；变了就作废已有结果、按新参数重做 */
   readonly job: ImageJobOptions;
   readonly maxPixels: number;
+  /** 最多同时处理几张；内存由 Worker 池按像素预算兜底 */
+  readonly lanes: number;
 }
 
 /**
- * 图片工具的一批图：加进来就自动在 Worker 里一张张处理；处理参数变了，已有结果作废并重做。
+ * 图片工具的一批图：加进来就自动在 Worker 里处理（按顺序取，最多同时 lanes 张）；处理参数变了，已有结果作废并重做。
  * 「停止」之后不再自动开始，直到加图、改设置或「继续」。
  * 设置每改一次代数加一，上一轮还没写回的结果按代数丢弃，不会把旧设置的结果写到新列表里。
  */
-export function useImageBatch({ prefix, job, maxPixels }: Options) {
+export function useImageBatch({ prefix, job, maxPixels, lanes }: Options) {
   const [items, setItems] = useState<ImageItem[]>([]);
   const itemsRef = useRef(items);
   itemsRef.current = items;
@@ -200,12 +202,23 @@ export function useImageBatch({ prefix, job, maxPixels }: Options) {
         canvas.width = 0;
         canvas.height = 0;
         return processInWorker(
-          { file: png, options, maxPixels, rasterized: { format: 'svg', sized: true } },
+          {
+            file: png,
+            options,
+            maxPixels,
+            rasterized: { format: 'svg', sized: true },
+            pixels: plan.width * plan.height,
+          },
           signal,
         );
       }
+      // 文件头里读到了尺寸就按它给 Worker 池记账，读不到按单张上限算
+      const pixels =
+        item.width !== undefined && item.height !== undefined
+          ? item.width * item.height
+          : undefined;
       try {
-        return await processInWorker({ file: item.file, options, maxPixels }, signal);
+        return await processInWorker({ file: item.file, options, maxPixels, pixels }, signal);
       } catch (error) {
         // Worker 解不了、但 <img> 也许能显示（Safari 的 HEIC、TIFF）：主线程画成 PNG 再试一次
         if (!(error instanceof ImageJobError && error.code === 'decode')) throw error;
@@ -226,6 +239,50 @@ export function useImageBatch({ prefix, job, maxPixels }: Options) {
     [maxPixels],
   );
 
+  /** 处理一张并把结果写回列表；出错也在这里落定，不往外抛 */
+  const settleOne = useCallback(
+    async (item: ImageItem, options: ImageJobOptions, signal: AbortSignal, gen: number) => {
+      patch(item.id, (current) => ({ ...current, status: 'processing' }));
+      try {
+        const result = await processOne(item, options, signal);
+        if (gen !== generation.current) return;
+        patch(item.id, (current) => ({
+          ...current,
+          status: result.kept ? 'kept' : 'done',
+          width: current.width ?? result.sourceWidth,
+          height: current.height ?? result.sourceHeight,
+          result: {
+            blob: result.blob,
+            url: URL.createObjectURL(result.blob),
+            name: outputName(item.file.name, result.format),
+            format: result.format,
+            width: result.width,
+            height: result.height,
+            kept: result.kept,
+            notes: result.notes,
+          },
+        }));
+      } catch (error) {
+        if (signal.aborted || gen !== generation.current) {
+          // 用户点了停止：这张放回待处理；改设置引起的中断，invalidate 已经处理过
+          if (gen === generation.current) {
+            patch(item.id, (current) => ({ ...current, status: 'ready' }));
+          }
+          return;
+        }
+        const code: ImageFailure =
+          error instanceof ImageJobError ? error.code : isSvgItem(item) ? 'decode' : 'unknown';
+        patch(item.id, (current) => ({
+          ...current,
+          status: code === 'animated' ? 'skipped' : 'failed',
+          error: code,
+          detail: error instanceof Error ? error.message : String(error),
+        }));
+      }
+    },
+    [patch, processOne],
+  );
+
   const run = useCallback(async (): Promise<void> => {
     if (controller.current !== null) return;
     const abort = new AbortController();
@@ -234,57 +291,31 @@ export function useImageBatch({ prefix, job, maxPixels }: Options) {
     const options = jobRef.current;
     /** 列表快照要等下一次渲染才更新，处理过的记下来，免得同一张取两遍 */
     const seen = new Set<string>();
+    const inflight = new Set<Promise<void>>();
     setRunning(true);
     try {
       for (;;) {
         if (abort.signal.aborted || gen !== generation.current) break;
         // 处理途中新拖进来的图也会在这一轮里接着处理
         const item = itemsRef.current.find((each) => each.status === 'ready' && !seen.has(each.id));
-        if (item === undefined) break;
-        seen.add(item.id);
-        patch(item.id, (current) => ({ ...current, status: 'processing' }));
-        try {
-          const result = await processOne(item, options, abort.signal);
-          if (gen !== generation.current) break;
-          patch(item.id, (current) => ({
-            ...current,
-            status: result.kept ? 'kept' : 'done',
-            width: current.width ?? result.sourceWidth,
-            height: current.height ?? result.sourceHeight,
-            result: {
-              blob: result.blob,
-              url: URL.createObjectURL(result.blob),
-              name: outputName(item.file.name, result.format),
-              format: result.format,
-              width: result.width,
-              height: result.height,
-              kept: result.kept,
-              notes: result.notes,
-            },
-          }));
-        } catch (error) {
-          if (abort.signal.aborted || gen !== generation.current) {
-            // 用户点了停止：这张放回待处理；改设置引起的中断，invalidate 已经处理过
-            if (gen === generation.current) {
-              patch(item.id, (current) => ({ ...current, status: 'ready' }));
-            }
-            break;
-          }
-          const code: ImageFailure =
-            error instanceof ImageJobError ? error.code : isSvgItem(item) ? 'decode' : 'unknown';
-          patch(item.id, (current) => ({
-            ...current,
-            status: code === 'animated' ? 'skipped' : 'failed',
-            error: code,
-            detail: error instanceof Error ? error.message : String(error),
-          }));
+        // 没有可取的、或者同时处理的张数满了：等手上的某一张做完再看
+        if (item === undefined || inflight.size >= lanes) {
+          if (inflight.size === 0) break;
+          await Promise.race(inflight);
+          continue;
         }
+        seen.add(item.id);
+        const task = settleOne(item, options, abort.signal, gen).finally(() => {
+          inflight.delete(task);
+        });
+        inflight.add(task);
       }
+      await Promise.all(inflight);
     } finally {
       if (controller.current === abort) controller.current = null;
       setRunning(false);
     }
-  }, [patch, processOne]);
+  }, [lanes, settleOne]);
 
   // 有待处理的图就自动开始：拖进来、改了设置、点了「继续」都走这里
   const pending = items.filter((item) => item.status === 'ready').length;
