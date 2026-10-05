@@ -1,15 +1,21 @@
 import type { OutputFormat } from '../core/contracts/options.ts';
 
-/** 六个工具：三个从 PDF 转出、三个转成 PDF；首页就是 PDF 转 Word */
+/** 九个工具：三个从 PDF 转出、三个转成 PDF、三个图片工具；首页就是 PDF 转 Word */
 export type ToolId =
   | 'pdf-to-word'
   | 'pdf-to-markdown'
   | 'pdf-to-images'
   | 'word-to-pdf'
   | 'markdown-to-pdf'
-  | 'images-to-pdf';
+  | 'images-to-pdf'
+  | 'compress-images'
+  | 'convert-images'
+  | 'resize-images';
 
-export type ToolGroup = 'from-pdf' | 'to-pdf';
+export type ToolGroup = 'from-pdf' | 'to-pdf' | 'image';
+
+/** 三个图片工具共用一个组件，只是默认设置和设置项的顺序不同 */
+export type ImageToolId = 'compress-images' | 'convert-images' | 'resize-images';
 
 /** 导航里只需要知道某个工具留了多少内容、现在是否仍在处理。 */
 export interface ToolActivity {
@@ -24,6 +30,11 @@ export interface Tool {
   readonly group: ToolGroup;
   /** 文件选择框的 accept */
   readonly accept: string;
+  /**
+   * 不放进 accept、但拖进来也收的扩展名。HEIC 写进 accept 的话 iPhone 选图时就不再自动转成 JPEG，
+   * 而桌面浏览器大多解不了 HEIC；拖进来时仍要收下，才能在列表里说明原因。
+   */
+  readonly alsoAccepts?: readonly string[];
   /** 从 PDF 转出的工具对应的输出格式 */
   readonly output?: Exclude<OutputFormat, 'both'>;
 }
@@ -33,6 +44,7 @@ export const IMAGE_ACCEPT = 'image/*,.jpg,.jpeg,.png,.webp,.gif,.bmp,.avif,.svg'
 export const DOCX_ACCEPT =
   '.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 export const MARKDOWN_ACCEPT = `.md,.markdown,.txt,text/markdown,text/plain,${IMAGE_ACCEPT}`;
+const IMAGE_TOOL_EXTRA = ['.heic', '.heif', '.tif', '.tiff', '.ico'] as const;
 
 export const TOOLS: readonly Tool[] = [
   { id: 'pdf-to-word', slug: '', group: 'from-pdf', accept: PDF_ACCEPT, output: 'docx' },
@@ -53,6 +65,28 @@ export const TOOLS: readonly Tool[] = [
   { id: 'word-to-pdf', slug: 'word-to-pdf', group: 'to-pdf', accept: DOCX_ACCEPT },
   { id: 'markdown-to-pdf', slug: 'markdown-to-pdf', group: 'to-pdf', accept: MARKDOWN_ACCEPT },
   { id: 'images-to-pdf', slug: 'images-to-pdf', group: 'to-pdf', accept: IMAGE_ACCEPT },
+  // 图片工具排在最后：拖到 PDF 页面的图片和以前一样去「图片转 PDF」（平票按顺序取前面的）
+  {
+    id: 'compress-images',
+    slug: 'compress-images',
+    group: 'image',
+    accept: IMAGE_ACCEPT,
+    alsoAccepts: IMAGE_TOOL_EXTRA,
+  },
+  {
+    id: 'convert-images',
+    slug: 'convert-images',
+    group: 'image',
+    accept: IMAGE_ACCEPT,
+    alsoAccepts: IMAGE_TOOL_EXTRA,
+  },
+  {
+    id: 'resize-images',
+    slug: 'resize-images',
+    group: 'image',
+    accept: IMAGE_ACCEPT,
+    alsoAccepts: IMAGE_TOOL_EXTRA,
+  },
 ];
 
 export const HOME = TOOLS[0];
@@ -76,11 +110,15 @@ export function acceptsFile(tool: Tool, file: File): boolean {
       return true;
     }
   }
-  return false;
+  return tool.alsoAccepts?.includes(ext) ?? false;
 }
 
 export function isImageFile(file: File): boolean {
-  return acceptsFile(TOOLS[5], file);
+  return acceptsFile(toolById('images-to-pdf'), file);
+}
+
+export function isImageTool(id: ToolId): id is ImageToolId {
+  return id === 'compress-images' || id === 'convert-images' || id === 'resize-images';
 }
 
 export function isMarkdownFile(file: File): boolean {

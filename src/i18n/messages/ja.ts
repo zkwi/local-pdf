@@ -147,7 +147,7 @@ export const ja: Messages = {
   'compose.quality.lossless.hint':
     'すべての画像を可逆で埋め込みます。ファイルが大きくなることがあります。',
   'compose.quality.compact.hint':
-    'すべて JPEG にし、2000 px 以内に縮小します。ファイルが最も小さくなります。',
+    'すべて JPEG にし、約 400 万画素（2000×2000 相当）を超える画像は縦横比を保って縮小します。ファイルが最も小さくなります。',
   'compose.fileName': 'ファイル名',
   'compose.generate': 'PDF を作成',
   'compose.generating': '{total} 枚中 {done} 枚目を処理しています…',
@@ -471,4 +471,175 @@ export const ja: Messages = {
     '空欄なら全ページ。例：1-3, 5, 8- は 1〜3 ページ、5 ページ、8 ページ以降を指します。',
   'images.range.invalid': 'ページ範囲が無効です。1-3, 5, 8- のように修正してから変換してください。',
   'summary.pageRange': '{range} ページ',
+  'nav.imageTools': '画像ツール',
+  'nav.compress': '圧縮',
+  'nav.convert': '形式変換',
+  'nav.resize': 'サイズ変更',
+  'tool.compress-images.title': '画像を圧縮',
+  'tool.compress-images.lede':
+    'JPG・PNG・WebP をまとめて圧縮。PNG は透過を保ち、小さくならなければ元の画像のまま。指定サイズ以下にもでき、まとめて zip でダウンロードできます。',
+  'tool.convert-images.title': '画像の形式を変換',
+  'tool.convert-images.lede':
+    'PNG・JPG・WebP・GIF・BMP・AVIF・SVG をまとめて JPG・PNG・WebP に変換。透過は保つか、色で塗りつぶせます。',
+  'tool.resize-images.title': '画像サイズを変更',
+  'tool.resize-images.lede':
+    '長辺・幅・高さ・パーセントで縦横比を保ったまま縮小。指定サイズへの切り抜きや DPI の設定もまとめてできます。',
+  'drop.title.imageTools': '画像またはフォルダーをここにドロップ、またはクリックして選択',
+  'drop.hint.imageTools':
+    'JPG・PNG・WebP・GIF・BMP・AVIF・SVG に対応 · 何枚でもまとめて選べます · 画像はこのコンピューターから出ません',
+  'drop.folder': 'フォルダーを選択',
+  'drop.folder.long': 'フォルダーごと選ぶこともできます',
+  'compat.mobile.banner':
+    'スマートフォンのブラウザーはメモリが少なく、大きなファイルやスキャンの変換に失敗することがあります。できればパソコンでご利用ください。',
+  'compose.itemFailed':
+    '{index} 枚目の画像（{name}）を読み込めませんでした。削除するか PNG / JPG に変換してから再試行してください。',
+  'img.settings': '処理の設定',
+  'img.count.one': '1 枚の画像を選択中',
+  'img.count.other': '{count} 枚の画像を選択中',
+  'img.listHint':
+    '処理後にサムネイルをクリックすると元の画像と比較できます。設定を変えたら再処理が必要です。',
+  'img.output.label': '出力形式',
+  'img.output.keep': '元の形式',
+  'img.output.jpeg': 'JPG',
+  'img.output.png': 'PNG',
+  'img.output.webp': 'WebP',
+  'img.output.keep.hint':
+    '各画像の形式を保ちます。GIF・BMP・AVIF など書き戻せない形式は PNG か JPG で保存します。',
+  'img.output.jpeg.hint':
+    'JPG は小さくどこでも開けるので写真向き。透過は使えず、透明部分は背景色で塗りつぶします。',
+  'img.output.png.hint':
+    'PNG はスクリーンショットやアイコン、透過が必要な画像向き。可逆圧縮か減色圧縮です。',
+  'img.output.webp.hint':
+    'WebP は JPG・PNG より小さく、透過にも対応。一部の古いソフトでは開けません。',
+  'img.quality.label': '画質',
+  'img.quality.high': '高画質',
+  'img.quality.standard': '標準',
+  'img.quality.small': '最小',
+  'img.quality.high.hint': '高画質：JPG / WebP 品質 90、PNG は可逆。',
+  'img.quality.standard.hint':
+    '標準：JPG / WebP 品質 80 で見た目はほぼ変わりません。PNG は 256 色に減色。',
+  'img.quality.small.hint':
+    '最小：JPG / WebP 品質 65。PNG は 64 色に減色し、グラデーションが粗く見えることがあります。',
+  'img.quality.target':
+    'サイズ上限に収まる画質を自動で選び、足りなければ縦横比を保って縮小します（1 MB = 1024 KB）。',
+  'img.target.label': 'ファイルサイズ',
+  'img.target.toggle': '1 枚あたり最大',
+  'img.target.value': '1 枚あたりのサイズ上限（KB）',
+  'img.resize.label': '寸法',
+  'img.resize.none': '元のサイズ',
+  'img.resize.long': '長辺を指定',
+  'img.resize.width': '幅を指定',
+  'img.resize.height': '高さを指定',
+  'img.resize.percent': 'パーセント',
+  'img.resize.exact': '正確なサイズ',
+  'img.resize.none.hint': '元のピクセル数のままです。',
+  'img.resize.long.hint':
+    '横長・縦長どちらも長い辺に合わせて縦横比を保って縮小します。小さい画像は拡大しません。',
+  'img.resize.width.hint': '幅を指定値に縮め、高さは比率に従います。幅が狭い画像は拡大しません。',
+  'img.resize.height.hint':
+    '高さを指定値に縮め、幅は比率に従います。高さが低い画像は拡大しません。',
+  'img.resize.percent.hint': '幅と高さを同じ割合で縮小します。',
+  'img.resize.exactWidth': '幅（ピクセル）',
+  'img.resize.exactHeight': '高さ（ピクセル）',
+  'img.fit.cover': '切り抜いて埋める',
+  'img.fit.contain': '全体を収める',
+  'img.fit.cover.hint':
+    '縦横比を保ってこのサイズを覆うように拡大縮小し、はみ出た部分を中央基準で切り取ります。',
+  'img.fit.contain.hint':
+    '縦横比を保ってこのサイズに収め、余白は透明のままか背景色で塗りつぶします。',
+  'img.background.label': '透過',
+  'img.background.keep': '保持',
+  'img.background.fill': '塗りつぶし',
+  'img.background.keep.hint':
+    'PNG と WebP は透過を保ちます。JPG は透過を使えないため、透明部分は右の背景色になります。',
+  'img.background.fill.hint': 'すべての画像の透明部分を右の背景色で塗りつぶします。',
+  'img.background.color': '背景色',
+  'img.dpi.label': 'DPI',
+  'img.dpi.none': '設定しない',
+  'img.dpi.hint':
+    'DPI は印刷サイズの目印でピクセルは変わりません。JPG と PNG で有効、WebP は非対応です。',
+  'img.start.compress-images': '圧縮を開始',
+  'img.start.convert-images': '変換を開始',
+  'img.start.resize-images': 'サイズ変更を開始',
+  'img.startMore.one': '残りの 1 枚を処理',
+  'img.startMore.other': '残りの {count} 枚を処理',
+  'img.processing': '{total} 枚中 {done} 枚目を処理中…',
+  'img.status.ready': '未処理',
+  'img.status.queued': '待機中',
+  'img.status.processing': '処理中',
+  'img.status.kept': '元のまま',
+  'img.status.skipped': 'スキップ',
+  'img.status.failed': '失敗',
+  'img.note.format': '{format} で保存',
+  'img.note.alpha': '透明部分を塗りつぶしました',
+  'img.note.limited': '大きすぎるため {width} × {height} に縮小しました',
+  'img.note.shrunk': 'サイズ上限に収めるため {width} × {height} に縮小しました',
+  'img.note.missed': '{size} 以下にはできませんでした。可能な限り小さくした結果です',
+  'img.note.dpi': 'WebP には DPI を記録できません',
+  'img.note.palette': '{colors} 色に減色しました',
+  'img.note.larger': '元の画像より大きい',
+  'img.error.animated':
+    'アニメーション画像には未対応のためスキップしました（最初のフレームしか残らないため）',
+  'img.error.heic':
+    'このブラウザーは HEIC を読み込めません。Safari でこのページを開くか、iPhone の 設定 › カメラ › フォーマット で「互換性優先」を選んでください',
+  'img.error.decode':
+    'このブラウザーではこの {format} 画像を読み込めません。ファイルが壊れている可能性があります',
+  'img.error.memory':
+    'メモリ不足でこの画像を処理できませんでした。ほかのタブを閉じて再試行してください',
+  'img.error.encode': '画像を作成できませんでした',
+  'img.error.unknown': '処理に失敗しました：{detail}',
+  'img.compare': '比較',
+  'img.compare.open': '{name} の元の画像と結果を比較',
+  'img.compare.original': '元の画像',
+  'img.compare.result': '結果',
+  'img.compare.actual': '実寸',
+  'img.compare.close': '閉じる',
+  'img.compare.slider': '左右にドラッグして元の画像と結果を比較',
+  'img.compare.hint':
+    '仕切り線をドラッグ（または左右キー）して比較。「実寸」にチェックすると細部を確認できます。',
+  'img.download': 'ダウンロード',
+  'img.downloadAll': 'まとめてダウンロード（{count} 枚）',
+  'img.remove': '{name} を削除',
+  'img.summary.empty': 'まだ画像がありません',
+  'img.summary.done': '{count} 枚：{before} → {after}',
+  'img.saved': '{percent}% 削減',
+  'img.grew': '{percent}% 増加',
+  'features.shrink.title': '小さく、でも劣化させない',
+  'features.shrink.body':
+    'JPG・WebP は画質を調整し、PNG は透過を保ったまま減色。小さくならなければ元の画像を残し、指定サイズ以下にもできます。',
+  'features.batch.title': 'まとめて処理、まとめて保存',
+  'features.batch.body':
+    '数百枚やフォルダーごとドロップして形式・サイズ・画質をそろえ、元のフォルダー構成のまま 1 つの zip にします。',
+  'seo.how.image.1':
+    '画像やフォルダーごとページにドロップするか、Ctrl+V でスクリーンショットを貼り付けます。',
+  'seo.how.image.2':
+    '形式・画質・サイズを選んで開始します。デコード・縮小・圧縮はすべてブラウザー内で行われます。',
+  'seo.how.image.3':
+    'サムネイルをクリックして元の画像と比較し、1 枚ずつ、またはまとめて zip でダウンロードします。',
+  'seo.why.image':
+    '多くのオンライン画像圧縮ツールは画像をサーバーにアップロードします。Local PDF の画像ツールはブラウザー内で動くので、証明写真もスクリーンショットもカメラロールの写真もこのコンピューターから出ません。ネットワークパネルで確かめられます。',
+  'seo.faq.image.q1': '画像はアップロードされますか？',
+  'seo.faq.image.a1':
+    'いいえ。圧縮・変換・サイズ変更はすべてブラウザー内で行われます。アップロード先はなく、読み込み後はオフラインでも使えます。',
+  'seo.faq.image.q2': 'PNG の透過は保たれますか？',
+  'seo.faq.image.a2':
+    'はい。PNG と WebP で出力すれば透過は残ります。JPG は透過を持てないため、透明部分は選んだ背景色（既定は白）になります。すべての形式で透明部分を塗りつぶすこともできます。',
+  'seo.faq.image.q3': '「元のまま」と表示される画像があるのはなぜですか？',
+  'seo.faq.image.a3':
+    '再圧縮しても小さくならない場合（最適化済みの画像によくあります）は元のファイルをそのまま返すので、大きくなることはありません。さらに小さくしたいときは寸法や画質を下げるか、WebP / JPG で保存してください。',
+  'seo.faq.image.q4': '200 KB 以下など、指定したサイズに圧縮できますか？',
+  'seo.faq.image.a4':
+    'できます。「1 枚あたり最大」にチェックしてサイズを入力すると、収まる範囲で最も高い画質を自動で選び、それでも足りなければ縦横比を保って縮小します。',
+  'seo.faq.image.q5': '写真の向きや位置情報はどうなりますか？',
+  'seo.faq.image.a5':
+    '写真はまず撮影時の向きに合わせて回転されます。再エンコードした画像には EXIF が含まれないため、撮影場所やカメラの機種などの情報は削除されます。「元のまま」の画像だけはそのままです。',
+  'seo.faq.image.q6': 'HEIC やアニメーション画像には対応していますか？',
+  'seo.faq.image.a6':
+    'HEIC を読み込めるのは Safari だけです。iPhone では Web ページで写真を選ぶと通常 JPG に変換されます。アニメーション GIF・APNG・WebP は最初のフレームだけにならないようスキップします。',
+  'img.note.unchanged': '設定どおりのため元のまま',
+  'img.note.withinTarget': 'もともと {size} 以下のため元のまま',
+  'img.note.notSmaller': '再圧縮しても小さくならないため元のまま',
+  'img.note.svg':
+    'SVG を {width} × {height} でラスタライズしました。大きくしたい場合は「寸法」で指定できます',
+  'img.status.done': '完了',
 };

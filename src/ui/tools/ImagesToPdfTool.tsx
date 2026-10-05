@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DragEvent } from 'react';
 import { safeBaseName } from '../../core/util/filename.ts';
-import { imagesToPdf } from '../../core/pdfgen/images-to-pdf.ts';
+import { ImageItemError, imagesToPdf } from '../../core/pdfgen/images-to-pdf.ts';
 import type { ImagesToPdfOptions, Rotation } from '../../core/pdfgen/images-to-pdf.ts';
 import type { ImagePageSize, PageMargin, PageOrientation } from '../../core/pdfgen/page-layout.ts';
 import type { ImageQuality } from '../../core/pdfgen/raster.ts';
@@ -76,6 +76,8 @@ export function ImagesToPdfTool({ tool, active, onActivity }: ImagesToPdfToolPro
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** 读不出来的那张图：缩略图标红，方便找到后移除 */
+  const [failedId, setFailedId] = useState<string | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   const [dropAt, setDropAt] = useState<{ id: string; side: 'before' | 'after' } | null>(null);
   const controller = useRef<AbortController | null>(null);
@@ -87,6 +89,7 @@ export function ImagesToPdfTool({ tool, active, onActivity }: ImagesToPdfToolPro
       return null;
     });
     setError(null);
+    setFailedId(null);
   }, []);
 
   const addFiles = useCallback(
@@ -211,7 +214,14 @@ export function ImagesToPdfTool({ tool, active, onActivity }: ImagesToPdfToolPro
         pages: out.pages,
       });
     } catch (err) {
-      if (!abort.signal.aborted) setError(err instanceof Error ? err.message : String(err));
+      if (abort.signal.aborted) return;
+      if (err instanceof ImageItemError && items[err.index] !== undefined) {
+        const bad = items[err.index];
+        setFailedId(bad.id);
+        setError(t('compose.itemFailed', { index: err.index + 1, name: bad.file.name }));
+      } else {
+        setError(t('compose.failed', { detail: err instanceof Error ? err.message : String(err) }));
+      }
     } finally {
       controller.current = null;
       setProgress(null);
@@ -271,6 +281,7 @@ export function ImagesToPdfTool({ tool, active, onActivity }: ImagesToPdfToolPro
                   'thumb',
                   dragId === item.id ? 'thumb--dragging' : '',
                   dropAt?.id === item.id ? `thumb--${dropAt.side}` : '',
+                  failedId === item.id ? 'thumb--failed' : '',
                 ]
                   .filter(Boolean)
                   .join(' ');
@@ -468,7 +479,9 @@ export function ImagesToPdfTool({ tool, active, onActivity }: ImagesToPdfToolPro
       )}
       {error !== null && (
         <div className="composer__result">
-          <p className="composer__error">{t('compose.failed', { detail: error })}</p>
+          <p className="composer__error" role="alert">
+            {error}
+          </p>
         </div>
       )}
       {result !== null && (

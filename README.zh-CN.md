@@ -5,7 +5,7 @@
 <h1 align="center">Local PDF</h1>
 
 <p align="center">
-  <b>在浏览器里把 PDF 转成 Word、Markdown 和图片，也把 Word、Markdown 和图片转成 PDF。</b><br>
+  <b>在浏览器里把 PDF 转成 Word、Markdown 和图片，把 Word、Markdown 和图片转成 PDF，也能批量压缩、转换、缩放图片。</b><br>
   不上传 · 无需注册 · 免费开源
 </p>
 
@@ -27,7 +27,10 @@
   <a href="https://localpdfconverter.com/pdf-to-images?lang=zh-CN">PDF 转图片</a> ·
   <a href="https://localpdfconverter.com/word-to-pdf?lang=zh-CN">Word 转 PDF</a> ·
   <a href="https://localpdfconverter.com/markdown-to-pdf?lang=zh-CN">Markdown 转 PDF</a> ·
-  <a href="https://localpdfconverter.com/images-to-pdf?lang=zh-CN">图片转 PDF</a>
+  <a href="https://localpdfconverter.com/images-to-pdf?lang=zh-CN">图片转 PDF</a> ·
+  <a href="https://localpdfconverter.com/compress-images?lang=zh-CN">图片压缩</a> ·
+  <a href="https://localpdfconverter.com/convert-images?lang=zh-CN">图片格式转换</a> ·
+  <a href="https://localpdfconverter.com/resize-images?lang=zh-CN">调整图片尺寸</a>
 </p>
 
 ## 为什么选 Local PDF
@@ -36,7 +39,8 @@
 - **转出来的是真正的 Word，不是页面截图。** 段落、标题、列表、有线表格（含合并单元格）、图片、页眉页脚、页码域都会重建，可以接着编辑。
 - **扫描件直接可用。** 没有文字层的页面用 PaddleOCR（PP-OCRv6）在浏览器里逐页识别，支持中、英、日等 50 多种语言；微信里常见的"长图"PDF 也能处理。
 - **顺便给你 Markdown。** 同一份识别结果可以导出 Markdown，连图片和坐标、置信度清单一起打包。
-- **反过来也行。** Word、Markdown、图片在同一个页面里转成 PDF：浏览器负责排版，Local PDF 写出文字可选中的小体积矢量 PDF。六个工具各有自己的地址：`/`（PDF 转 Word）、`/pdf-to-markdown`、`/pdf-to-images`、`/word-to-pdf`、`/markdown-to-pdf`、`/images-to-pdf`。
+- **反过来也行。** Word、Markdown、图片在同一个页面里转成 PDF：浏览器负责排版，Local PDF 写出文字可选中的小体积矢量 PDF。
+- **图片工具同样不上传。** 照片、截图、整个文件夹都能批量压缩、转格式、改尺寸：PNG 保留透明，压不小就保留原图，结果按原目录打成一个 zip。九个工具各有自己的地址：`/`（PDF 转 Word）、`/pdf-to-markdown`、`/pdf-to-images`、`/word-to-pdf`、`/markdown-to-pdf`、`/images-to-pdf`、`/compress-images`、`/convert-images`、`/resize-images`。
 - **对质量说实话。** 每份文件附一份转换报告：逐页把握度、元素统计、提示，告诉你哪些页面该再看一眼。
 - **免安装、可离线。** 纯静态站，四种界面语言，模型第一次用后就缓存在本地。
 
@@ -51,7 +55,11 @@
 | PDF → 图片（PNG / JPEG）   | 每页一张图，也可以只转 `1-3, 5, 8-` 这样的页码范围；96 / 150 / 300 DPI 可选；多张打成 zip |
 | Word → PDF                 | .docx 在浏览器里排版后写成矢量 PDF：文字可选中，页眉页脚、自动编号、表格、图片都在；不嵌字体 |
 | Markdown → PDF             | GFM 表格、任务列表、代码块、引用；.md 引用的图片一起拖进来即可，也可以直接粘贴文本 |
-| 图片 → PDF                 | 拖动缩略图排序、旋转，可选纸张 / 页边距 / 图片质量；JPEG 原文件直接嵌入 |
+| 图片 → PDF                 | 拖动缩略图排序、旋转，可选纸张 / 页边距 / 图片质量；JPEG 原文件直接嵌入；支持 SVG |
+| 图片压缩                   | JPG / WebP 调画质，PNG 减色并保留透明；压不小就保留原图；可限制单张大小（如 200 KB） |
+| 图片格式转换               | PNG、JPG、WebP、GIF、BMP、AVIF、SVG 转 JPG / PNG / WebP；透明可保留或填色 |
+| 调整图片尺寸               | 按长边、宽、高或百分比等比缩小，或裁切 / 留边成精确尺寸；可写 DPI |
+| 文件夹与 zip               | 可拖入或选择整个文件夹；结果单张下载，或打成保留目录结构的 zip |
 | 多栏阅读顺序               | XY-Cut 版面切分，跨栏标题能正确处理                    |
 | 中英文混排                 | 中文之间不补空格，西文按字距补；行尾断词合并           |
 | 页眉页脚、页码             | 跨页检测；页码写成 Word 的 PAGE 域                     |
@@ -62,6 +70,9 @@
 
 明确**不做**的：完全没有线的表格（误判代价高于收益）、嵌入字体、可编辑公式、竖排文字（压平并给警告）、文字颜色。
 也不保证 Word 页数与 PDF 一致：每页强制分页，字体替换后溢出的内容会挤到下一页。
+
+图片工具不做：在 Safari 以外读取 HEIC（iPhone 在网页里选照片时一般会自动给 JPG）、输出 AVIF（浏览器没有 AVIF 编码器）、
+压缩动图（GIF / APNG / 动画 WebP 会跳过，不会压成只剩第一帧）。重新编码的图片不带 EXIF，拍摄地点、相机型号等信息会被去掉。
 
 原生 PDF 中的复杂矢量图表不能完整重建为 Word 或 Markdown。需要完整保留图表外观时，请使用「PDF 转图片」，可编辑结果仍需对照原文核对。
 
@@ -152,7 +163,8 @@ src/
 │  ├─ layout/       # 行、分栏、段落、表格、页眉页脚
 │  ├─ semantic/     # 版面结果 → 文档语义
 │  ├─ docx/ markdown/ ocr/ converter/
-├─ worker/          # Web Worker 与消息协议
+│  ├─ image/        # 图片工具：文件头识别、缩放规则、PNG 编码器、减色
+├─ worker/          # Web Worker（PDF 转换、图片处理）与消息协议
 ├─ i18n/            # 语言检测与四张文案表
 ├─ ui/ hooks/       # React 界面、能力探测
 scripts/            # 静态资源复制、模型下载

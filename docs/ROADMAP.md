@@ -53,6 +53,12 @@
 11. **PWA / 离线**
     模型已经进 Cache Storage 了，差的是 pdf.js 资源、ORT wasm 和应用本身的 Service Worker 缓存。
 
+12. **图片工具的后续格式**
+    - HEIC：Safari 以外要带 wasm 解码器（libheif，LGPL，约 1.5 MB），体积和许可都要再掂量；iPhone 在网页里选图时一般会自动给 JPG。
+    - AVIF 输出：浏览器画布不能编码 AVIF，要带 wasm 编码器，先看真实需求。
+    - 动图：现在整张跳过；要压缩就得自己逐帧解码、重编码 GIF / APNG / 动画 WebP。
+    - 保留拍摄时间：重新编码会去掉全部 EXIF；如果有需求，可以只把 DateTimeOriginal 拼回 JPEG。
+
 ## 明确不做
 
 - 把 BentoPDF / PDFCraft / pdf2docx 的代码搬进来（和自研版面引擎的路线冲突；见 ADR 001）
@@ -60,3 +66,4 @@
 - 为了"看起来完整"而输出低置信度的表格
 - 把 Markdown 当作 PDF→Word 的中间格式（它表达不了坐标、字体、合并单元格；两种输出都从 SemanticDocument 生成）
 - 保留第二个 OCR 引擎作对照（见 ADR 006）
+- 图片编辑：滤镜、水印、拉伸变形、逐张手动裁切（图片工具只做压缩、格式和尺寸）

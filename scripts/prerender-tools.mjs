@@ -22,6 +22,9 @@ export const TOOL_SLUGS = [
   'word-to-pdf',
   'markdown-to-pdf',
   'images-to-pdf',
+  'compress-images',
+  'convert-images',
+  'resize-images',
 ];
 
 export const LOCALES = ['en', 'zh-CN', 'zh-TW', 'ja'];

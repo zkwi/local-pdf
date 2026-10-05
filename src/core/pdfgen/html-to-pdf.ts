@@ -16,7 +16,7 @@ import {
   replaceUnsupportedCharacters,
 } from './fonts.ts';
 import type { CjkFont, FontFamilyClass } from './fonts.ts';
-import { isJpeg, parseJpeg } from './jpeg.ts';
+import { isJpeg, parseJpeg } from '../image/jpeg.ts';
 import { PX_TO_PT } from './page-layout.ts';
 import { encodeDrawable } from './raster.ts';
 import { isLocalImageSource, unsupportedImageFormat, waitForResource } from './resources.ts';

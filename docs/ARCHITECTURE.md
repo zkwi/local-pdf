@@ -43,7 +43,8 @@ core/markdown    ← contracts (+ 动态 import unified/remark、fflate)
 core/pdfgen      ← fflate、docx-preview、remark；转成 PDF：自写的 PDF 写入器 + 浏览器排版后的 DOM 坐标抽取（主线程，需要 DOM）
 core/ocr         ← contracts + geometry + util (+ 动态 import @paddleocr/paddleocr-js)
 core/converter   ← 以上全部，负责编排
-worker/          ← converter
+core/image       ← fflate；图片工具：文件头识别、缩放规则、PNG 编码与减色（svg.ts 要用 DOM，只在主线程调用）
+worker/          ← converter；image.worker 只依赖 core/image
 i18n/            ← contracts（把 code / key + params 变成当前语言的文案）
 ui/ hooks/       ← contracts + worker 协议 + i18n（不直接调 converter）
 ```
@@ -140,3 +141,22 @@ OCR 是例外：PaddleOCR.js 的直连模式依赖 `document`，只能用它的 
 
 `AbortController` 在主线程创建 → Worker 里按 jobId 存 controller → 转换流水线在每页
 边界检查 `signal.aborted`，抛 `CancelledError`。取消后不会再发 `done` 事件。
+
+## 图片工具
+
+压缩、格式转换、改尺寸是同一条流水线（`core/image/compress.ts`），跑在单独的图片 Worker 里，三个工具页共用，
+一次只处理一张，内存里同时只有一张大图：
+
+```text
+文件头识别（格式、尺寸、动图） → createImageBitmap 解码并按 EXIF 摆正 → 等比缩放 / 裁切 / 留边
+  → 判断透明 → 定输出格式 → 必要时铺底色 → 编码（可按目标大小二分画质、再缩尺寸） → 不变大保护
+```
+
+- **PNG 自己编码。** 画布的 `convertToBlob('image/png')` 为速度压得很松，优化过的截图重存一遍会大 80% 以上。
+  `png.ts` 按内容选颜色类型（灰度、1～8 位调色板、RGB、RGBA），逐行选滤波器，用 fflate 最高级别压缩；
+  `quantize.ts` 在 RGB 5 位 + 不透明度 4 位的桶上做中位切分和 k-means，再带抖动映射回像素，相当于浏览器里的 pngquant。
+- **透明默认保留。** 只有输出 JPEG（没有透明）或用户选了「填充」时才在底下垫底色；透明图不会被自动判断改成 JPEG。
+- **不变大保护。** 格式和尺寸都没要求改、结果又不比原图小，就给原文件。转换和改尺寸遇到本来就符合设置的图直接原样保留，不白白重新编码。
+- **SVG** 交给 `<img>` 在主线程按最终尺寸栅格化（createImageBitmap 解不了 SVG），再进 Worker；图片转 PDF 也走同一个函数。
+- **取消**直接 terminate 图片 Worker，下一张需要时再起一个；Worker 崩溃（多半是内存）只算当前这张失败。
+- 手机浏览器单张按约 1600 万像素的上限解码和输出，避开 iOS 的画布面积限制。

@@ -8,7 +8,8 @@ import { Logo } from './Logo.tsx';
 
 const ACK_KEY = 'local-pdf.mobile-ack';
 
-function readAck(): boolean {
+/** 本次会话里是否点过「仍要在手机上试试」 */
+export function readMobileAck(): boolean {
   try {
     return sessionStorage.getItem(ACK_KEY) === '1';
   } catch {
@@ -18,6 +19,11 @@ function readAck(): boolean {
 
 interface CompatGateProps {
   readonly caps: Capabilities;
+  /**
+   * 从图片工具进来的手机用户不拦：压缩照片正是手机上的常见用途，也用不到 OCR 和大文档解析。
+   * 之后切到 PDF 工具时页面上会有一条提示代替整页说明。
+   */
+  readonly bypassMobile?: boolean;
   readonly children: ReactNode;
 }
 
@@ -25,9 +31,9 @@ interface CompatGateProps {
  * 不满足硬性要求：整页提示，不渲染应用。
  * 手机：先给一页说明，用户点"仍要继续"才放行（本会话记住）。
  */
-export function CompatGate({ caps, children }: CompatGateProps) {
+export function CompatGate({ caps, bypassMobile = false, children }: CompatGateProps) {
   const { t } = useI18n();
-  const [ack, setAck] = useState(readAck);
+  const [ack, setAck] = useState(() => readMobileAck() || bypassMobile);
   const [copied, setCopied] = useState(false);
 
   if (!isSupported(caps)) {

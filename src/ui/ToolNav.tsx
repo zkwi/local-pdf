@@ -5,18 +5,30 @@ import { toolHref } from './router.ts';
 import { TOOLS } from './tools.ts';
 import type { Tool, ToolActivity, ToolGroup, ToolId } from './tools.ts';
 
-type Kind = 'word' | 'markdown' | 'images';
+type Kind = 'word' | 'markdown' | 'images' | 'compress' | 'convert' | 'resize';
 
-function kindOf(tool: Tool): Kind {
-  if (tool.id.includes('word')) return 'word';
-  if (tool.id.includes('markdown')) return 'markdown';
-  return 'images';
-}
+const KIND: Record<ToolId, Kind> = {
+  'pdf-to-word': 'word',
+  'pdf-to-markdown': 'markdown',
+  'pdf-to-images': 'images',
+  'word-to-pdf': 'word',
+  'markdown-to-pdf': 'markdown',
+  'images-to-pdf': 'images',
+  'compress-images': 'compress',
+  'convert-images': 'convert',
+  'resize-images': 'resize',
+};
 
-const GROUPS: readonly ToolGroup[] = ['from-pdf', 'to-pdf'];
+const GROUPS: readonly ToolGroup[] = ['from-pdf', 'to-pdf', 'image'];
+
+const GROUP_LABEL: Record<ToolGroup, MessageKey> = {
+  'from-pdf': 'nav.fromPdf',
+  'to-pdf': 'nav.toPdf',
+  image: 'nav.imageTools',
+};
 
 /**
- * 六个工具分两组摆在顶栏下面：左边"从 PDF 转出"，右边"转成 PDF"，每组三个。
+ * 九个工具分三组摆在顶栏下面："从 PDF 转出"、"转成 PDF"、"图片工具"，每组三个。
  * 是真正的链接（有 href，能中键打开），普通点击走站内切换不刷新页面。
  */
 export function ToolNav({
@@ -39,13 +51,11 @@ export function ToolNav({
     <nav className="toolnav" aria-label={t('nav.label')}>
       {GROUPS.map((group) => (
         <div className="toolnav__group" key={group}>
-          <span className="toolnav__label">
-            {t(group === 'from-pdf' ? 'nav.fromPdf' : 'nav.toPdf')}
-          </span>
+          <span className="toolnav__label">{t(GROUP_LABEL[group])}</span>
           <ul className="toolnav__list">
             {TOOLS.filter((tool) => tool.group === group).map((tool) => {
               const on = tool.id === active.id;
-              const kind = kindOf(tool);
+              const kind = KIND[tool.id];
               const state = activity[tool.id];
               const toolTitle = t(`tool.${tool.id}.title` as MessageKey);
               const accessibleTitle =
@@ -105,6 +115,25 @@ const ICONS: Record<Kind, ReactElement> = {
       <rect x="3" y="4" width="18" height="16" rx="2" />
       <circle cx="8.5" cy="9.5" r="1.5" />
       <path d="m21 16-5-5-8 8" />
+    </svg>
+  ),
+  // 四角向里收：压缩
+  compress: (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 9h5V4M20 9h-5V4M4 15h5v5M20 15h-5v5" />
+    </svg>
+  ),
+  // 两个方向的箭头：转换格式
+  convert: (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 8h13m0 0-3.5-3.5M17 8l-3.5 3.5M20 16H7m0 0 3.5-3.5M7 16l3.5 3.5" />
+    </svg>
+  ),
+  // 带对角拉伸箭头的框：改尺寸
+  resize: (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="3" y="11" width="10" height="10" rx="1.5" />
+      <path d="M13 3h8v8M21 3l-7.5 7.5" />
     </svg>
   ),
 };

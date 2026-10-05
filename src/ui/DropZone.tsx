@@ -1,8 +1,8 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useI18n } from '../i18n/index.tsx';
 import type { MessageKey } from '../i18n/index.tsx';
 
-export type DropKind = 'pdf' | 'word' | 'markdown' | 'images';
+export type DropKind = 'pdf' | 'word' | 'markdown' | 'images' | 'image-tools';
 
 interface DropZoneProps {
   readonly onFiles: (files: readonly File[]) => void;
@@ -15,6 +15,8 @@ interface DropZoneProps {
   readonly kind?: DropKind;
   /** 文件选择框的 accept */
   readonly accept?: string;
+  /** 另给一个「选择文件夹」入口（图片工具用；手机上不显示） */
+  readonly folder?: boolean;
 }
 
 export interface SplitFiles {
@@ -74,6 +76,14 @@ const LABELS: Record<DropKind, Labels> = {
     sample: 'drop.sample',
     paste: false,
   },
+  'image-tools': {
+    title: 'drop.title.imageTools',
+    hint: 'drop.hint.imageTools',
+    choose: 'drop.choose.images',
+    more: 'drop.more.images',
+    sample: 'drop.sample',
+    paste: true,
+  },
 };
 
 /**
@@ -87,19 +97,27 @@ export function DropZone({
   disabled = false,
   kind = 'pdf',
   accept = 'application/pdf,.pdf',
+  folder = false,
 }: DropZoneProps) {
   const { t } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
+  const folderRef = useRef<HTMLInputElement>(null);
   const labels = LABELS[kind];
 
   const open = useCallback(() => {
     if (!disabled) inputRef.current?.click();
   }, [disabled]);
 
+  // React 不认识 webkitdirectory 属性，挂载后直接设到元素上
+  useEffect(() => {
+    if (folderRef.current !== null) folderRef.current.webkitdirectory = true;
+  }, [folder]);
+
   const className = [
     'dropzone',
     compact ? 'dropzone--compact' : '',
-    !compact && onSample !== undefined ? 'dropzone--with-sample' : '',
+    !compact && (onSample !== undefined || folder) ? 'dropzone--with-sample' : '',
+    compact && folder ? 'dropzone--with-folder' : '',
     disabled ? 'dropzone--disabled' : '',
   ]
     .filter(Boolean)
@@ -155,6 +173,30 @@ export function DropZone({
         <button type="button" className="link dropzone__sample" onClick={onSample}>
           {t(labels.sample)}
         </button>
+      )}
+      {folder && (
+        <button
+          type="button"
+          className={`link ${compact ? 'dropzone__folder' : 'dropzone__sample'}`}
+          disabled={disabled}
+          onClick={() => folderRef.current?.click()}
+        >
+          {t(compact ? 'drop.folder' : 'drop.folder.long')}
+        </button>
+      )}
+      {folder && (
+        <input
+          ref={folderRef}
+          className="visually-hidden"
+          type="file"
+          multiple
+          tabIndex={-1}
+          aria-hidden="true"
+          onChange={(e) => {
+            onFiles([...(e.target.files ?? [])]);
+            e.target.value = '';
+          }}
+        />
       )}
       <input
         ref={inputRef}

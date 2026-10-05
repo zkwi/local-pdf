@@ -27,6 +27,17 @@ export interface ImagesToPdfResult {
   readonly pages: number;
 }
 
+/** 某一张图读不出来：带上它在列表里的位置，界面能指出是哪张 */
+export class ImageItemError extends Error {
+  constructor(
+    readonly index: number,
+    cause: unknown,
+  ) {
+    super(cause instanceof Error ? cause.message : String(cause));
+    this.name = 'ImageItemError';
+  }
+}
+
 /** 一张图一页，按列表顺序。旋转不动像素，画的时候转矩阵。 */
 export async function imagesToPdf(
   items: readonly ImageItem[],
@@ -39,12 +50,20 @@ export async function imagesToPdf(
     hooks.signal?.throwIfAborted();
     hooks.onProgress?.(i, items.length);
     const item = items[i];
-    const decoded = await encodeImageFile(item.file, options.quality, hooks.signal);
+    let decoded;
+    try {
+      decoded = await encodeImageFile(item.file, options.quality, hooks.signal);
+    } catch (error) {
+      if (hooks.signal?.aborted) throw error;
+      throw new ImageItemError(i, error);
+    }
     const rotation = ((decoded.rotation + item.rotation) % 360) as Rotation;
     const sideways = rotation === 90 || rotation === 270;
     // 显示尺寸：转 90/270 后宽高对调
-    const shownWidth = (sideways ? decoded.source.height : decoded.source.width) * PX_TO_PT;
-    const shownHeight = (sideways ? decoded.source.width : decoded.source.height) * PX_TO_PT;
+    const baseWidth = decoded.displayWidth ?? decoded.source.width;
+    const baseHeight = decoded.displayHeight ?? decoded.source.height;
+    const shownWidth = (sideways ? baseHeight : baseWidth) * PX_TO_PT;
+    const shownHeight = (sideways ? baseWidth : baseHeight) * PX_TO_PT;
     const placed = placeImage(shownWidth, shownHeight, options);
     const name = doc.addImage(`img-${i}`, decoded.source);
     const content = new ContentStream();

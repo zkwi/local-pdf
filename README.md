@@ -5,7 +5,7 @@
 <h1 align="center">Local PDF</h1>
 
 <p align="center">
-  <b>Convert PDF to Word, Markdown and images, and Word, Markdown and images to PDF, entirely in your browser.</b><br>
+  <b>Convert PDF to Word, Markdown and images, Word, Markdown and images to PDF, and compress, convert or resize images, entirely in your browser.</b><br>
   Nothing uploaded · No sign-up · Free &amp; open source
 </p>
 
@@ -27,7 +27,10 @@
   <a href="https://localpdfconverter.com/pdf-to-images">PDF to Images</a> ·
   <a href="https://localpdfconverter.com/word-to-pdf">Word to PDF</a> ·
   <a href="https://localpdfconverter.com/markdown-to-pdf">Markdown to PDF</a> ·
-  <a href="https://localpdfconverter.com/images-to-pdf">Images to PDF</a>
+  <a href="https://localpdfconverter.com/images-to-pdf">Images to PDF</a> ·
+  <a href="https://localpdfconverter.com/compress-images">Compress images</a> ·
+  <a href="https://localpdfconverter.com/convert-images">Convert images</a> ·
+  <a href="https://localpdfconverter.com/resize-images">Resize images</a>
 </p>
 
 ## Why Local PDF
@@ -42,8 +45,12 @@
 - **Markdown as well.** The same recognition result can be exported as Markdown, zipped with images and a
   manifest of coordinates and confidence.
 - **The other direction too.** Word, Markdown and images become PDFs in the same tab: the browser lays the
-  document out, Local PDF writes a small vector PDF with selectable text. Six tools, each with its own URL:
-  `/` (PDF → Word), `/pdf-to-markdown`, `/pdf-to-images`, `/word-to-pdf`, `/markdown-to-pdf`, `/images-to-pdf`.
+  document out, Local PDF writes a small vector PDF with selectable text.
+- **Image tools that never upload.** Compress, convert and resize photos, screenshots and whole folders in
+  bulk: PNG keeps its transparency, nothing ever comes out larger than it went in, and results download as
+  one zip that mirrors your folders. Nine tools, each with its own URL: `/` (PDF → Word), `/pdf-to-markdown`,
+  `/pdf-to-images`, `/word-to-pdf`, `/markdown-to-pdf`, `/images-to-pdf`, `/compress-images`,
+  `/convert-images`, `/resize-images`.
 - **Honest about quality.** Every file comes with a conversion report: confidence per page, element counts,
   and warnings that tell you which pages deserve a second look.
 - **No install, works offline.** Static site, four interface languages, model files cached after first use.
@@ -59,7 +66,11 @@
 | PDF → Images (PNG / JPEG)            | Every page, or a page range such as `1-3, 5, 8-`, rendered at 96, 150 or 300 DPI; zipped when there is more than one |
 | Word → PDF                           | The .docx is laid out in the browser and written as a vector PDF: selectable text, headers/footers, numbering, tables, images; no embedded fonts |
 | Markdown → PDF                       | GFM tables, task lists, code blocks, quotes; drop the referenced images alongside the .md, or paste text |
-| Images → PDF                         | Drag thumbnails to reorder, rotate, pick paper / margins / quality; JPEG originals embedded as-is  |
+| Images → PDF                         | Drag thumbnails to reorder, rotate, pick paper / margins / quality; JPEG originals embedded as-is; SVG supported  |
+| Compress images                      | JPG / WebP by quality, PNG by colour reduction with transparency kept; never larger than the original; optional size limit such as 200 KB |
+| Convert images                       | PNG, JPG, WebP, GIF, BMP, AVIF and SVG to JPG, PNG or WebP; transparency kept or filled with a colour |
+| Resize images                        | Long side, width, height or percentage without distortion, or crop / fit to an exact size; optional DPI tag |
+| Folders and zip                      | Drop or pick a whole folder; results download one by one or as a zip that keeps the folder structure |
 | Multi-column reading order           | XY-cut page segmentation, cross-column headings handled                     |
 | CJK-aware text joining               | No stray spaces between Chinese characters; hyphenated Latin words rejoined |
 | Headers, footers, page numbers       | Detected across pages; page numbers become a Word `PAGE` field              |
@@ -72,6 +83,10 @@ What it deliberately does **not** do: tables with no ruling lines at all (misdet
 font embedding, editable formulas, vertical text (flattened with a warning), text colour.
 Page counts are not preserved either: every PDF page ends with a page break, so text that overflows after font
 substitution spills onto an extra page.
+
+The image tools do not read HEIC outside Safari (iPhones usually hand web pages a JPG anyway), cannot write
+AVIF (browsers have no AVIF encoder), and skip animated GIF / APNG / WebP instead of flattening them to one frame.
+Re-encoded images carry no EXIF, so the GPS location and camera details are removed.
 
 Complex vector charts in native PDFs are not fully reconstructed in Word or Markdown. Use PDF to images
 when the complete chart appearance matters, and check editable output against the original.
@@ -177,7 +192,8 @@ src/
 │  ├─ layout/       # lines, columns, paragraphs, tables, headers/footers
 │  ├─ semantic/     # layout → document semantics
 │  ├─ docx/ markdown/ ocr/ converter/
-├─ worker/          # Web Worker and message protocol
+│  ├─ image/        # image tools: header sniffing, resize rules, PNG encoder, colour quantiser
+├─ worker/          # Web Workers (PDF conversion, image processing) and message protocols
 ├─ i18n/            # locale detection and the four message tables
 ├─ ui/ hooks/       # React UI, capability detection
 scripts/            # asset copying, model download

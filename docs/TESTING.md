@@ -31,6 +31,13 @@ playwright-cli run-code --filename tests/browser/document-safety.js
 
 使用命名浏览器会话时，命令带上相同的 `-s=会话名`。脚本检查远程图片、srcset、CSS、iframe、页面跳转、合并单元格、罕见字符占位，以及解码等待取消后的后续转换和 iframe 清理。它不需要新增测试框架或私有样本。
 
+`tests/browser/image-tools.js` 用同样方式运行，用画布现做的合成图片检查压缩、按目标大小、等比缩放、JPEG 铺底色、PNG 减色、
+透明留边、SVG 转 PDF，再在图片压缩页走一遍拖入、处理、对比和打包下载。
+
+```bash
+playwright-cli run-code --filename tests/browser/image-tools.js
+```
+
 `tests/browser/document-pagination.js` 使用同样的运行方式，验证文本框内的页码域、普通域的保留、240 页文档逐页文字归属、中文半角空格、宽表格，以及旧式 Word 图片的保留和 EMF 提示。修改转换模块后先刷新开发页面再执行，避免直接动态导入仍命中旧模块缓存。
 
 ```bash
@@ -50,7 +57,8 @@ playwright-cli run-code --filename tests/browser/document-pagination.js
 | PDF → 图片 | 页码范围、PNG/JPEG、多页 zip |
 | Word → PDF | 标题、段落、表格、图片、分页 |
 | Markdown → PDF | GFM 表格、任务项、代码块、内联编辑器 |
-| 图片 → PDF | 多图排序、旋转、纸张与边距、下载 |
+| 图片 → PDF | 多图排序、旋转、纸张与边距、SVG、读不出的图能指出是哪张、下载 |
+| 图片压缩 / 转换 / 改尺寸 | 批量拖入和文件夹、透明 PNG（保留 / 转 JPG 铺底色）、按目标大小、各缩放模式、DPI、SVG、动图跳过、坏图和 HEIC 提示、对比、取消、zip 目录结构 |
 | 反馈入口 | 失败任务卡的「反馈这个问题」、报告底部的「结果不对？去反馈」打开的 Issue 表单已预填环境和诊断信息，且不含文件名 |
 | 工具页直达 | 直接打开 `/word-to-pdf` 等地址时标题、描述是该工具的；不存在的地址返回 404 状态但页面仍能用 |
 

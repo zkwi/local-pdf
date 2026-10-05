@@ -83,3 +83,55 @@ function readExifOrientation(bytes: Uint8Array, start: number, end: number): num
   }
   return null;
 }
+
+/**
+ * 写 JPEG 的 DPI：改 JFIF（APP0）里的密度单位和数值；没有 JFIF 段就在 SOI 后面插一个。
+ * 只改头部几个字节，图像数据不动。不是 JPEG 时原样返回。
+ */
+export function setJpegDpi(bytes: Uint8Array, dpi: number): Uint8Array {
+  if (!isJpeg(bytes)) return bytes;
+  const value = Math.max(1, Math.min(65535, Math.round(dpi)));
+  const isJfif =
+    bytes.length > 18 &&
+    bytes[2] === 0xff &&
+    bytes[3] === 0xe0 &&
+    bytes[6] === 0x4a &&
+    bytes[7] === 0x46 &&
+    bytes[8] === 0x49 &&
+    bytes[9] === 0x46 &&
+    bytes[10] === 0;
+  if (isJfif) {
+    const out = new Uint8Array(bytes);
+    out[13] = 1;
+    out[14] = value >> 8;
+    out[15] = value & 0xff;
+    out[16] = value >> 8;
+    out[17] = value & 0xff;
+    return out;
+  }
+  const app0 = new Uint8Array([
+    0xff,
+    0xe0,
+    0x00,
+    0x10,
+    0x4a,
+    0x46,
+    0x49,
+    0x46,
+    0x00,
+    0x01,
+    0x01,
+    0x01,
+    value >> 8,
+    value & 0xff,
+    value >> 8,
+    value & 0xff,
+    0x00,
+    0x00,
+  ]);
+  const out = new Uint8Array(bytes.length + app0.length);
+  out.set(bytes.subarray(0, 2), 0);
+  out.set(app0, 2);
+  out.set(bytes.subarray(2), 2 + app0.length);
+  return out;
+}

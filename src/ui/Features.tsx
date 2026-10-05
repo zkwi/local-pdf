@@ -3,12 +3,13 @@ import { useI18n } from '../i18n/index.tsx';
 import type { MessageKey } from '../i18n/index.tsx';
 import type { ToolGroup } from './tools.ts';
 
-type Item = 'local' | 'editable' | 'ocr' | 'free' | 'vector' | 'compose';
+type Item = 'local' | 'editable' | 'ocr' | 'free' | 'vector' | 'compose' | 'shrink' | 'batch';
 
-/** 两个方向各自的四张卖点卡：本地和免费共用，中间两张按方向换 */
+/** 每组四张卖点卡：本地和免费共用，中间两张按工具组换 */
 const ITEMS: Record<ToolGroup, readonly Item[]> = {
   'from-pdf': ['local', 'editable', 'ocr', 'free'],
   'to-pdf': ['local', 'vector', 'compose', 'free'],
+  image: ['local', 'shrink', 'batch', 'free'],
 };
 
 /**
@@ -72,6 +73,20 @@ const ICONS: Record<Item, ReactElement> = {
       <rect x="3" y="4" width="18" height="16" rx="2" />
       <path d="M7 9h10M7 13h6" />
       <path d="M15 15v5M13 17.5h4" />
+    </svg>
+  ),
+  shrink: (
+    <svg viewBox="0 0 24 24">
+      <rect x="3" y="3" width="18" height="18" rx="2.5" />
+      <path d="M9 9h6v6H9z" />
+      <path d="M3 3l6 6M21 3l-6 6M3 21l6-6M21 21l-6-6" />
+    </svg>
+  ),
+  batch: (
+    <svg viewBox="0 0 24 24">
+      <rect x="7" y="3" width="14" height="14" rx="2" />
+      <path d="M3 7v12a2 2 0 0 0 2 2h12" />
+      <path d="M11 10h6M14 7v6" />
     </svg>
   ),
   compose: (

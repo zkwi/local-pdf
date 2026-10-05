@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { acceptsFile, routeTool, toolById } from '../src/ui/tools.ts';
+import { acceptsFile, isImageFile, routeTool, toolById } from '../src/ui/tools.ts';
 
 const file = (name: string, type = ''): File => new File(['x'], name, { type });
 
@@ -28,6 +28,15 @@ describe('拖错页面时的分流', () => {
     expect(
       routeTool([file('notes.md'), file('x.png', 'image/png'), file('y.png', 'image/png')])?.id,
     ).toBe('markdown-to-pdf');
+  });
+
+  it('图片工具排在后面：拖到 PDF 页的图片仍去图片转 PDF；只有 HEIC 这类它收不下的才去图片压缩', () => {
+    expect(routeTool([file('a.png', 'image/png')])?.id).toBe('images-to-pdf');
+    expect(routeTool([file('IMG_0001.HEIC')])?.id).toBe('compress-images');
+    expect(acceptsFile(toolById('convert-images'), file('scan.tif'))).toBe(true);
+    expect(acceptsFile(toolById('resize-images'), file('icon.svg', 'image/svg+xml'))).toBe(true);
+    expect(acceptsFile(toolById('compress-images'), file('a.pdf'))).toBe(false);
+    expect(isImageFile(file('IMG_0001.HEIC'))).toBe(false);
   });
 
   it('谁都收不下就返回 null', () => {

@@ -15,12 +15,16 @@ const SITE_URL = 'https://localpdfconverter.com/';
  */
 export function SeoContent({ group }: { readonly group: ToolGroup }) {
   const { t, locale } = useI18n();
+  // 图片工具有自己的一套问答；PDF 两个方向共用一套
+  const faqPrefix = group === 'image' ? 'seo.faq.image.' : 'seo.faq.';
   const faq = Array.from({ length: FAQ_COUNT }, (_, i) => ({
-    q: t(`seo.faq.q${i + 1}` as MessageKey),
-    a: t(`seo.faq.a${i + 1}` as MessageKey),
+    q: t(`${faqPrefix}q${i + 1}` as MessageKey),
+    a: t(`${faqPrefix}a${i + 1}` as MessageKey),
   }));
-  // 三步说明按方向分两套：转成 PDF 的页面不该再说"把 PDF 拖进来"
-  const prefix = group === 'to-pdf' ? 'seo.how.topdf' : 'seo.how';
+  // 三步说明按工具组分三套：转成 PDF 的页面不该再说"把 PDF 拖进来"
+  const prefix = { 'from-pdf': 'seo.how', 'to-pdf': 'seo.how.topdf', image: 'seo.how.image' }[
+    group
+  ];
   const steps = Array.from({ length: STEP_COUNT }, (_, i) => t(`${prefix}.${i + 1}` as MessageKey));
 
   const jsonLd = {
@@ -70,7 +74,7 @@ export function SeoContent({ group }: { readonly group: ToolGroup }) {
 
       <section className="seo seo--why">
         <h2>{t('seo.why.title')}</h2>
-        <p>{t('seo.why.body')}</p>
+        <p>{t(group === 'image' ? 'seo.why.image' : 'seo.why.body')}</p>
       </section>
 
       <section className="seo seo--faq">

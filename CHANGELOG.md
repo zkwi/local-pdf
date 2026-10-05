@@ -5,6 +5,53 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-10-05
+
+### Added
+
+- Three image tools in a new "Image tools" group: **Compress images** (`/compress-images`), **Convert
+  images** (`/convert-images`) and **Resize images** (`/resize-images`). They share one pipeline that runs in
+  its own worker, never uploads anything, and differ only in their default settings and the order of the
+  options.
+- Batch input from the file picker, drag and drop, paste, or a whole folder (dropped or picked); a dropped
+  folder also expands into its files on every other tool. Results download one by one or as a zip that
+  keeps the folder structure.
+- Output as the original format, JPG, PNG or WebP (WebP only where the browser can encode it). GIF, BMP,
+  AVIF and SVG, which cannot be written back, become PNG or JPG depending on transparency and content.
+- Transparency is kept for PNG and WebP. JPG output, or the "Fill" option, puts a chosen background colour
+  underneath instead of turning transparent areas black.
+- Quality presets that map to JPG / WebP quality and to PNG colour reduction: a built-in PNG encoder picks
+  the smallest colour type, filters every row and compresses with fflate, and a median-cut quantiser with
+  dithering reduces PNGs to 256 or 64 colours while keeping transparency.
+- A per-image size limit (for example 200 KB): the highest quality that fits is found by bisection, then the
+  image is scaled down proportionally if needed.
+- Proportional resizing by long side, width, height or percentage (never enlarging photos; SVGs scale up
+  sharply), exact sizes by centre crop or by fitting with margins, and optional DPI tags for JPG and PNG.
+- Nothing ever comes out larger than it went in: when re-encoding does not help, the original file is kept.
+  Convert and Resize keep images that already match the settings untouched instead of re-encoding them.
+- A before/after comparison with a draggable divider and an actual-pixels mode, per-image notes (colour
+  reduction, filled transparency, resized to meet the limit), cancel and retry.
+- Each image tool shows its three most relevant settings; the rest sit under "More options", which opens by
+  itself when one of the hidden settings has been changed.
+- Formats the image worker cannot decode but the browser can display (such as HEIC and TIFF in Safari) are
+  decoded through an image element instead of failing.
+- Phone users who open an image tool go straight to it; the "use a computer" page is replaced by a banner
+  on the PDF tools for them.
+
+### Changed
+
+- "Download all" on every tool now builds the zip from the existing results without copying them, so large
+  batches no longer need twice their size in memory.
+- Disabled buttons look disabled.
+
+### Fixed
+
+- Images to PDF accepted SVG files but failed the whole PDF in Chromium-based browsers. SVGs are now
+  rendered sharply at their own size, and an unreadable image is named and highlighted instead of failing
+  with a generic error.
+- The "Compact" image quality in Images to PDF described a 2000 px limit while it actually limits images to
+  about 4 megapixels (which keeps long screenshots readable); the description now matches.
+
 ## [0.7.1] — 2026-09-06
 
 ### Fixed

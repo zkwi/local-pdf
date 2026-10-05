@@ -6,8 +6,9 @@ import { useI18n } from './i18n/index.tsx';
 import type { MessageKey } from './i18n/index.tsx';
 import { SITE } from './site.ts';
 import { probeCapabilities } from './ui/capabilities.ts';
-import { CompatGate } from './ui/CompatGate.tsx';
+import { CompatGate, readMobileAck } from './ui/CompatGate.tsx';
 import { Features } from './ui/Features.tsx';
+import { droppedFiles } from './ui/files.ts';
 import { LanguageSelect } from './ui/LanguageSelect.tsx';
 import { Logo } from './ui/Logo.tsx';
 import { useTool } from './ui/router.ts';
@@ -15,9 +16,10 @@ import { SeoContent } from './ui/SeoContent.tsx';
 import { ShellContext } from './ui/shell.tsx';
 import type { FileSink, Shell } from './ui/shell.tsx';
 import { ToolNav } from './ui/ToolNav.tsx';
-import { acceptsFile, routeTool, TOOLS } from './ui/tools.ts';
-import type { ToolActivity, ToolId } from './ui/tools.ts';
+import { acceptsFile, isImageTool, routeTool, TOOLS } from './ui/tools.ts';
+import type { ImageToolId, Tool, ToolActivity, ToolId } from './ui/tools.ts';
 import { DocToPdfTool } from './ui/tools/DocToPdfTool.tsx';
+import { ImageTool } from './ui/tools/ImageTool.tsx';
 import { ImagesToPdfTool } from './ui/tools/ImagesToPdfTool.tsx';
 import { PdfConvertTool } from './ui/tools/PdfConvertTool.tsx';
 
@@ -40,9 +42,11 @@ interface Pending {
   readonly text?: string;
 }
 
+const IDLE: ToolActivity = { count: 0, busy: false };
+
 /**
  * 页面外壳：顶栏、工具导航、当前工具的标题和面板、卖点和说明。
- * 六个工具页全部挂着、只显示当前这个，切换工具不丢队列和已选的图片。
+ * 九个工具页全部挂着、只显示当前这个，切换工具不丢队列和已选的图片。
  */
 export function App() {
   const { t, locale } = useI18n();
@@ -50,7 +54,20 @@ export function App() {
   const [tool, navigate] = useTool();
   const [dragging, setDragging] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const [imageActivity, setImageActivity] = useState<ToolActivity>({ count: 0, busy: false });
+  const [imageActivity, setImageActivity] = useState<ToolActivity>(IDLE);
+  const [imageToolActivity, setImageToolActivity] = useState<Record<ImageToolId, ToolActivity>>({
+    'compress-images': IDLE,
+    'convert-images': IDLE,
+    'resize-images': IDLE,
+  });
+  const onImageToolActivity = useCallback((id: ImageToolId, activity: ToolActivity) => {
+    setImageToolActivity((prev) =>
+      prev[id].count === activity.count && prev[id].busy === activity.busy
+        ? prev
+        : { ...prev, [id]: activity },
+    );
+  }, []);
+  const imageToolsBusy = Object.values(imageToolActivity).some((activity) => activity.busy);
   /** 后台标签页里转完了：标题挂个 ✅，切回来就摘掉 */
   const [attention, setAttention] = useState(false);
   const sinkRef = useRef<FileSink | null>(null);
@@ -106,7 +123,11 @@ export function App() {
   const pdfSettled = pdfJobs.filter((j) => j.status !== 'running' && j.status !== 'queued').length;
   const docJobs = docQueue.jobs;
   const docSettled = docJobs.filter((j) => j.status !== 'running' && j.status !== 'queued').length;
-  const busy = pdfSettled < pdfJobs.length || docSettled < docJobs.length || imageActivity.busy;
+  const busy =
+    pdfSettled < pdfJobs.length ||
+    docSettled < docJobs.length ||
+    imageActivity.busy ||
+    imageToolsBusy;
   const toolActivity = useMemo<Record<ToolId, ToolActivity>>(() => {
     const summarize = (jobs: readonly { readonly status: string }[]): ToolActivity => ({
       count: jobs.length,
@@ -123,8 +144,9 @@ export function App() {
       'word-to-pdf': summarize(docJobs.filter((job) => job.source === 'word')),
       'markdown-to-pdf': summarize(docJobs.filter((job) => job.source === 'markdown')),
       'images-to-pdf': imageActivity,
+      ...imageToolActivity,
     };
-  }, [docJobs, imageActivity, pdfJobs]);
+  }, [docJobs, imageActivity, imageToolActivity, pdfJobs]);
 
   // 页面空闲时先把转换 Worker（含 pdf.js，约 2 MB）拉起来，第一次转换不用等下载
   const { warmUp } = pdfQueue;
@@ -162,7 +184,10 @@ export function App() {
       e.preventDefault();
       depth = 0;
       setDragging(false);
-      deliverRef.current([...(e.dataTransfer?.files ?? [])]);
+      // 拖进来的是文件夹就展开成里面的文件（要在事件里同步取条目，再异步读）
+      const dropped = droppedFiles(e.dataTransfer);
+      if (Array.isArray(dropped)) deliverRef.current(dropped);
+      else void dropped.then((files) => deliverRef.current(files));
     };
     const onPaste = (e: ClipboardEvent): void => {
       if (isEditable(e.target)) return;
@@ -263,7 +288,7 @@ export function App() {
   }, [busy]);
 
   return (
-    <CompatGate caps={caps}>
+    <CompatGate caps={caps} bypassMobile={tool.group === 'image'}>
       <ShellContext.Provider value={shell}>
         <div className="app" data-dragging={dragging || undefined}>
           <a className="skip-link" href="#main">
@@ -301,6 +326,9 @@ export function App() {
               <p className="banner banner--warn">{t('ocr.unavailable')}</p>
             )}
             {caps.lowMemory && <p className="banner">{t('compat.lowMemory')}</p>}
+            {caps.mobile && tool.group !== 'image' && !readMobileAck() && (
+              <p className="banner">{t('compat.mobile.banner')}</p>
+            )}
 
             <section className="hero reveal" style={reveal(1)} aria-labelledby="hero-title">
               <h1 id="hero-title" className="hero__title" key={`title-${tool.id}`}>
@@ -333,6 +361,13 @@ export function App() {
                     {each.id === 'images-to-pdf' && (
                       <ImagesToPdfTool tool={each} active={active} onActivity={setImageActivity} />
                     )}
+                    {isImageTool(each.id) && (
+                      <ImageTool
+                        tool={each as Tool & { readonly id: ImageToolId }}
+                        active={active}
+                        onActivity={onImageToolActivity}
+                      />
+                    )}
                   </div>
                 );
               })}
@@ -362,7 +397,11 @@ export function App() {
           {dragging && (
             <div className="drop-overlay" aria-hidden="true">
               <div className="drop-overlay__box">
-                {t(tool.id === 'images-to-pdf' ? 'drop.overlay.images' : 'drop.overlay')}
+                {t(
+                  tool.id === 'images-to-pdf' || tool.group === 'image'
+                    ? 'drop.overlay.images'
+                    : 'drop.overlay',
+                )}
               </div>
             </div>
           )}

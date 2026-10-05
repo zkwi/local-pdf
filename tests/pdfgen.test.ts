@@ -10,7 +10,7 @@ import {
   isWinAnsi,
   standardFontName,
 } from '../src/core/pdfgen/fonts.ts';
-import { parseJpeg } from '../src/core/pdfgen/jpeg.ts';
+import { parseJpeg } from '../src/core/image/jpeg.ts';
 import { markdownToHtml } from '../src/core/pdfgen/markdown.ts';
 import { evaluateNumbering, parseNumberingCss } from '../src/core/pdfgen/numbering.ts';
 import { placeImage } from '../src/core/pdfgen/page-layout.ts';

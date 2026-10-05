@@ -146,7 +146,7 @@ export const en: Messages = {
     'Photos as JPEG, screenshots and diagrams lossless; JPEG originals are embedded without re-encoding.',
   'compose.quality.lossless.hint': 'Every image embedded losslessly; the file can get large.',
   'compose.quality.compact.hint':
-    'Everything as JPEG, scaled to at most 2000 px; the smallest file.',
+    'Everything as JPEG, with images over about 4 megapixels (2000 × 2000) scaled down proportionally; the smallest file.',
   'compose.fileName': 'File name',
   'compose.generate': 'Create PDF',
   'compose.generating': 'Processing image {done} of {total}…',
@@ -471,4 +471,174 @@ export const en: Messages = {
     'Leave empty for every page. For example 1-3, 5, 8- means pages 1 to 3, page 5, and page 8 to the end.',
   'images.range.invalid': 'Invalid page range. Write it like 1-3, 5, 8- before converting.',
   'summary.pageRange': 'Pages {range}',
+  'nav.imageTools': 'Image tools',
+  'nav.compress': 'Compress',
+  'nav.convert': 'Convert',
+  'nav.resize': 'Resize',
+  'tool.compress-images.title': 'Compress images',
+  'tool.compress-images.lede':
+    'Shrink JPG, PNG and WebP in bulk: PNG keeps its transparency, nothing ever gets bigger, and you can aim for a size limit. Download everything as one zip.',
+  'tool.convert-images.title': 'Convert images',
+  'tool.convert-images.lede':
+    'Turn PNG, JPG, WebP, GIF, BMP, AVIF and SVG into JPG, PNG or WebP in bulk, keeping transparency or filling it with a colour.',
+  'tool.resize-images.title': 'Resize images',
+  'tool.resize-images.lede':
+    'Scale images down by the long side, width, height or a percentage without distortion, crop to an exact size, or set the DPI, in bulk.',
+  'drop.title.imageTools': 'Drop images or a folder here, or click to choose',
+  'drop.hint.imageTools':
+    'JPG, PNG, WebP, GIF, BMP, AVIF, SVG · choose as many as you like · images never leave this computer',
+  'drop.folder': 'Choose a folder',
+  'drop.folder.long': 'or choose a whole folder',
+  'compat.mobile.banner':
+    'Phone browsers have little memory, so large files and scans may fail to convert; a computer works better if you have one.',
+  'compose.itemFailed':
+    'Image {index} ({name}) could not be read. Remove it or convert it to PNG / JPG and try again.',
+  'img.settings': 'Processing settings',
+  'img.count.one': '1 image selected',
+  'img.count.other': '{count} images selected',
+  'img.listHint':
+    'After processing, click a thumbnail to compare it with the original. Changing a setting means processing again.',
+  'img.output.label': 'Format',
+  'img.output.keep': 'Original',
+  'img.output.jpeg': 'JPG',
+  'img.output.png': 'PNG',
+  'img.output.webp': 'WebP',
+  'img.output.keep.hint':
+    'Each image keeps its format; GIF, BMP, AVIF and others that cannot be written back become PNG or JPG.',
+  'img.output.jpeg.hint':
+    'JPG is small and opens everywhere, ideal for photos; it has no transparency, so transparent areas get the background colour.',
+  'img.output.png.hint':
+    'PNG suits screenshots, icons and anything transparent, with lossless or reduced-colour compression.',
+  'img.output.webp.hint':
+    'WebP is smaller than both JPG and PNG and keeps transparency; a few older apps cannot open it.',
+  'img.quality.label': 'Quality',
+  'img.quality.high': 'High',
+  'img.quality.standard': 'Standard',
+  'img.quality.small': 'Smallest',
+  'img.quality.high.hint': 'High: JPG / WebP quality 90; PNG lossless.',
+  'img.quality.standard.hint':
+    'Standard: JPG / WebP quality 80, practically indistinguishable; PNG reduced to 256 colours.',
+  'img.quality.small.hint':
+    'Smallest: JPG / WebP quality 65; PNG reduced to 64 colours, gradients may look grainy.',
+  'img.quality.target':
+    'Quality is picked automatically to meet the size limit; if that is not enough, the image is scaled down (1 MB = 1024 KB).',
+  'img.target.label': 'File size',
+  'img.target.toggle': 'At most',
+  'img.target.value': 'Size limit per image (KB)',
+  'img.resize.label': 'Dimensions',
+  'img.resize.none': 'Original',
+  'img.resize.long': 'Long side',
+  'img.resize.width': 'Width',
+  'img.resize.height': 'Height',
+  'img.resize.percent': 'Percentage',
+  'img.resize.exact': 'Exact size',
+  'img.resize.none.hint': 'Keeps the original pixel dimensions.',
+  'img.resize.long.hint':
+    'Landscape and portrait images shrink by their longer side, keeping proportions; smaller images are not enlarged.',
+  'img.resize.width.hint':
+    'Shrinks to this width and the height follows; narrower images are not enlarged.',
+  'img.resize.height.hint':
+    'Shrinks to this height and the width follows; shorter images are not enlarged.',
+  'img.resize.percent.hint': 'Width and height shrink by the same percentage.',
+  'img.resize.exactWidth': 'Width (pixels)',
+  'img.resize.exactHeight': 'Height (pixels)',
+  'img.fit.cover': 'Crop to fill',
+  'img.fit.contain': 'Fit inside',
+  'img.fit.cover.hint':
+    'Scales proportionally to cover this size and trims the overflow around the centre.',
+  'img.fit.contain.hint':
+    'Scales proportionally to fit within this size; the margins stay transparent or get the background colour.',
+  'img.background.label': 'Transparency',
+  'img.background.keep': 'Keep',
+  'img.background.fill': 'Fill',
+  'img.background.keep.hint':
+    'PNG and WebP keep transparency; JPG cannot, so transparent areas get the colour on the right.',
+  'img.background.fill.hint':
+    'Transparent areas of every image are filled with the colour on the right.',
+  'img.background.color': 'Colour',
+  'img.dpi.label': 'DPI',
+  'img.dpi.none': 'Unset',
+  'img.dpi.hint':
+    'DPI only tags the print size and does not change pixels; it applies to JPG and PNG, not WebP.',
+  'img.start.compress-images': 'Compress',
+  'img.start.convert-images': 'Convert',
+  'img.start.resize-images': 'Resize',
+  'img.startMore.one': 'Process 1 more',
+  'img.startMore.other': 'Process {count} more',
+  'img.processing': 'Processing image {done} of {total}…',
+  'img.status.ready': 'Ready',
+  'img.status.queued': 'Waiting',
+  'img.status.processing': 'Processing',
+  'img.status.kept': 'Kept original',
+  'img.status.skipped': 'Skipped',
+  'img.status.failed': 'Failed',
+  'img.note.format': 'Saved as {format}',
+  'img.note.alpha': 'Transparent areas filled',
+  'img.note.limited': 'Too large, scaled down to {width} × {height}',
+  'img.note.shrunk': 'Scaled down to {width} × {height} to meet the size limit',
+  'img.note.missed': 'Could not get under {size}; this is the smallest result possible',
+  'img.note.dpi': 'WebP cannot carry a DPI tag',
+  'img.note.palette': 'Reduced to {colors} colours',
+  'img.note.larger': 'Larger than the original',
+  'img.error.animated':
+    'Animated images are not supported yet and were skipped (only the first frame would survive)',
+  'img.error.heic':
+    'This browser cannot read HEIC. Open this page in Safari, or set iPhone Settings › Camera › Formats to “Most Compatible”',
+  'img.error.decode': 'This browser cannot read this {format} image; the file may be damaged',
+  'img.error.memory': 'Not enough memory to process this image; close other tabs and retry',
+  'img.error.encode': 'Could not create the image',
+  'img.error.unknown': 'Processing failed: {detail}',
+  'img.compare': 'Compare',
+  'img.compare.open': 'Compare the original and the result of {name}',
+  'img.compare.original': 'Original',
+  'img.compare.result': 'Result',
+  'img.compare.actual': 'Actual pixels',
+  'img.compare.close': 'Close',
+  'img.compare.slider': 'Drag to compare the original and the result',
+  'img.compare.hint':
+    'Drag the divider (or use the arrow keys) to compare; tick “Actual pixels” to inspect detail.',
+  'img.download': 'Download',
+  'img.downloadAll': 'Download all ({count})',
+  'img.remove': 'Remove {name}',
+  'img.summary.empty': 'No images yet',
+  'img.summary.done': '{count} done: {before} → {after}',
+  'img.saved': '{percent}% smaller',
+  'img.grew': '{percent}% larger',
+  'features.shrink.title': 'Smaller, never worse',
+  'features.shrink.body':
+    'JPG and WebP get tuned quality, PNG gets fewer colours with transparency intact; if nothing is gained the original is kept, and you can target a file size.',
+  'features.batch.title': 'Whole batches at once',
+  'features.batch.body':
+    'Drop hundreds of images or a whole folder, apply one format, size and quality, and download a single zip that mirrors your folders.',
+  'seo.how.image.1':
+    'Drop images or a whole folder onto the page, or paste a screenshot with Ctrl+V.',
+  'seo.how.image.2':
+    'Pick the format, quality and size, then start; decoding, resizing and compression all run in your browser.',
+  'seo.how.image.3':
+    'Click a thumbnail to compare with the original, then download images one by one or all together as a zip.',
+  'seo.why.image':
+    'Most online image compressors upload your pictures to a server. The Local PDF image tools run in your browser: ID photos, screenshots and camera rolls never leave your computer, and you can verify that in the network panel.',
+  'seo.faq.image.q1': 'Are my images uploaded?',
+  'seo.faq.image.a1':
+    'No. Compression, conversion and resizing all happen in your browser. There is no upload endpoint, and the page keeps working offline once loaded.',
+  'seo.faq.image.q2': 'Does PNG transparency survive?',
+  'seo.faq.image.a2':
+    'Yes. PNG and WebP output keep transparency. JPG has no transparency, so transparent areas are filled with the colour you choose (white by default); you can also fill transparency for every format.',
+  'seo.faq.image.q3': 'Why do some images say “Kept original”?',
+  'seo.faq.image.a3':
+    'If re-compressing does not make an image smaller, which is common for already optimised files, you get the original file back, so nothing ever grows. To go smaller, reduce the dimensions or quality, or save as WebP or JPG.',
+  'seo.faq.image.q4': 'Can I compress to a specific size, such as under 200 KB?',
+  'seo.faq.image.a4':
+    'Yes. Tick “At most” and enter the size: the highest quality that fits is picked automatically, and the image is scaled down proportionally if that is not enough.',
+  'seo.faq.image.q5': 'What happens to photo orientation and location data?',
+  'seo.faq.image.a5':
+    'Photos are first turned upright according to how they were taken. Re-encoded images carry no EXIF, so location, camera model and similar details are removed; only images marked “Kept original” stay untouched.',
+  'seo.faq.image.q6': 'Are HEIC and animated images supported?',
+  'seo.faq.image.a6':
+    'Only Safari can read HEIC; iPhones usually convert photos to JPG when you pick them on a web page. Animated GIF, APNG and WebP files are skipped so they do not end up as a single frame.',
+  'img.note.unchanged': 'Already matches the settings, kept as is',
+  'img.note.withinTarget': 'Already under {size}, kept as is',
+  'img.note.notSmaller': 'Re-compressing would not make it smaller, kept as is',
+  'img.note.svg': 'SVG rendered at {width} × {height}; set Dimensions for a larger image',
+  'img.status.done': 'Done',
 };
