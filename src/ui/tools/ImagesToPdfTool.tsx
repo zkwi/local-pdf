@@ -385,6 +385,7 @@ export function ImagesToPdfTool({ tool, active, onActivity }: ImagesToPdfToolPro
           <span className="imgopts__label">{t('compose.pageSize')}</span>
           <Segmented
             compact
+            name={t('compose.pageSize')}
             values={PAGE_SIZES}
             value={options.pageSize}
             label={(v) => t(`compose.pageSize.${v}` as MessageKey)}
@@ -394,6 +395,7 @@ export function ImagesToPdfTool({ tool, active, onActivity }: ImagesToPdfToolPro
           {options.pageSize !== 'fit' && (
             <Segmented
               compact
+              name={t('compose.orientation')}
               values={ORIENTATIONS}
               value={options.orientation}
               label={(v) => t(`compose.orientation.${v}` as MessageKey)}
@@ -416,6 +418,7 @@ export function ImagesToPdfTool({ tool, active, onActivity }: ImagesToPdfToolPro
             <span>{t('compose.margin')}</span>
             <Segmented
               compact
+              name={t('compose.margin')}
               values={MARGINS}
               value={options.margin}
               label={(v) => t(`compose.margin.${v}` as MessageKey)}
@@ -427,6 +430,7 @@ export function ImagesToPdfTool({ tool, active, onActivity }: ImagesToPdfToolPro
             <span>{t('compose.quality')}</span>
             <Segmented
               compact
+              name={t('compose.quality')}
               values={QUALITIES}
               value={options.quality}
               label={(v) => t(`compose.quality.${v}` as MessageKey)}

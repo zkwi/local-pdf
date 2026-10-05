@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { KeyboardEvent } from 'react';
 import { DEFAULT_OPTIONS } from '../core/contracts/options.ts';
 import type {
   ConversionMode,
@@ -100,17 +101,18 @@ export function OptionsPanel({
                   />
                   {options.ocr !== 'off' && (
                     <div className="subfield">
-                      <label className="field__row">
+                      <div className="field__row">
                         <span>{t('ocr.quality.label')}</span>
                         <Segmented
                           compact
+                          name={t('ocr.quality.label')}
                           values={QUALITIES}
                           value={options.ocrQuality}
                           label={(v) => t(`ocr.quality.${v}` as MessageKey)}
                           hint={(v) => t(`ocr.quality.${v}.hint` as MessageKey)}
                           onChange={(v) => set('ocrQuality', v)}
                         />
-                      </label>
+                      </div>
                       <label className="field__row">
                         <span>{t('ocr.language.label')}</span>
                         <select
@@ -225,6 +227,7 @@ function ImageOptions({ options, set }: ImageOptionsProps) {
           <span>{t('images.format.label')}</span>
           <Segmented
             compact
+            name={t('images.format.label')}
             values={IMAGE_FORMATS}
             value={options.pageImageFormat}
             label={(v) => v.toUpperCase()}
@@ -236,6 +239,7 @@ function ImageOptions({ options, set }: ImageOptionsProps) {
           <span>{t('images.dpi.label')}</span>
           <Segmented
             compact
+            name={t('images.dpi.label')}
             values={IMAGE_DPIS}
             value={String(options.pageImageDpi) as ImageDpi}
             label={(v) => `${v} DPI`}
@@ -278,8 +282,14 @@ interface SegmentedProps<T extends string> {
   readonly hint: (value: T) => string;
   readonly onChange: (value: T) => void;
   readonly compact?: boolean;
+  /** 读屏时这一组的名字（一般就是旁边的可见标题）；在 fieldset 里、legend 已经说明了的可以不给 */
+  readonly name?: string;
 }
 
+/**
+ * 分段单选。键盘按单选组的惯例：Tab 只停在选中的那一项，方向键和 Home / End 切换，
+ * 不用一项一项 Tab 过去
+ */
 export function Segmented<T extends string>({
   values,
   value,
@@ -287,16 +297,36 @@ export function Segmented<T extends string>({
   hint,
   onChange,
   compact = false,
+  name,
 }: SegmentedProps<T>) {
+  const current = values.includes(value) ? value : values[0];
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>): void => {
+    const index = values.indexOf(current);
+    const target =
+      e.key === 'ArrowRight' || e.key === 'ArrowDown'
+        ? (index + 1) % values.length
+        : e.key === 'ArrowLeft' || e.key === 'ArrowUp'
+          ? (index - 1 + values.length) % values.length
+          : e.key === 'Home'
+            ? 0
+            : e.key === 'End'
+              ? values.length - 1
+              : -1;
+    if (target < 0) return;
+    e.preventDefault();
+    onChange(values[target]);
+    e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]')[target]?.focus();
+  };
   return (
     <div className={compact ? 'segmented-wrap segmented-wrap--compact' : 'segmented-wrap'}>
-      <div className="segmented" role="radiogroup">
+      <div className="segmented" role="radiogroup" aria-label={name} onKeyDown={onKeyDown}>
         {values.map((v) => (
           <button
             key={v}
             type="button"
             role="radio"
             aria-checked={value === v}
+            tabIndex={v === current ? 0 : -1}
             className={`segmented__item${value === v ? ' segmented__item--on' : ''}`}
             onClick={() => onChange(v)}
             title={hint(v)}

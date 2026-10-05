@@ -51,6 +51,7 @@ export function DocOptionsPanel({
                 <span>{t('docpdf.page.label')}</span>
                 <Segmented
                   compact
+                  name={t('docpdf.page.label')}
                   values={PAGES}
                   value={options.pageSize}
                   label={(v) => t(`docpdf.page.${v}` as MessageKey)}
@@ -62,6 +63,7 @@ export function DocOptionsPanel({
                 <span>{t('docpdf.margin.label')}</span>
                 <Segmented
                   compact
+                  name={t('docpdf.margin.label')}
                   values={MARGINS}
                   value={options.margin}
                   label={(v) => t(`docpdf.margin.${v}` as MessageKey)}
@@ -73,6 +75,7 @@ export function DocOptionsPanel({
                 <span>{t('docpdf.fontSize.label')}</span>
                 <Segmented
                   compact
+                  name={t('docpdf.fontSize.label')}
                   values={FONT_SIZES}
                   value={String(options.fontSize) as FontSize}
                   label={(v) => `${v} pt`}

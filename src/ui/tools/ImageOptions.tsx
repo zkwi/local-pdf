@@ -47,6 +47,7 @@ export function ImageOptions({ tool, settings, onChange, webp }: ImageOptionsPro
   const outputSegments = (
     <Segmented
       compact
+      name={t(tool === 'convert-images' ? 'img.convert.label' : 'img.output.label')}
       values={outputs}
       value={output}
       label={(v) => t(`img.output.${v}`)}
@@ -75,6 +76,7 @@ export function ImageOptions({ tool, settings, onChange, webp }: ImageOptionsPro
           <span className="imgopts__label">{t('img.quality.label')}</span>
           <Segmented
             compact
+            name={t('img.quality.label')}
             values={LEVELS}
             value={level}
             label={(v) => t(v === 'target' ? 'img.quality.custom' : `img.quality.${v}`)}
@@ -134,6 +136,7 @@ export function ImageOptions({ tool, settings, onChange, webp }: ImageOptionsPro
           <span>{t('img.quality.label')}</span>
           <Segmented
             compact
+            name={t('img.quality.label')}
             values={QUALITIES}
             value={settings.quality}
             label={(v) => t(`img.quality.${v}`)}
@@ -232,6 +235,7 @@ export function ImageOptions({ tool, settings, onChange, webp }: ImageOptionsPro
           <span>{t('img.dpi.label')}</span>
           <Segmented
             compact
+            name={t('img.dpi.label')}
             values={DPIS}
             value={String(settings.dpi) as DpiValue}
             label={(v) => (v === '0' ? t('img.dpi.none') : v)}

@@ -583,6 +583,7 @@ export const en: Messages = {
   'img.compare.hint':
     'Drag the divider (or use the arrow keys) to compare; tick “Actual pixels” to inspect detail.',
   'img.download': 'Download',
+  'img.download.named': 'Download {name}',
   'img.downloadAll': 'Download all ({count})',
   'img.remove': 'Remove {name}',
   'img.summary.done': '{count} done: {before} → {after}',

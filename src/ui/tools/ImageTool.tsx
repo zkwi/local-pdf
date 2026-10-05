@@ -143,18 +143,15 @@ export function ImageTool({ tool, active, onActivity }: ImageToolProps) {
           />
         ) : (
           <>
-            <div className="composer__head">
-              <div>
-                <h2>
-                  {tn('img.count', items.length)} · {formatSize(totalSize)}
-                </h2>
-                <p className="composer__hint">{t('img.listHint')}</p>
-              </div>
-              <div className="queue__actions">
-                <button className="btn btn--ghost" type="button" onClick={clear}>
-                  {t('compose.clear')}
-                </button>
-              </div>
+            {/* 只有一个「清空」：和标题放一行，说明另起一行，手机上不用单独占一整行 */}
+            <div className="composer__head composer__head--inline">
+              <h2>
+                {tn('img.count', items.length)} · {formatSize(totalSize)}
+              </h2>
+              <button className="btn btn--ghost" type="button" onClick={clear}>
+                {t('compose.clear')}
+              </button>
+              <p className="composer__hint">{t('img.listHint')}</p>
             </div>
             <ul className="imglist">
               {items.map((item) => (

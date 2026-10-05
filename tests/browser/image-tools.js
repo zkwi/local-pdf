@@ -130,7 +130,7 @@ async (page) => {
     const rerun = await settle(20000);
     const after = await sizes();
 
-    tool.querySelector('.queue__actions button').click(); // 清空
+    tool.querySelector('.composer__head button').click(); // 清空
     await wait(200);
     const c = new OffscreenCanvas(3000, 2000);
     const ctx = c.getContext('2d');
@@ -155,7 +155,17 @@ async (page) => {
     const resumed = await settle(60000);
     return { before, invalidated, rerun, after, stopped, paused, resumeLabel, resumed, final: statuses() };
   });
+  // 分段单选的键盘约定：只有选中的那项能 Tab 到，方向键切换选项、焦点跟着走
+  batch.stops = await page.evaluate(() => {
+    const tool = [...document.querySelectorAll('.tool')].find((el) => !el.hidden);
+    const radios = [...tool.querySelectorAll('.imgopts [role="radio"]')];
+    radios.find((r) => r.tabIndex === 0)?.focus();
+    return radios.map((r) => r.tabIndex).join();
+  });
+  await page.keyboard.press('ArrowLeft');
+  batch.arrow = await page.evaluate(() => `${document.activeElement?.textContent}:${document.activeElement?.getAttribute('aria-checked')}`);
   await page.evaluate(() => localStorage.removeItem('local-pdf.compress-images'));
+  if (batch.stops !== '-1,-1,0,-1' || batch.arrow !== 'Standard:true') throw new Error(`Radio keyboard regression: ${JSON.stringify(batch)}`);
   if (!batch.invalidated.every((s) => s === 'ready' || s === 'processing') || !batch.rerun) throw new Error(`Settings re-run regression: ${JSON.stringify(batch)}`);
   if (!batch.after.every((size, i) => size <= batch.before[i]) || batch.after[0] >= batch.before[0]) throw new Error(`Re-run result regression: ${JSON.stringify(batch)}`);
   if (batch.stopped.includes('processing') || !batch.stopped.includes('ready') || batch.paused.join() !== batch.stopped.join()) throw new Error(`Stop regression: ${JSON.stringify(batch)}`);

@@ -144,12 +144,14 @@ export function ImageRow({
 
   return (
     <li className={`imgrow imgrow--${item.status}`}>
+      {/* 点缩略图对比只是给鼠标的捷径，键盘和读屏用后面的「对比」按钮，不用每行多停一次 */}
       <button
         type="button"
         className="imgrow__thumb"
         disabled={!comparable}
         onClick={() => onCompare(item.id)}
-        aria-label={t('img.compare.open', { name: item.file.name })}
+        tabIndex={-1}
+        aria-hidden="true"
         title={comparable ? t('img.compare.open', { name: item.file.name }) : undefined}
       >
         {item.previewable ? (
@@ -212,17 +214,24 @@ export function ImageRow({
           {statusText()}
         </span>
         <div className="imgrow__actions">
+          {/* 每行都有「对比」「下载」，读屏要带上文件名才分得清是哪一张 */}
           {comparable && (
             <button
               type="button"
               className="btn btn--ghost btn--small"
+              aria-label={t('img.compare.open', { name: item.file.name })}
               onClick={() => onCompare(item.id)}
             >
               {t('img.compare')}
             </button>
           )}
           {result !== undefined && (
-            <a className="btn btn--ghost btn--small" href={result.url} download={result.name}>
+            <a
+              className="btn btn--ghost btn--small"
+              href={result.url}
+              download={result.name}
+              aria-label={t('img.download.named', { name: result.name })}
+            >
               {t('img.download')}
             </a>
           )}

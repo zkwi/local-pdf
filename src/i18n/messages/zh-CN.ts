@@ -526,6 +526,7 @@ export const zhCN = {
   'img.compare.slider': '左右拖动对比原图和结果',
   'img.compare.hint': '拖动分隔线（或按左右方向键）对比；勾选「实际像素」看细节。',
   'img.download': '下载',
+  'img.download.named': '下载 {name}',
   'img.downloadAll': '打包下载（{count} 张）',
   'img.remove': '移除 {name}',
   'img.summary.done': '{count} 张：{before} → {after}',

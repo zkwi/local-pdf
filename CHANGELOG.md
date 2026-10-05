@@ -5,6 +5,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+## [0.8.3] — 2026-10-06
+
+### Changed
+
+- Segmented choices (quality, format, page size and the like) work like radio groups: Tab stops only on the
+  selected option, the arrow keys, Home and End switch options, and screen readers announce the group name.
+- In the image tools list, Compare and Download include the file name for screen readers, and the thumbnail
+  is no longer an extra Tab stop (the Compare button does the same thing).
+- On phones, Clear sits next to the image count instead of taking a whole row.
+
+### Fixed
+
+- The OCR quality choice was wrapped in a label, so screen readers read the whole row as the name of its
+  first option.
+
 ## [0.8.2] — 2026-10-06
 
 ### Changed

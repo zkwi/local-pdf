@@ -584,6 +584,7 @@ export const ja: Messages = {
   'img.compare.hint':
     '仕切り線をドラッグ（または左右キー）して比較。「実寸」にチェックすると細部を確認できます。',
   'img.download': 'ダウンロード',
+  'img.download.named': '{name} をダウンロード',
   'img.downloadAll': 'まとめてダウンロード（{count} 枚）',
   'img.remove': '{name} を削除',
   'img.summary.done': '{count} 枚：{before} → {after}',

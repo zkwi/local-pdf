@@ -524,6 +524,7 @@ export const zhTW: Messages = {
   'img.compare.slider': '左右拖曳對比原圖和結果',
   'img.compare.hint': '拖曳分隔線（或按左右方向鍵）對比；勾選「實際像素」看細節。',
   'img.download': '下載',
+  'img.download.named': '下載 {name}',
   'img.downloadAll': '打包下載（{count} 張）',
   'img.remove': '移除 {name}',
   'img.summary.done': '{count} 張：{before} → {after}',
