@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ImageNote } from '../../core/image/compress.ts';
+import type { ImageNote, ProcessResult } from '../../core/image/compress.ts';
 import { decodeWithImage } from '../../core/image/dom-decode.ts';
 import { canEncode } from '../../core/image/encode.ts';
 import { directoryOf, limitPlan, outputName, planResize } from '../../core/image/plan.ts';
 import type {
-  BackgroundMode,
   EncodeFormat,
   ExactFit,
   ImageJobOptions,
@@ -17,12 +16,12 @@ import type { ImageHeader, SourceFormat } from '../../core/image/sniff.ts';
 import { renderSvg, svgIntrinsicSize } from '../../core/image/svg.ts';
 import { useI18n } from '../../i18n/index.tsx';
 import type { MessageKey } from '../../i18n/index.tsx';
+import type { ImageFailure } from '../../worker/image-protocol.ts';
 import { probeCapabilities } from '../capabilities.ts';
 import { DropZone } from '../DropZone.tsx';
 import { relativePathOf } from '../files.ts';
 import { formatSize } from '../format.ts';
 import { ImageJobError, processInWorker } from '../image-client.ts';
-import type { ImageFailure } from '../../worker/image-protocol.ts';
 import { Segmented } from '../OptionsPanel.tsx';
 import { PanelMore } from '../PanelMore.tsx';
 import { useStored } from '../persist.ts';
@@ -32,83 +31,115 @@ import type { ImageToolId, Tool, ToolActivity } from '../tools.ts';
 import { triggerDownload, zipBlobs } from '../zip.ts';
 import { CompareDialog } from './CompareDialog.tsx';
 
-/** 界面上的设置：目标大小拆成开关 + 数值，关掉时数值还记着 */
-interface ImageSettings extends Omit<ImageJobOptions, 'targetBytes' | 'keepUnchanged'> {
+/**
+ * 三个工具各自只露出一项核心设置，「更多选项」里也只有一项，其余固定成合理的默认：
+ * - 压缩：画质（高清 / 标准 / 小体积 / 指定大小）；更多选项里改输出格式；
+ * - 转换：转成 JPG / PNG / WebP，选 JPG 时顺带给透明部分选个底色；更多选项里改画质；
+ * - 改尺寸：长边 / 宽 / 高 / 百分比 / 精确尺寸；更多选项里写 DPI。
+ * 设置项少，用户不用琢磨；需要组合时先压缩、再转换即可。
+ */
+interface ImageSettings {
+  readonly quality: QualityPreset;
+  /** 压缩时选了「指定大小」 */
   readonly target: boolean;
   /** KB */
   readonly targetKb: number;
+  readonly output: OutputChoice;
+  /** 转成 JPG 时透明部分填的颜色 */
+  readonly color: string;
+  readonly resize: Exclude<ResizeMode, 'none'>;
+  readonly size: number;
+  readonly percent: number;
+  readonly exactWidth: number;
+  readonly exactHeight: number;
+  readonly fit: ExactFit;
+  readonly dpi: number;
 }
 
 const BASE: ImageSettings = {
-  output: 'keep',
   quality: 'standard',
   target: false,
   targetKb: 500,
-  resize: 'none',
+  output: 'keep',
+  color: '#ffffff',
+  resize: 'long',
   size: 1920,
   percent: 50,
+  exactWidth: 1080,
+  exactHeight: 1080,
+  fit: 'cover',
+  dpi: 0,
+};
+
+const IMAGE_DEFAULTS: Record<ImageToolId, ImageSettings> = {
+  'compress-images': BASE,
+  'convert-images': { ...BASE, output: 'jpeg', quality: 'high' },
+  'resize-images': BASE,
+};
+
+/** 用户不能改的部分：不缩放、不填色、不写 DPI、画质按高清 */
+const FIXED: ImageJobOptions = {
+  output: 'keep',
+  quality: 'high',
+  targetBytes: 0,
+  resize: 'none',
+  size: 1920,
+  percent: 100,
   exactWidth: 1080,
   exactHeight: 1080,
   fit: 'cover',
   background: 'keep',
   color: '#ffffff',
   dpi: 0,
+  keepUnchanged: true,
 };
-
-/** 三个工具的默认设置：压缩保持格式、转换默认出 JPG、改尺寸默认限制长边 */
-const IMAGE_DEFAULTS: Record<ImageToolId, ImageSettings> = {
-  'compress-images': BASE,
-  'convert-images': { ...BASE, output: 'jpeg', quality: 'high' },
-  'resize-images': { ...BASE, quality: 'high', resize: 'long' },
-};
-
-type Row = 'output' | 'quality' | 'target' | 'resize' | 'background' | 'dpi';
 
 /**
- * 每个工具直接露出最相关的三项，其余收进「更多选项」：压缩先看画质和大小，转换先看格式和透明，改尺寸先看尺寸。
+ * 只取这个工具露出来的设置，别的一律用固定值：以前版本存下的其他设置不会悄悄生效。
+ * 压缩总要重新编码试一试；转换和改尺寸遇到本来就符合的图原样保留，不白白损失画质。
  */
-const ROWS: Record<ImageToolId, { readonly main: readonly Row[]; readonly more: readonly Row[] }> =
-  {
-    'compress-images': {
-      main: ['quality', 'target', 'output'],
-      more: ['resize', 'background', 'dpi'],
-    },
-    'convert-images': {
-      main: ['output', 'quality', 'background'],
-      more: ['resize', 'target', 'dpi'],
-    },
-    'resize-images': {
-      main: ['resize', 'output', 'quality'],
-      more: ['background', 'dpi', 'target'],
-    },
-  };
-
-/** 这一行的设置和默认值不同（目标大小没勾选时数值改了不算） */
-function rowChanged(row: Row, settings: ImageSettings, defaults: ImageSettings): boolean {
-  if (row === 'target') {
-    return (
-      settings.target !== defaults.target ||
-      (settings.target && settings.targetKb !== defaults.targetKb)
-    );
+function toJob(s: ImageSettings, tool: ImageToolId): ImageJobOptions {
+  switch (tool) {
+    case 'compress-images':
+      return {
+        ...FIXED,
+        output: s.output,
+        quality: s.quality,
+        targetBytes: s.target ? Math.round(s.targetKb * 1024) : 0,
+        keepUnchanged: false,
+      };
+    case 'convert-images':
+      return { ...FIXED, output: s.output, quality: s.quality, color: s.color };
+    case 'resize-images':
+      return {
+        ...FIXED,
+        resize: s.resize,
+        size: s.size,
+        percent: s.percent,
+        exactWidth: s.exactWidth,
+        exactHeight: s.exactHeight,
+        fit: s.fit,
+        dpi: s.dpi,
+      };
   }
-  return ROW_KEYS[row].some((key) => settings[key] !== defaults[key]);
 }
 
-/** 这几项属于哪个设置行，用来判断收起的设置有没有改过 */
-const ROW_KEYS: Record<Row, readonly (keyof ImageSettings)[]> = {
-  output: ['output'],
-  quality: ['quality'],
-  target: ['target', 'targetKb'],
-  resize: ['resize', 'size', 'percent', 'exactWidth', 'exactHeight', 'fit'],
-  background: ['background', 'color'],
-  dpi: ['dpi'],
-};
+/** 「更多选项」里那一项改过没有：改过就亮点，打开页面时直接展开 */
+function moreChanged(s: ImageSettings, tool: ImageToolId): boolean {
+  const d = IMAGE_DEFAULTS[tool];
+  if (tool === 'compress-images') return s.output !== d.output;
+  if (tool === 'convert-images') return s.quality !== d.quality;
+  return s.dpi !== d.dpi;
+}
 
-const OUTPUTS: readonly OutputChoice[] = ['keep', 'jpeg', 'png', 'webp'];
+const COMPRESS_OUTPUTS: readonly OutputChoice[] = ['keep', 'jpeg', 'png', 'webp'];
+const CONVERT_OUTPUTS: readonly OutputChoice[] = ['jpeg', 'png', 'webp'];
 const QUALITIES: readonly QualityPreset[] = ['high', 'standard', 'small'];
-const RESIZES: readonly ResizeMode[] = ['none', 'long', 'width', 'height', 'percent', 'exact'];
+/** 压缩的画质档位多一个「指定大小」 */
+type CompressLevel = QualityPreset | 'target';
+const LEVELS: readonly CompressLevel[] = ['high', 'standard', 'small', 'target'];
+const RESIZES: readonly ImageSettings['resize'][] = ['long', 'width', 'height', 'percent', 'exact'];
 const FITS: readonly ExactFit[] = ['cover', 'contain'];
-const BACKGROUNDS: readonly BackgroundMode[] = ['keep', 'fill'];
 const DPIS = ['0', '72', '96', '150', '300'] as const;
 type DpiValue = (typeof DPIS)[number];
 const SIZE_PRESETS = [1280, 1920, 2560, 3840];
@@ -137,40 +168,34 @@ const ZIP_NAMES: Record<ImageToolId, string> = {
 const MAX_PIXELS_DESKTOP = 50_000_000;
 const MAX_PIXELS_MOBILE = 16_000_000;
 
+/** 加图或改设置后稍等一下再开始：连着拖几批、连着点几下设置时只处理一遍 */
+const AUTO_START_MS = 300;
+
 const oneOf = <T,>(list: readonly T[], value: T, fallback: T): T =>
   list.includes(value) ? value : fallback;
 const clamp = (value: number, min: number, max: number, fallback: number): number =>
   Number.isFinite(value) ? Math.min(max, Math.max(min, Math.round(value))) : fallback;
 
-function fixSettings(defaults: ImageSettings) {
+function fixSettings(tool: ImageToolId) {
+  const d = IMAGE_DEFAULTS[tool];
+  const outputs = tool === 'convert-images' ? CONVERT_OUTPUTS : COMPRESS_OUTPUTS;
   return (o: ImageSettings): ImageSettings => ({
-    output: oneOf(OUTPUTS, o.output, defaults.output),
-    quality: oneOf(QUALITIES, o.quality, defaults.quality),
-    target: o.target,
-    targetKb: clamp(o.targetKb, 10, 102_400, defaults.targetKb),
-    resize: oneOf(RESIZES, o.resize, defaults.resize),
-    size: clamp(o.size, 16, 16384, defaults.size),
-    percent: clamp(o.percent, 1, 100, defaults.percent),
-    exactWidth: clamp(o.exactWidth, 1, 16384, defaults.exactWidth),
-    exactHeight: clamp(o.exactHeight, 1, 16384, defaults.exactHeight),
-    fit: oneOf(FITS, o.fit, defaults.fit),
-    background: oneOf(BACKGROUNDS, o.background, defaults.background),
-    color: /^#[0-9a-f]{6}$/i.test(o.color) ? o.color : defaults.color,
-    dpi: oneOf([0, 72, 96, 150, 300], o.dpi, defaults.dpi),
+    quality: oneOf(QUALITIES, o.quality, d.quality),
+    target: o.target === true,
+    targetKb: clamp(o.targetKb, 10, 102_400, d.targetKb),
+    output: oneOf(outputs, o.output, d.output),
+    color: /^#[0-9a-f]{6}$/i.test(o.color) ? o.color : d.color,
+    resize: oneOf(RESIZES, o.resize, d.resize),
+    size: clamp(o.size, 16, 16384, d.size),
+    percent: clamp(o.percent, 1, 100, d.percent),
+    exactWidth: clamp(o.exactWidth, 1, 16384, d.exactWidth),
+    exactHeight: clamp(o.exactHeight, 1, 16384, d.exactHeight),
+    fit: oneOf(FITS, o.fit, d.fit),
+    dpi: oneOf([0, 72, 96, 150, 300], o.dpi, d.dpi),
   });
 }
 
-/** 压缩总要重新编码试一试；转换和改尺寸遇到不用改的图原样保留，不白白损失画质 */
-function toJob(s: ImageSettings, tool: ImageToolId): ImageJobOptions {
-  const { target, targetKb, ...rest } = s;
-  return {
-    ...rest,
-    targetBytes: target ? Math.round(targetKb * 1024) : 0,
-    keepUnchanged: tool !== 'compress-images',
-  };
-}
-
-type Status = 'ready' | 'queued' | 'processing' | 'done' | 'kept' | 'skipped' | 'failed';
+type Status = 'ready' | 'processing' | 'done' | 'kept' | 'skipped' | 'failed';
 
 interface ItemResult {
   readonly blob: Blob;
@@ -205,7 +230,7 @@ let seq = 0;
 const isSvg = (item: Item): boolean =>
   item.header?.format === 'svg' || item.file.type === 'image/svg+xml';
 
-/** 失败了值得再试一次的：内存不够、Worker 崩了、没见过的错误 */
+/** 失败了值得再试一次的：内存不够、Worker 崩了、编码失败、没见过的错误；读不了的格式重试也没用 */
 const retryable = (error: ImageFailure | undefined): boolean =>
   error === 'memory' || error === 'crashed' || error === 'unknown' || error === 'encode';
 
@@ -266,33 +291,34 @@ interface ImageToolProps {
 }
 
 /**
- * 图片压缩 / 格式转换 / 改尺寸：同一个组件，按工具换默认设置和设置项顺序。
- * 图片按添加顺序列出，点「开始」后在 Worker 里一张张处理；改了设置旧结果作废。
+ * 图片压缩 / 格式转换 / 改尺寸：同一个组件，按工具换设置。
+ * 拖进来就在 Worker 里一张张处理；改了设置，已有结果作废并按新设置重做。
  */
 export function ImageTool({ tool, active, onActivity }: ImageToolProps) {
   const { t, tn } = useI18n();
   const { toast } = useShell();
   const defaults = IMAGE_DEFAULTS[tool.id];
-  const fix = useMemo(() => fixSettings(defaults), [defaults]);
+  const fix = useMemo(() => fixSettings(tool.id), [tool.id]);
   const [settings, setSettings] = useStored<ImageSettings>(`local-pdf.${tool.id}`, defaults, {
     fix,
   });
-  // 上次改过收起的那几项，打开页面时直接展开，免得设置藏着不知道
-  const [moreOpen, setMoreOpen] = useState(() =>
-    ROWS[tool.id].more.some((row) => rowChanged(row, settings, defaults)),
-  );
+  const [moreOpen, setMoreOpen] = useState(() => moreChanged(settings, tool.id));
   const [items, setItems] = useState<Item[]>([]);
   const itemsRef = useRef(items);
   itemsRef.current = items;
   const [running, setRunning] = useState(false);
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  /** 用户点了「停止」：不再自动开始，直到加图、改设置或点「继续」 */
+  const [paused, setPaused] = useState(false);
   const [zipping, setZipping] = useState(false);
   const [compareId, setCompareId] = useState<string | null>(null);
   const [webp, setWebp] = useState(true);
   const controller = useRef<AbortController | null>(null);
+  /** 设置每改一次加一：上一轮还没写回的结果作废 */
+  const generation = useRef(0);
   const sniffing = useRef<Promise<void>>(Promise.resolve());
   const caps = useMemo(() => probeCapabilities(), []);
   const maxPixels = caps.mobile ? MAX_PIXELS_MOBILE : MAX_PIXELS_DESKTOP;
+  const moreId = `${tool.id}-more`;
 
   useEffect(() => {
     let alive = true;
@@ -308,21 +334,30 @@ export function ImageTool({ tool, active, onActivity }: ImageToolProps) {
     setItems((prev) => prev.map((item) => (item.id === id ? fn(item) : item)));
   }, []);
 
-  /** 设置改了：已有结果全部作废，回到待处理 */
+  /** 设置改了：正在跑的这一轮作废，已有结果放回待处理（读不了的格式不用重来） */
   const invalidate = useCallback(() => {
+    generation.current++;
+    controller.current?.abort();
     setItems((prev) =>
       prev.map((item) => {
-        if (item.status === 'skipped' || item.status === 'ready') return item;
+        if (item.status === 'ready' || item.status === 'skipped') return item;
+        if (item.status === 'failed' && !retryable(item.error)) return item;
         if (item.result !== undefined) URL.revokeObjectURL(item.result.url);
         return { ...item, status: 'ready', result: undefined, error: undefined, detail: undefined };
       }),
     );
   }, []);
 
-  const set = <K extends keyof ImageSettings>(key: K, value: ImageSettings[K]): void => {
-    if (settings[key] === value) return;
-    invalidate();
-    setSettings((o) => ({ ...o, [key]: value }));
+  const update = (change: Partial<ImageSettings>): void => {
+    const keys = Object.keys(change) as (keyof ImageSettings)[];
+    if (keys.every((key) => settings[key] === change[key])) return;
+    const next = { ...settings, ...change };
+    // 只有真正影响结果的改动才重做（比如没选「指定大小」时改了 KB 数值就不用）
+    if (JSON.stringify(toJob(next, tool.id)) !== JSON.stringify(toJob(settings, tool.id))) {
+      invalidate();
+      setPaused(false);
+    }
+    setSettings(next);
   };
 
   const addFiles = useCallback(
@@ -341,6 +376,7 @@ export function ImageTool({ tool, active, onActivity }: ImageToolProps) {
         status: 'ready',
       }));
       setItems((prev) => [...prev, ...created]);
+      setPaused(false);
       // 只读文件头：格式、尺寸、是不是动图，列表里先显示出来。
       // 一张接一张读，几百张一起拖进来时不会同时占几百 MB 内存
       for (const item of created) {
@@ -382,118 +418,126 @@ export function ImageTool({ tool, active, onActivity }: ImageToolProps) {
   };
 
   const clear = (): void => {
+    generation.current++;
+    controller.current?.abort();
     for (const item of itemsRef.current) {
       URL.revokeObjectURL(item.url);
       if (item.result !== undefined) URL.revokeObjectURL(item.result.url);
     }
     setItems([]);
     setCompareId(null);
+    setPaused(false);
   };
 
-  const start = useCallback(async (): Promise<void> => {
+  /** 处理一张：SVG 先在主线程按最终尺寸画成 PNG；Worker 解不了的再用 <img> 兜底一次 */
+  const processOne = useCallback(
+    async (item: Item, job: ImageJobOptions, signal: AbortSignal): Promise<ProcessResult> => {
+      if (isSvg(item)) {
+        const intrinsic = svgIntrinsicSize(await item.file.text());
+        const plan = limitPlan(planResize(intrinsic, job, true), maxPixels);
+        const canvas = await renderSvg(item.file, plan, intrinsic, signal);
+        const png = await canvas.convertToBlob({ type: 'image/png' });
+        canvas.width = 0;
+        canvas.height = 0;
+        return processInWorker(
+          { file: png, options: job, maxPixels, rasterized: { format: 'svg', sized: true } },
+          signal,
+        );
+      }
+      try {
+        return await processInWorker({ file: item.file, options: job, maxPixels }, signal);
+      } catch (error) {
+        // Worker 解不了、但 <img> 也许能显示（Safari 的 HEIC、TIFF）：主线程画成 PNG 再试一次
+        if (!(error instanceof ImageJobError && error.code === 'decode')) throw error;
+        const png = await decodeWithImage(item.file, maxPixels, signal).catch(() => {
+          throw error;
+        });
+        return processInWorker(
+          {
+            file: png,
+            options: job,
+            maxPixels,
+            rasterized: { format: item.header?.format ?? 'unknown', sized: false },
+          },
+          signal,
+        );
+      }
+    },
+    [maxPixels],
+  );
+
+  const run = useCallback(async (): Promise<void> => {
     if (controller.current !== null) return;
-    const ids = itemsRef.current.filter((item) => item.status === 'ready').map((item) => item.id);
-    if (ids.length === 0) return;
     const abort = new AbortController();
     controller.current = abort;
+    const gen = generation.current;
     const job = toJob(settings, tool.id);
+    /** 列表快照要等下一次渲染才更新，处理过的记下来，免得同一张取两遍 */
+    const seen = new Set<string>();
     setRunning(true);
-    setItems((prev) =>
-      prev.map((item) => (ids.includes(item.id) ? { ...item, status: 'queued' } : item)),
-    );
-    setProgress({ done: 0, total: ids.length });
-    let done = 0;
-    for (const id of ids) {
-      if (abort.signal.aborted) break;
-      // 处理途中被移除的、读文件头后发现是动图的，跳过（第一张时列表快照里还是「待处理」，不能按「等待中」判断）
-      const item = itemsRef.current.find((each) => each.id === id);
-      if (item === undefined || item.status === 'skipped') {
-        done++;
-        setProgress({ done, total: ids.length });
-        continue;
-      }
-      patch(id, (current) => ({ ...current, status: 'processing' }));
-      try {
-        let file: Blob = item.file;
-        let rasterized: { format: SourceFormat; sized: boolean } | undefined;
-        if (isSvg(item)) {
-          // SVG 在主线程按最终尺寸画成 PNG，再交给 Worker 做格式、压缩这些
-          const intrinsic = svgIntrinsicSize(await item.file.text());
-          const plan = limitPlan(planResize(intrinsic, job, true), maxPixels);
-          const canvas = await renderSvg(item.file, plan, intrinsic, abort.signal);
-          file = await canvas.convertToBlob({ type: 'image/png' });
-          canvas.width = 0;
-          canvas.height = 0;
-          rasterized = { format: 'svg', sized: true };
-        }
-        let result;
+    try {
+      for (;;) {
+        if (abort.signal.aborted || gen !== generation.current) break;
+        // 处理途中新拖进来的图也会在这一轮里接着处理
+        const item = itemsRef.current.find((each) => each.status === 'ready' && !seen.has(each.id));
+        if (item === undefined) break;
+        seen.add(item.id);
+        patch(item.id, (current) => ({ ...current, status: 'processing' }));
         try {
-          result = await processInWorker(
-            { file, options: job, maxPixels, rasterized },
-            abort.signal,
-          );
-        } catch (error) {
-          // Worker 解不了、但 <img> 也许能显示（Safari 的 HEIC、TIFF）：主线程画成 PNG 再试一次
-          if (!(error instanceof ImageJobError && error.code === 'decode') || rasterized) {
-            throw error;
-          }
-          const png = await decodeWithImage(item.file, maxPixels, abort.signal).catch(() => {
-            throw error;
-          });
-          result = await processInWorker(
-            {
-              file: png,
-              options: job,
-              maxPixels,
-              rasterized: { format: item.header?.format ?? 'unknown', sized: false },
+          const result = await processOne(item, job, abort.signal);
+          if (gen !== generation.current) break;
+          patch(item.id, (current) => ({
+            ...current,
+            status: result.kept ? 'kept' : 'done',
+            width: current.width ?? result.sourceWidth,
+            height: current.height ?? result.sourceHeight,
+            result: {
+              blob: result.blob,
+              url: URL.createObjectURL(result.blob),
+              name: outputName(item.file.name, result.format),
+              format: result.format,
+              width: result.width,
+              height: result.height,
+              kept: result.kept,
+              notes: result.notes,
             },
-            abort.signal,
-          );
+          }));
+        } catch (error) {
+          if (abort.signal.aborted || gen !== generation.current) {
+            // 用户点了停止：这张放回待处理；改设置引起的中断，invalidate 已经处理过
+            if (gen === generation.current) {
+              patch(item.id, (current) => ({ ...current, status: 'ready' }));
+            }
+            break;
+          }
+          const code: ImageFailure =
+            error instanceof ImageJobError ? error.code : isSvg(item) ? 'decode' : 'unknown';
+          patch(item.id, (current) => ({
+            ...current,
+            status: code === 'animated' ? 'skipped' : 'failed',
+            error: code,
+            detail: error instanceof Error ? error.message : String(error),
+          }));
         }
-        const name = outputName(item.file.name, result.format);
-        patch(id, (current) => ({
-          ...current,
-          status: result.kept ? 'kept' : 'done',
-          width: current.width ?? result.sourceWidth,
-          height: current.height ?? result.sourceHeight,
-          result: {
-            blob: result.blob,
-            url: URL.createObjectURL(result.blob),
-            name,
-            format: result.format,
-            width: result.width,
-            height: result.height,
-            kept: result.kept,
-            notes: result.notes,
-          },
-        }));
-      } catch (error) {
-        if (abort.signal.aborted) {
-          patch(id, (current) => ({ ...current, status: 'ready' }));
-          break;
-        }
-        const code: ImageFailure =
-          error instanceof ImageJobError ? error.code : isSvg(item) ? 'decode' : 'unknown';
-        patch(id, (current) => ({
-          ...current,
-          status: code === 'animated' ? 'skipped' : 'failed',
-          error: code,
-          detail: error instanceof Error ? error.message : String(error),
-        }));
       }
-      done++;
-      setProgress({ done, total: ids.length });
+    } finally {
+      if (controller.current === abort) controller.current = null;
+      setRunning(false);
     }
-    // 取消后还没轮到的放回待处理
-    setItems((prev) =>
-      prev.map((item) => (item.status === 'queued' ? { ...item, status: 'ready' } : item)),
-    );
-    controller.current = null;
-    setRunning(false);
-    setProgress(null);
-  }, [maxPixels, patch, settings, tool.id]);
+  }, [patch, processOne, settings, tool.id]);
 
-  const cancel = (): void => controller.current?.abort();
+  // 有待处理的图就自动开始：拖进来、改了设置、点了「继续」都走这里
+  const pending = items.filter((item) => item.status === 'ready').length;
+  useEffect(() => {
+    if (paused || running || pending === 0) return;
+    const timer = setTimeout(() => void run(), AUTO_START_MS);
+    return () => clearTimeout(timer);
+  }, [paused, pending, run, running]);
+
+  const stop = (): void => {
+    setPaused(true);
+    controller.current?.abort();
+  };
 
   useEffect(
     () => () => {
@@ -504,10 +548,11 @@ export function ImageTool({ tool, active, onActivity }: ImageToolProps) {
 
   const retry = (id: string): void => {
     patch(id, (current) => ({ ...current, status: 'ready', error: undefined, detail: undefined }));
+    setPaused(false);
   };
 
   const finished = items.filter((item) => item.result !== undefined);
-  const pending = items.filter((item) => item.status === 'ready').length;
+  const settled = items.filter((item) => item.status !== 'ready' && item.status !== 'processing');
   const totalSize = items.reduce((sum, item) => sum + item.file.size, 0);
   const before = finished.reduce((sum, item) => sum + item.file.size, 0);
   const after = finished.reduce((sum, item) => sum + (item.result?.blob.size ?? 0), 0);
@@ -537,11 +582,13 @@ export function ImageTool({ tool, active, onActivity }: ImageToolProps) {
     }
   };
 
+  const busy = running || (pending > 0 && !paused);
   useEffect(() => {
-    onActivity(tool.id, { count: items.length, busy: running });
-  }, [items.length, onActivity, running, tool.id]);
+    onActivity(tool.id, { count: items.length, busy });
+  }, [busy, items.length, onActivity, tool.id]);
 
-  const changed = JSON.stringify(settings) !== JSON.stringify(defaults);
+  const changed =
+    JSON.stringify(toJob(settings, tool.id)) !== JSON.stringify(toJob(defaults, tool.id));
   const compareItem = items.find((item) => item.id === compareId);
 
   const noteText = (note: ImageNote): string => {
@@ -591,84 +638,102 @@ export function ImageTool({ tool, active, onActivity }: ImageToolProps) {
     }
   };
 
-  const rows = ROWS[tool.id];
-  const moreChanged = rows.more.some((row) => rowChanged(row, settings, defaults));
-  const targetOn = settings.target;
-  const qualityHint = targetOn
-    ? t('img.quality.target')
-    : t(`img.quality.${settings.quality}.hint` as MessageKey);
+  const statusText = (item: Item): string => {
+    switch (item.status) {
+      case 'ready':
+        return t(busy ? 'img.status.queued' : 'img.status.ready');
+      case 'processing':
+        return t('img.status.processing');
+      case 'kept':
+        return t('img.status.kept');
+      case 'skipped':
+        return t('img.status.skipped');
+      case 'failed':
+        return t('img.status.failed');
+      case 'done': {
+        if (isSvg(item)) return t('img.status.done');
+        const size = item.result?.blob.size ?? 0;
+        const change = Math.round((1 - size / Math.max(1, item.file.size)) * 100);
+        return change >= 0 ? `−${change}%` : `+${-change}%`;
+      }
+    }
+  };
 
-  const renderRow = (row: Row) => {
-    switch (row) {
-      case 'output':
+  // ---------- 设置 ----------
+
+  const outputs = (tool.id === 'convert-images' ? CONVERT_OUTPUTS : COMPRESS_OUTPUTS).filter(
+    (v) => webp || v !== 'webp',
+  );
+  const shownOutput = !webp && settings.output === 'webp' ? outputs[0] : settings.output;
+
+  const mainControls = (() => {
+    switch (tool.id) {
+      case 'compress-images': {
+        const level: CompressLevel = settings.target ? 'target' : settings.quality;
         return (
-          <div className="field__row" key={row}>
-            <span>{t('img.output.label')}</span>
+          <>
+            <span className="imgopts__label" id={`${tool.id}-main`}>
+              {t('img.quality.label')}
+            </span>
             <Segmented
               compact
-              values={webp ? OUTPUTS : OUTPUTS.filter((v) => v !== 'webp')}
-              value={!webp && settings.output === 'webp' ? 'keep' : settings.output}
+              values={LEVELS}
+              value={level}
+              label={(v) => t(v === 'target' ? 'img.quality.custom' : `img.quality.${v}`)}
+              hint={(v) => t(v === 'target' ? 'img.quality.target' : `img.quality.${v}.hint`)}
+              onChange={(v) =>
+                v === 'target' ? update({ target: true }) : update({ quality: v, target: false })
+              }
+            />
+            {settings.target && (
+              <span className="unit-input">
+                <NumberField
+                  min={10}
+                  max={102_400}
+                  value={settings.targetKb}
+                  label={t('img.target.value')}
+                  onCommit={(v) => update({ targetKb: v })}
+                />
+                <span>KB</span>
+              </span>
+            )}
+          </>
+        );
+      }
+      case 'convert-images':
+        return (
+          <>
+            <span className="imgopts__label">{t('img.convert.label')}</span>
+            <Segmented
+              compact
+              values={outputs}
+              value={shownOutput}
               label={(v) => t(`img.output.${v}` as MessageKey)}
               hint={(v) => t(`img.output.${v}.hint` as MessageKey)}
-              onChange={(v) => set('output', v)}
+              onChange={(v) => update({ output: v })}
             />
-          </div>
+            {shownOutput === 'jpeg' && (
+              <label className="swatch-field">
+                <span>{t('img.fill.label')}</span>
+                <span className="swatch">
+                  <input
+                    type="color"
+                    value={settings.color}
+                    onChange={(e) => update({ color: e.target.value })}
+                  />
+                </span>
+              </label>
+            )}
+          </>
         );
-      case 'quality':
+      case 'resize-images':
         return (
-          <div className={`field__row${targetOn ? ' field__row--muted' : ''}`} key={row}>
-            <span>{t('img.quality.label')}</span>
-            <Segmented
-              compact
-              values={QUALITIES}
-              value={settings.quality}
-              label={(v) => t(`img.quality.${v}` as MessageKey)}
-              hint={(v) => t(`img.quality.${v}.hint` as MessageKey)}
-              onChange={(v) => {
-                set('quality', v);
-                if (targetOn) set('target', false);
-              }}
-            />
-          </div>
-        );
-      case 'target':
-        return (
-          <div className="field__row" key={row}>
-            <span>{t('img.target.label')}</span>
-            <label className="check">
-              <input
-                type="checkbox"
-                checked={targetOn}
-                onChange={(e) => set('target', e.target.checked)}
-              />
-              <span>{t('img.target.toggle')}</span>
-            </label>
-            <span className="unit-input">
-              <NumberField
-                min={10}
-                max={102_400}
-                value={settings.targetKb}
-                label={t('img.target.value')}
-                onCommit={(v) => {
-                  set('targetKb', v);
-                  if (!targetOn) set('target', true);
-                }}
-              />
-              <span>KB</span>
-            </span>
-          </div>
-        );
-      case 'resize':
-        return (
-          <div
-            className={`field__row${settings.resize === 'exact' ? ' field__row--wide' : ''}`}
-            key={row}
-          >
-            <span>{t('img.resize.label')}</span>
+          <>
+            <span className="imgopts__label">{t('img.resize.label')}</span>
             <select
               value={settings.resize}
               aria-label={t('img.resize.label')}
-              onChange={(e) => set('resize', e.target.value as ResizeMode)}
+              onChange={(e) => update({ resize: e.target.value as ImageSettings['resize'] })}
             >
               {RESIZES.map((mode) => (
                 <option key={mode} value={mode}>
@@ -686,7 +751,7 @@ export function ImageTool({ tool, active, onActivity }: ImageToolProps) {
                   list={`${tool.id}-sizes`}
                   value={settings.size}
                   label={t(`img.resize.${settings.resize}` as MessageKey)}
-                  onCommit={(v) => set('size', v)}
+                  onCommit={(v) => update({ size: v })}
                 />
                 <span>px</span>
                 <datalist id={`${tool.id}-sizes`}>
@@ -703,7 +768,7 @@ export function ImageTool({ tool, active, onActivity }: ImageToolProps) {
                   max={100}
                   value={settings.percent}
                   label={t('img.resize.percent')}
-                  onCommit={(v) => set('percent', v)}
+                  onCommit={(v) => update({ percent: v })}
                 />
                 <span>%</span>
               </span>
@@ -716,7 +781,7 @@ export function ImageTool({ tool, active, onActivity }: ImageToolProps) {
                     max={16384}
                     value={settings.exactWidth}
                     label={t('img.resize.exactWidth')}
-                    onCommit={(v) => set('exactWidth', v)}
+                    onCommit={(v) => update({ exactWidth: v })}
                   />
                   <span>×</span>
                   <NumberField
@@ -724,7 +789,7 @@ export function ImageTool({ tool, active, onActivity }: ImageToolProps) {
                     max={16384}
                     value={settings.exactHeight}
                     label={t('img.resize.exactHeight')}
-                    onCommit={(v) => set('exactHeight', v)}
+                    onCommit={(v) => update({ exactHeight: v })}
                   />
                   <span>px</span>
                 </span>
@@ -734,39 +799,48 @@ export function ImageTool({ tool, active, onActivity }: ImageToolProps) {
                   value={settings.fit}
                   label={(v) => t(`img.fit.${v}` as MessageKey)}
                   hint={(v) => t(`img.fit.${v}.hint` as MessageKey)}
-                  onChange={(v) => set('fit', v)}
+                  onChange={(v) => update({ fit: v })}
                 />
               </>
             )}
-          </div>
+          </>
         );
-      case 'background':
+    }
+  })();
+
+  const moreControls = (() => {
+    switch (tool.id) {
+      case 'compress-images':
         return (
-          <div className="field__row field__row--background" key={row}>
-            <span>{t('img.background.label')}</span>
+          <label className="field__row">
+            <span>{t('img.output.label')}</span>
             <Segmented
               compact
-              values={BACKGROUNDS}
-              value={settings.background}
-              label={(v) => t(`img.background.${v}` as MessageKey)}
-              hint={(v) => t(`img.background.${v}.hint` as MessageKey)}
-              onChange={(v) => set('background', v)}
+              values={outputs}
+              value={shownOutput}
+              label={(v) => t(`img.output.${v}` as MessageKey)}
+              hint={(v) => t(`img.output.${v}.hint` as MessageKey)}
+              onChange={(v) => update({ output: v })}
             />
-            <label className="swatch-field">
-              <span className="swatch">
-                <input
-                  type="color"
-                  value={settings.color}
-                  onChange={(e) => set('color', e.target.value)}
-                />
-              </span>
-              <span>{t('img.background.color')}</span>
-            </label>
-          </div>
+          </label>
         );
-      case 'dpi':
+      case 'convert-images':
         return (
-          <div className="field__row" key={row}>
+          <label className="field__row">
+            <span>{t('img.quality.label')}</span>
+            <Segmented
+              compact
+              values={QUALITIES}
+              value={settings.quality}
+              label={(v) => t(`img.quality.${v}`)}
+              hint={(v) => t(`img.quality.${v}.hint`)}
+              onChange={(v) => update({ quality: v })}
+            />
+          </label>
+        );
+      case 'resize-images':
+        return (
+          <label className="field__row">
             <span>{t('img.dpi.label')}</span>
             <Segmented
               compact
@@ -774,43 +848,38 @@ export function ImageTool({ tool, active, onActivity }: ImageToolProps) {
               value={String(settings.dpi) as DpiValue}
               label={(v) => (v === '0' ? t('img.dpi.none') : v)}
               hint={() => t('img.dpi.hint')}
-              onChange={(v) => set('dpi', Number(v))}
+              onChange={(v) => update({ dpi: Number(v) })}
             />
-          </div>
+          </label>
         );
     }
-  };
+  })();
 
-  const resizeHint =
-    settings.resize === 'exact'
-      ? t(`img.fit.${settings.fit}.hint` as MessageKey)
-      : t(`img.resize.${settings.resize}.hint` as MessageKey);
-  const outputHint = t(
-    `img.output.${!webp && settings.output === 'webp' ? 'keep' : settings.output}.hint` as MessageKey,
-  );
-
-  const statusText = (item: Item): string => {
-    switch (item.status) {
-      case 'ready':
-        return t('img.status.ready');
-      case 'queued':
-        return t('img.status.queued');
-      case 'processing':
-        return t('img.status.processing');
-      case 'kept':
-        return t('img.status.kept');
-      case 'skipped':
-        return t('img.status.skipped');
-      case 'failed':
-        return t('img.status.failed');
-      case 'done': {
-        if (isSvg(item)) return t('img.status.done');
-        const size = item.result?.blob.size ?? 0;
-        const change = Math.round((1 - size / Math.max(1, item.file.size)) * 100);
-        return change >= 0 ? `−${change}%` : `+${-change}%`;
-      }
+  const moreHint = (() => {
+    switch (tool.id) {
+      case 'compress-images':
+        return t(`img.output.${shownOutput}.hint` as MessageKey);
+      case 'convert-images':
+        return t(`img.quality.${settings.quality}.hint`);
+      case 'resize-images':
+        return t('img.dpi.hint');
     }
-  };
+  })();
+
+  const mainHint = (() => {
+    switch (tool.id) {
+      case 'compress-images':
+        return settings.target
+          ? t('img.quality.target')
+          : t(`img.quality.${settings.quality}.hint`);
+      case 'convert-images':
+        return t(`img.output.${shownOutput}.hint` as MessageKey);
+      case 'resize-images':
+        return settings.resize === 'exact'
+          ? t(`img.fit.${settings.fit}.hint` as MessageKey)
+          : t(`img.resize.${settings.resize}.hint` as MessageKey);
+    }
+  })();
 
   return (
     <div className="panel">
@@ -832,7 +901,7 @@ export function ImageTool({ tool, active, onActivity }: ImageToolProps) {
                 <p className="composer__hint">{t('img.listHint')}</p>
               </div>
               <div className="queue__actions">
-                <button className="btn btn--ghost" type="button" onClick={clear} disabled={running}>
+                <button className="btn btn--ghost" type="button" onClick={clear}>
                   {t('compose.clear')}
                 </button>
               </div>
@@ -855,6 +924,8 @@ export function ImageTool({ tool, active, onActivity }: ImageToolProps) {
                     .map(noteText) ?? [];
                 if (vector && result !== undefined) {
                   parts.unshift(t('img.note.svg', { width: result.width, height: result.height }));
+                  // 只有「调整尺寸」能放大 SVG，别的工具里指个路
+                  if (tool.id !== 'resize-images') parts.splice(1, 0, t('img.note.svgResize'));
                 }
                 if (grew) parts.push(t('img.note.larger'));
                 const failed = item.status === 'failed' || item.status === 'skipped';
@@ -866,18 +937,17 @@ export function ImageTool({ tool, active, onActivity }: ImageToolProps) {
                       ? ' imgrow__note--warn'
                       : '';
                 const sourceFormat = item.header?.format;
+                const comparable = result !== undefined && !result.kept && item.previewable;
                 return (
                   <li key={item.id} className={`imgrow imgrow--${item.status}`}>
                     <button
                       type="button"
                       className="imgrow__thumb"
-                      disabled={result === undefined || result.kept || !item.previewable}
+                      disabled={!comparable}
                       onClick={() => setCompareId(item.id)}
                       aria-label={t('img.compare.open', { name: item.file.name })}
                       title={
-                        result !== undefined
-                          ? t('img.compare.open', { name: item.file.name })
-                          : undefined
+                        comparable ? t('img.compare.open', { name: item.file.name }) : undefined
                       }
                     >
                       {item.previewable ? (
@@ -950,7 +1020,7 @@ export function ImageTool({ tool, active, onActivity }: ImageToolProps) {
                         {statusText(item)}
                       </span>
                       <div className="imgrow__actions">
-                        {result !== undefined && !result.kept && item.previewable && (
+                        {comparable && (
                           <button
                             type="button"
                             className="btn btn--ghost btn--small"
@@ -968,7 +1038,7 @@ export function ImageTool({ tool, active, onActivity }: ImageToolProps) {
                             {t('img.download')}
                           </a>
                         )}
-                        {item.status === 'failed' && retryable(item.error) && !running && (
+                        {item.status === 'failed' && retryable(item.error) && (
                           <button
                             type="button"
                             className="btn btn--ghost btn--small"
@@ -1004,110 +1074,103 @@ export function ImageTool({ tool, active, onActivity }: ImageToolProps) {
         )}
       </div>
 
-      <fieldset className="composer__settings imgset" id={`${tool.id}-settings`} disabled={running}>
-        <legend className="visually-hidden">{t('img.settings')}</legend>
-        {rows.main.map(renderRow)}
-        {moreOpen && rows.more.map(renderRow)}
-        <div className="imgset__toggle">
-          <PanelMore
-            open={moreOpen}
-            changed={moreChanged}
-            controls={`${tool.id}-settings`}
-            onToggle={() => setMoreOpen((v) => !v)}
-          />
-        </div>
-        <p className="field__hint composer__settings-hint">
-          {[outputHint, qualityHint, resizeHint].join(' ')}
-          {changed && (
-            <>
-              {' '}
-              <button
-                type="button"
-                className="link"
-                onClick={() => {
-                  invalidate();
-                  setSettings(defaults);
-                }}
-              >
-                {t('advanced.reset')}
-              </button>
-            </>
-          )}
-        </p>
-      </fieldset>
-
-      <div className="panel__bar panel__bar--solo imgbar">
-        <p className="imgbar__summary" aria-live="polite">
-          {finished.length > 0
-            ? t('img.summary.done', {
-                count: finished.length,
-                before: formatSize(before),
-                after: formatSize(after),
-              })
-            : items.length > 0
-              ? tn('img.count', items.length)
-              : t('img.summary.empty')}
-          {finished.length > 0 && before > 0 && (
-            <b className={after <= before ? 'saving' : 'saving saving--worse'}>
-              {' '}
-              {after <= before
-                ? t('img.saved', { percent: Math.round((1 - after / before) * 100) })
-                : t('img.grew', { percent: Math.round((after / before - 1) * 100) })}
-            </b>
-          )}
-        </p>
-        <div className="imgbar__actions">
-          {running ? (
-            <button className="btn btn--ghost" type="button" onClick={cancel}>
-              {t('compose.cancel')}
-            </button>
-          ) : (
-            pending > 0 && (
-              <button className="btn btn--primary" type="button" onClick={() => void start()}>
-                {finished.length > 0
-                  ? tn('img.startMore', pending)
-                  : t(`img.start.${tool.id}` as MessageKey)}
-              </button>
-            )
-          )}
-          {finished.length > 0 && !running && (
-            <button
-              className={`btn ${pending > 0 ? 'btn--ghost' : 'btn--primary'}`}
-              type="button"
-              disabled={zipping}
-              onClick={() => void downloadAll()}
-            >
-              {zipping
-                ? t('queue.zipping')
-                : finished.length === 1
-                  ? t('img.download')
-                  : t('img.downloadAll', { count: finished.length })}
-            </button>
-          )}
-          {items.length === 0 && (
-            <button className="btn btn--primary" type="button" disabled>
-              {t(`img.start.${tool.id}` as MessageKey)}
-            </button>
-          )}
-        </div>
+      <div className="panel__bar imgopts" role="group" aria-label={t('img.settings')}>
+        <div className="imgopts__main">{mainControls}</div>
+        <PanelMore
+          open={moreOpen}
+          changed={moreChanged(settings, tool.id)}
+          controls={moreId}
+          onToggle={() => setMoreOpen((v) => !v)}
+        />
       </div>
+      <p className="panel__hint">
+        {mainHint}
+        {changed && !moreOpen && (
+          <>
+            {' '}
+            <button type="button" className="link" onClick={() => update(defaults)}>
+              {t('advanced.reset')}
+            </button>
+          </>
+        )}
+      </p>
+      {moreOpen && (
+        <div className="advanced imgopts__more" id={moreId}>
+          {moreControls}
+          <p className="field__hint">
+            {moreHint}
+            {changed && (
+              <>
+                {' '}
+                <button type="button" className="link" onClick={() => update(defaults)}>
+                  {t('advanced.reset')}
+                </button>
+              </>
+            )}
+          </p>
+        </div>
+      )}
 
-      {progress !== null && (
-        <div className="composer__progress" role="status" aria-live="polite">
-          <div className="bar">
-            <div
-              className="bar__fill"
-              style={{
-                width: `${Math.round((progress.done / Math.max(1, progress.total)) * 100)}%`,
-              }}
-            />
+      {items.length > 0 && (
+        <div className="panel__bar panel__bar--solo imgbar">
+          {busy && (
+            <div className="imgbar__progress" aria-hidden="true">
+              <div
+                className="imgbar__fill"
+                style={{ width: `${Math.round((settled.length / items.length) * 100)}%` }}
+              />
+            </div>
+          )}
+          <p className="imgbar__summary" role="status" aria-live="polite">
+            {busy ? (
+              t('img.processing', { done: settled.length, total: items.length })
+            ) : finished.length > 0 ? (
+              <>
+                {t('img.summary.done', {
+                  count: finished.length,
+                  before: formatSize(before),
+                  after: formatSize(after),
+                })}
+                {before > 0 && (
+                  <b className={after <= before ? 'saving' : 'saving saving--worse'}>
+                    {' '}
+                    {after <= before
+                      ? t('img.saved', { percent: Math.round((1 - after / before) * 100) })
+                      : t('img.grew', { percent: Math.round((after / before - 1) * 100) })}
+                  </b>
+                )}
+              </>
+            ) : (
+              tn('img.count', items.length)
+            )}
+          </p>
+          <div className="imgbar__actions">
+            {busy ? (
+              <button className="btn btn--ghost" type="button" onClick={stop}>
+                {t('img.stop')}
+              </button>
+            ) : (
+              pending > 0 && (
+                <button className="btn btn--primary" type="button" onClick={() => setPaused(false)}>
+                  {tn('img.startMore', pending)}
+                </button>
+              )
+            )}
+            {finished.length > 0 && (
+              <button
+                className={`btn ${busy || pending > 0 ? 'btn--ghost' : 'btn--primary'}`}
+                type="button"
+                disabled={zipping}
+                onClick={() => void downloadAll()}
+              >
+                {zipping
+                  ? t('queue.zipping')
+                  : finished.length === 1
+                    ? t('img.download')
+                    : t('img.downloadAll', { count: finished.length })}
+              </button>
+            )}
           </div>
-          <span>
-            {t('img.processing', {
-              done: Math.min(progress.done + 1, progress.total),
-              total: progress.total,
-            })}
-          </span>
         </div>
       )}
 

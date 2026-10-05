@@ -477,13 +477,13 @@ export const en: Messages = {
   'nav.resize': 'Resize',
   'tool.compress-images.title': 'Compress images',
   'tool.compress-images.lede':
-    'Shrink JPG, PNG and WebP in bulk: PNG keeps its transparency, nothing ever gets bigger, and you can aim for a size limit. Download everything as one zip.',
+    'Shrink JPG, PNG and WebP in bulk, keeping transparency and never growing a file.',
   'tool.convert-images.title': 'Convert images',
   'tool.convert-images.lede':
-    'Turn PNG, JPG, WebP, GIF, BMP, AVIF and SVG into JPG, PNG or WebP in bulk, keeping transparency or filling it with a colour.',
+    'Turn PNG, WebP, GIF, BMP, AVIF and SVG into JPG, PNG or WebP in bulk.',
   'tool.resize-images.title': 'Resize images',
   'tool.resize-images.lede':
-    'Scale images down by the long side, width, height or a percentage without distortion, crop to an exact size, or set the DPI, in bulk.',
+    'Scale images down by side or percentage without distortion, or crop to an exact size.',
   'drop.title.imageTools': 'Drop images or a folder here, or click to choose',
   'drop.hint.imageTools':
     'JPG, PNG, WebP, GIF, BMP, AVIF, SVG · choose as many as you like · images never leave this computer',
@@ -497,7 +497,7 @@ export const en: Messages = {
   'img.count.one': '1 image selected',
   'img.count.other': '{count} images selected',
   'img.listHint':
-    'After processing, click a thumbnail to compare it with the original. Changing a setting means processing again.',
+    'Click a thumbnail to compare with the original. Changing a setting reprocesses everything automatically.',
   'img.output.label': 'Format',
   'img.output.keep': 'Original',
   'img.output.jpeg': 'JPG',
@@ -522,17 +522,13 @@ export const en: Messages = {
     'Smallest: JPG / WebP quality 65; PNG reduced to 64 colours, gradients may look grainy.',
   'img.quality.target':
     'Quality is picked automatically to meet the size limit; if that is not enough, the image is scaled down (1 MB = 1024 KB).',
-  'img.target.label': 'File size',
-  'img.target.toggle': 'At most',
   'img.target.value': 'Size limit per image (KB)',
   'img.resize.label': 'Dimensions',
-  'img.resize.none': 'Original',
   'img.resize.long': 'Long side',
   'img.resize.width': 'Width',
   'img.resize.height': 'Height',
   'img.resize.percent': 'Percentage',
   'img.resize.exact': 'Exact size',
-  'img.resize.none.hint': 'Keeps the original pixel dimensions.',
   'img.resize.long.hint':
     'Landscape and portrait images shrink by their longer side, keeping proportions; smaller images are not enlarged.',
   'img.resize.width.hint':
@@ -548,24 +544,13 @@ export const en: Messages = {
     'Scales proportionally to cover this size and trims the overflow around the centre.',
   'img.fit.contain.hint':
     'Scales proportionally to fit within this size; the margins stay transparent or get the background colour.',
-  'img.background.label': 'Transparency',
-  'img.background.keep': 'Keep',
-  'img.background.fill': 'Fill',
-  'img.background.keep.hint':
-    'PNG and WebP keep transparency; JPG cannot, so transparent areas get the colour on the right.',
-  'img.background.fill.hint':
-    'Transparent areas of every image are filled with the colour on the right.',
-  'img.background.color': 'Colour',
   'img.dpi.label': 'DPI',
   'img.dpi.none': 'Unset',
   'img.dpi.hint':
     'DPI only tags the print size and does not change pixels; it applies to JPG and PNG, not WebP.',
-  'img.start.compress-images': 'Compress',
-  'img.start.convert-images': 'Convert',
-  'img.start.resize-images': 'Resize',
   'img.startMore.one': 'Process 1 more',
   'img.startMore.other': 'Process {count} more',
-  'img.processing': 'Processing image {done} of {total}…',
+  'img.processing': 'Processing… {done} of {total} done',
   'img.status.ready': 'Ready',
   'img.status.queued': 'Waiting',
   'img.status.processing': 'Processing',
@@ -600,7 +585,6 @@ export const en: Messages = {
   'img.download': 'Download',
   'img.downloadAll': 'Download all ({count})',
   'img.remove': 'Remove {name}',
-  'img.summary.empty': 'No images yet',
   'img.summary.done': '{count} done: {before} → {after}',
   'img.saved': '{percent}% smaller',
   'img.grew': '{percent}% larger',
@@ -623,13 +607,13 @@ export const en: Messages = {
     'No. Compression, conversion and resizing all happen in your browser. There is no upload endpoint, and the page keeps working offline once loaded.',
   'seo.faq.image.q2': 'Does PNG transparency survive?',
   'seo.faq.image.a2':
-    'Yes. PNG and WebP output keep transparency. JPG has no transparency, so transparent areas are filled with the colour you choose (white by default); you can also fill transparency for every format.',
+    'Yes. PNG and WebP output keep transparency. JPG has no transparency, so transparent areas are filled with the colour you choose (white by default).',
   'seo.faq.image.q3': 'Why do some images say “Kept original”?',
   'seo.faq.image.a3':
     'If re-compressing does not make an image smaller, which is common for already optimised files, you get the original file back, so nothing ever grows. To go smaller, reduce the dimensions or quality, or save as WebP or JPG.',
   'seo.faq.image.q4': 'Can I compress to a specific size, such as under 200 KB?',
   'seo.faq.image.a4':
-    'Yes. Tick “At most” and enter the size: the highest quality that fits is picked automatically, and the image is scaled down proportionally if that is not enough.',
+    'Yes. In Compress images, pick “Size limit” and enter a number: the highest quality that fits is picked automatically, and the image is scaled down proportionally if that is not enough.',
   'seo.faq.image.q5': 'What happens to photo orientation and location data?',
   'seo.faq.image.a5':
     'Photos are first turned upright according to how they were taken. Re-encoded images carry no EXIF, so location, camera model and similar details are removed; only images marked “Kept original” stay untouched.',
@@ -639,6 +623,18 @@ export const en: Messages = {
   'img.note.unchanged': 'Already matches the settings, kept as is',
   'img.note.withinTarget': 'Already under {size}, kept as is',
   'img.note.notSmaller': 'Re-compressing would not make it smaller, kept as is',
-  'img.note.svg': 'SVG rendered at {width} × {height}; set Dimensions for a larger image',
+  'img.note.svg': 'SVG rendered at {width} × {height}',
+  'img.note.svgResize': 'use Resize images for a larger version',
   'img.status.done': 'Done',
+  'img.quality.custom': 'Size limit',
+  'img.convert.label': 'Convert to',
+  'img.fill.label': 'Transparent areas',
+  'img.stop': 'Stop',
+  'compose.settings': 'PDF page settings',
+  'compose.pageSize.fit.hint':
+    'Each page matches its image, with no white border; good for screenshots and long images.',
+  'compose.pageSize.a4.hint':
+    'Every page is A4 and each image is scaled to fit and centred; landscape images turn the page sideways.',
+  'compose.pageSize.letter.hint':
+    'Every page is Letter and each image is scaled to fit and centred; landscape images turn the page sideways.',
 };

@@ -477,13 +477,13 @@ export const ja: Messages = {
   'nav.resize': 'サイズ変更',
   'tool.compress-images.title': '画像を圧縮',
   'tool.compress-images.lede':
-    'JPG・PNG・WebP をまとめて圧縮。PNG は透過を保ち、小さくならなければ元の画像のまま。指定サイズ以下にもでき、まとめて zip でダウンロードできます。',
+    'JPG・PNG・WebP をまとめて圧縮。透過を保ち、元より大きくならず、サイズ指定もできます。',
   'tool.convert-images.title': '画像の形式を変換',
   'tool.convert-images.lede':
-    'PNG・JPG・WebP・GIF・BMP・AVIF・SVG をまとめて JPG・PNG・WebP に変換。透過は保つか、色で塗りつぶせます。',
+    'PNG・WebP・GIF・BMP・AVIF・SVG などをまとめて JPG・PNG・WebP に変換します。',
   'tool.resize-images.title': '画像サイズを変更',
   'tool.resize-images.lede':
-    '長辺・幅・高さ・パーセントで縦横比を保ったまま縮小。指定サイズへの切り抜きや DPI の設定もまとめてできます。',
+    '長辺・幅・高さ・パーセントで縦横比を保って縮小、正確なサイズへの切り抜きもできます。',
   'drop.title.imageTools': '画像またはフォルダーをここにドロップ、またはクリックして選択',
   'drop.hint.imageTools':
     'JPG・PNG・WebP・GIF・BMP・AVIF・SVG に対応 · 何枚でもまとめて選べます · 画像はこのコンピューターから出ません',
@@ -497,7 +497,7 @@ export const ja: Messages = {
   'img.count.one': '1 枚の画像を選択中',
   'img.count.other': '{count} 枚の画像を選択中',
   'img.listHint':
-    '処理後にサムネイルをクリックすると元の画像と比較できます。設定を変えたら再処理が必要です。',
+    'サムネイルをクリックすると元の画像と比較できます。設定を変えると自動で処理し直します。',
   'img.output.label': '出力形式',
   'img.output.keep': '元の形式',
   'img.output.jpeg': 'JPG',
@@ -522,17 +522,13 @@ export const ja: Messages = {
     '最小：JPG / WebP 品質 65。PNG は 64 色に減色し、グラデーションが粗く見えることがあります。',
   'img.quality.target':
     'サイズ上限に収まる画質を自動で選び、足りなければ縦横比を保って縮小します（1 MB = 1024 KB）。',
-  'img.target.label': 'ファイルサイズ',
-  'img.target.toggle': '1 枚あたり最大',
   'img.target.value': '1 枚あたりのサイズ上限（KB）',
   'img.resize.label': '寸法',
-  'img.resize.none': '元のサイズ',
   'img.resize.long': '長辺を指定',
   'img.resize.width': '幅を指定',
   'img.resize.height': '高さを指定',
   'img.resize.percent': 'パーセント',
   'img.resize.exact': '正確なサイズ',
-  'img.resize.none.hint': '元のピクセル数のままです。',
   'img.resize.long.hint':
     '横長・縦長どちらも長い辺に合わせて縦横比を保って縮小します。小さい画像は拡大しません。',
   'img.resize.width.hint': '幅を指定値に縮め、高さは比率に従います。幅が狭い画像は拡大しません。',
@@ -547,23 +543,13 @@ export const ja: Messages = {
     '縦横比を保ってこのサイズを覆うように拡大縮小し、はみ出た部分を中央基準で切り取ります。',
   'img.fit.contain.hint':
     '縦横比を保ってこのサイズに収め、余白は透明のままか背景色で塗りつぶします。',
-  'img.background.label': '透過',
-  'img.background.keep': '保持',
-  'img.background.fill': '塗りつぶし',
-  'img.background.keep.hint':
-    'PNG と WebP は透過を保ちます。JPG は透過を使えないため、透明部分は右の背景色になります。',
-  'img.background.fill.hint': 'すべての画像の透明部分を右の背景色で塗りつぶします。',
-  'img.background.color': '背景色',
   'img.dpi.label': 'DPI',
   'img.dpi.none': '設定しない',
   'img.dpi.hint':
     'DPI は印刷サイズの目印でピクセルは変わりません。JPG と PNG で有効、WebP は非対応です。',
-  'img.start.compress-images': '圧縮を開始',
-  'img.start.convert-images': '変換を開始',
-  'img.start.resize-images': 'サイズ変更を開始',
   'img.startMore.one': '残りの 1 枚を処理',
   'img.startMore.other': '残りの {count} 枚を処理',
-  'img.processing': '{total} 枚中 {done} 枚目を処理中…',
+  'img.processing': '処理中… {total} 枚中 {done} 枚完了',
   'img.status.ready': '未処理',
   'img.status.queued': '待機中',
   'img.status.processing': '処理中',
@@ -600,7 +586,6 @@ export const ja: Messages = {
   'img.download': 'ダウンロード',
   'img.downloadAll': 'まとめてダウンロード（{count} 枚）',
   'img.remove': '{name} を削除',
-  'img.summary.empty': 'まだ画像がありません',
   'img.summary.done': '{count} 枚：{before} → {after}',
   'img.saved': '{percent}% 削減',
   'img.grew': '{percent}% 増加',
@@ -623,13 +608,13 @@ export const ja: Messages = {
     'いいえ。圧縮・変換・サイズ変更はすべてブラウザー内で行われます。アップロード先はなく、読み込み後はオフラインでも使えます。',
   'seo.faq.image.q2': 'PNG の透過は保たれますか？',
   'seo.faq.image.a2':
-    'はい。PNG と WebP で出力すれば透過は残ります。JPG は透過を持てないため、透明部分は選んだ背景色（既定は白）になります。すべての形式で透明部分を塗りつぶすこともできます。',
+    'はい。PNG と WebP で出力すれば透過は残ります。JPG は透過を持てないため、透明部分は選んだ色（既定は白）になります。',
   'seo.faq.image.q3': '「元のまま」と表示される画像があるのはなぜですか？',
   'seo.faq.image.a3':
     '再圧縮しても小さくならない場合（最適化済みの画像によくあります）は元のファイルをそのまま返すので、大きくなることはありません。さらに小さくしたいときは寸法や画質を下げるか、WebP / JPG で保存してください。',
   'seo.faq.image.q4': '200 KB 以下など、指定したサイズに圧縮できますか？',
   'seo.faq.image.a4':
-    'できます。「1 枚あたり最大」にチェックしてサイズを入力すると、収まる範囲で最も高い画質を自動で選び、それでも足りなければ縦横比を保って縮小します。',
+    'できます。「画像を圧縮」の画質で「サイズ指定」を選んで数値を入力すると、収まる範囲で最も高い画質を自動で選び、それでも足りなければ縦横比を保って縮小します。',
   'seo.faq.image.q5': '写真の向きや位置情報はどうなりますか？',
   'seo.faq.image.a5':
     '写真はまず撮影時の向きに合わせて回転されます。再エンコードした画像には EXIF が含まれないため、撮影場所やカメラの機種などの情報は削除されます。「元のまま」の画像だけはそのままです。',
@@ -639,7 +624,18 @@ export const ja: Messages = {
   'img.note.unchanged': '設定どおりのため元のまま',
   'img.note.withinTarget': 'もともと {size} 以下のため元のまま',
   'img.note.notSmaller': '再圧縮しても小さくならないため元のまま',
-  'img.note.svg':
-    'SVG を {width} × {height} でラスタライズしました。大きくしたい場合は「寸法」で指定できます',
+  'img.note.svg': 'SVG を {width} × {height} でラスタライズしました',
+  'img.note.svgResize': '大きくしたい場合は「画像サイズを変更」で拡大できます',
   'img.status.done': '完了',
+  'img.quality.custom': 'サイズ指定',
+  'img.convert.label': '変換先',
+  'img.fill.label': '透明部分の色',
+  'img.stop': '停止',
+  'compose.settings': 'PDF ページの設定',
+  'compose.pageSize.fit.hint':
+    '各ページを画像と同じ大きさにし、余白を付けません。スクリーンショットや縦長の画像向きです。',
+  'compose.pageSize.a4.hint':
+    'すべて A4 ページにし、画像は縦横比を保って中央に配置します。横長の画像はページを横向きにします。',
+  'compose.pageSize.letter.hint':
+    'すべて Letter ページにし、画像は縦横比を保って中央に配置します。横長の画像はページを横向きにします。',
 };

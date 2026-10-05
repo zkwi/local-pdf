@@ -5,6 +5,28 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+## [0.8.1] — 2026-10-05
+
+### Changed
+
+- The tool navigation shows its three groups side by side with the group name above each one; tablets and
+  phones get one row per group with the name on the left. Count badges sit on the corner of a tool instead of
+  widening it.
+- The image tools start working as soon as images are added and redo the results when a setting changes; a
+  Stop button pauses and a Continue button resumes.
+- Fewer settings: each image tool shows one main choice (quality for Compress, target format for Convert,
+  dimensions for Resize) and keeps a single extra option under "More options". Transparency is kept for PNG
+  and WebP, and Convert offers a fill colour only when the target is JPG.
+- Images to PDF shows only the page size up front; orientation appears for A4 and Letter, and margins and
+  image quality moved under "More options".
+- Shorter descriptions for the image tools, balanced line breaks in the upload area, and no Ctrl+V hint on
+  touch screens.
+
+### Fixed
+
+- The SVG note in Compress and Convert pointed to a size setting those tools do not have; it now points to
+  Resize images.
+
 ## [0.8.0] — 2026-10-05
 
 ### Added

@@ -62,7 +62,7 @@ async (page) => {
   if (pipeline.containCorner[3] !== 0) throw new Error(`Transparent padding regression: ${JSON.stringify(pipeline)}`);
   if (pipeline.pdfPages !== 2) throw new Error(`SVG to PDF regression: ${JSON.stringify(pipeline)}`);
 
-  // 界面主流程：拖入、开始、结果、对比、打包
+  // 界面主流程：拖入后自动处理、结果、对比、打包
   await page.goto(`${page.url().split('/').slice(0, 3).join('/')}/compress-images?lang=en`);
   await page.waitForTimeout(500);
   const ui = await page.evaluate(async () => {
@@ -81,11 +81,11 @@ async (page) => {
     window.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }));
     await wait(400);
     const tool = [...document.querySelectorAll('.tool')].find((el) => !el.hidden);
-    tool.querySelector('.imgbar__actions button').click();
+    // 拖进来就自动开始处理，等所有行都处理完
     const t0 = performance.now();
     while (performance.now() - t0 < 20000) {
       await wait(200);
-      if (![...tool.querySelectorAll('.imgrow')].some((r) => /--(ready|queued|processing)/.test(r.className))) break;
+      if (![...tool.querySelectorAll('.imgrow')].some((r) => /--(ready|processing)/.test(r.className))) break;
     }
     const statuses = [...tool.querySelectorAll('.imgrow')].map((r) => r.className.replace('imgrow imgrow--', ''));
     tool.querySelector('.imgrow__actions button.btn--small')?.click();

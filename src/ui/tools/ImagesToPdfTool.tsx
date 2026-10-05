@@ -10,6 +10,7 @@ import type { MessageKey } from '../../i18n/index.tsx';
 import { DropZone } from '../DropZone.tsx';
 import { formatSize } from '../format.ts';
 import { Segmented } from '../OptionsPanel.tsx';
+import { PanelMore } from '../PanelMore.tsx';
 import { useStored } from '../persist.ts';
 import { useFileSink, useShell } from '../shell.tsx';
 import { isImageFile } from '../tools.ts';
@@ -71,6 +72,10 @@ export function ImagesToPdfTool({ tool, active, onActivity }: ImagesToPdfToolPro
   const [options, setOptions] = useStored<Options>('local-pdf.images', DEFAULT, {
     fix: fixOptions,
   });
+  // 页边距或图片质量改过的话，打开页面时直接展开，免得设置藏着
+  const [moreOpen, setMoreOpen] = useState(
+    () => options.margin !== DEFAULT.margin || options.quality !== DEFAULT.quality,
+  );
   const [fileName, setFileName] = useState('');
   const [nameTouched, setNameTouched] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
@@ -374,55 +379,66 @@ export function ImagesToPdfTool({ tool, active, onActivity }: ImagesToPdfToolPro
         )}
       </div>
 
-      <div className="composer__settings">
-        <div className="field__row">
-          <span>{t('compose.pageSize')}</span>
+      {/* 只露出「页面」；纸张固定时才需要「方向」；页边距和图片质量收进「更多选项」 */}
+      <div className="panel__bar imgopts" role="group" aria-label={t('compose.settings')}>
+        <div className="imgopts__main">
+          <span className="imgopts__label">{t('compose.pageSize')}</span>
           <Segmented
             compact
             values={PAGE_SIZES}
             value={options.pageSize}
             label={(v) => t(`compose.pageSize.${v}` as MessageKey)}
-            hint={(v) => t(`compose.pageSize.${v}` as MessageKey)}
+            hint={(v) => t(`compose.pageSize.${v}.hint` as MessageKey)}
             onChange={(v) => setOption('pageSize', v)}
           />
+          {options.pageSize !== 'fit' && (
+            <Segmented
+              compact
+              values={ORIENTATIONS}
+              value={options.orientation}
+              label={(v) => t(`compose.orientation.${v}` as MessageKey)}
+              hint={(v) => t(`compose.orientation.${v}` as MessageKey)}
+              onChange={(v) => setOption('orientation', v)}
+            />
+          )}
         </div>
-        <div className="field__row">
-          <span>{t('compose.orientation')}</span>
-          <Segmented
-            compact
-            values={ORIENTATIONS}
-            value={options.orientation}
-            label={(v) => t(`compose.orientation.${v}` as MessageKey)}
-            hint={(v) => t(`compose.orientation.${v}` as MessageKey)}
-            onChange={(v) => setOption('orientation', v)}
-          />
-        </div>
-        <div className="field__row">
-          <span>{t('compose.margin')}</span>
-          <Segmented
-            compact
-            values={MARGINS}
-            value={options.margin}
-            label={(v) => t(`compose.margin.${v}` as MessageKey)}
-            hint={(v) => t(`compose.margin.${v}` as MessageKey)}
-            onChange={(v) => setOption('margin', v)}
-          />
-        </div>
-        <div className="field__row">
-          <span>{t('compose.quality')}</span>
-          <Segmented
-            compact
-            values={QUALITIES}
-            value={options.quality}
-            label={(v) => t(`compose.quality.${v}` as MessageKey)}
-            hint={(v) => t(`compose.quality.${v}.hint` as MessageKey)}
-            onChange={(v) => setOption('quality', v)}
-          />
-        </div>
-        <p className="field__hint composer__settings-hint">
-          {t(`compose.quality.${options.quality}.hint` as MessageKey)}
-        </p>
+        <PanelMore
+          open={moreOpen}
+          changed={options.margin !== DEFAULT.margin || options.quality !== DEFAULT.quality}
+          controls="images-to-pdf-more"
+          onToggle={() => setMoreOpen((v) => !v)}
+        />
       </div>
+      <p className="panel__hint">{t(`compose.pageSize.${options.pageSize}.hint` as MessageKey)}</p>
+      {moreOpen && (
+        <div className="advanced imgopts__more" id="images-to-pdf-more">
+          <div className="field__row">
+            <span>{t('compose.margin')}</span>
+            <Segmented
+              compact
+              values={MARGINS}
+              value={options.margin}
+              label={(v) => t(`compose.margin.${v}` as MessageKey)}
+              hint={(v) => t(`compose.margin.${v}` as MessageKey)}
+              onChange={(v) => setOption('margin', v)}
+            />
+          </div>
+          <div className="field__row">
+            <span>{t('compose.quality')}</span>
+            <Segmented
+              compact
+              values={QUALITIES}
+              value={options.quality}
+              label={(v) => t(`compose.quality.${v}` as MessageKey)}
+              hint={(v) => t(`compose.quality.${v}.hint` as MessageKey)}
+              onChange={(v) => setOption('quality', v)}
+            />
+          </div>
+          <p className="field__hint">
+            {t(`compose.quality.${options.quality}.hint` as MessageKey)}
+          </p>
+        </div>
+      )}
 
       <div className="panel__bar panel__bar--solo composer__bar">
         <label className="composer__name">

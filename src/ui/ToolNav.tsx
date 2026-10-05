@@ -50,7 +50,10 @@ export function ToolNav({
   return (
     <nav className="toolnav" aria-label={t('nav.label')}>
       {GROUPS.map((group) => (
-        <div className="toolnav__group" key={group}>
+        <div
+          className={`toolnav__group${group === active.group ? ' toolnav__group--on' : ''}`}
+          key={group}
+        >
           <span className="toolnav__label">{t(GROUP_LABEL[group])}</span>
           <ul className="toolnav__list">
             {TOOLS.filter((tool) => tool.group === group).map((tool) => {

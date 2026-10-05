@@ -68,9 +68,9 @@
 | Markdown → PDF                       | GFM tables, task lists, code blocks, quotes; drop the referenced images alongside the .md, or paste text |
 | Images → PDF                         | Drag thumbnails to reorder, rotate, pick paper / margins / quality; JPEG originals embedded as-is; SVG supported  |
 | Compress images                      | JPG / WebP by quality, PNG by colour reduction with transparency kept; never larger than the original; optional size limit such as 200 KB |
-| Convert images                       | PNG, JPG, WebP, GIF, BMP, AVIF and SVG to JPG, PNG or WebP; transparency kept or filled with a colour |
+| Convert images                       | PNG, JPG, WebP, GIF, BMP, AVIF and SVG to JPG, PNG or WebP; transparency kept (PNG / WebP) or filled with a colour of your choice (JPG) |
 | Resize images                        | Long side, width, height or percentage without distortion, or crop / fit to an exact size; optional DPI tag |
-| Folders and zip                      | Drop or pick a whole folder; results download one by one or as a zip that keeps the folder structure |
+| Folders and zip                      | Drop or pick a whole folder; processing starts by itself; results download one by one or as a zip that keeps the folder structure |
 | Multi-column reading order           | XY-cut page segmentation, cross-column headings handled                     |
 | CJK-aware text joining               | No stray spaces between Chinese characters; hyphenated Latin words rejoined |
 | Headers, footers, page numbers       | Detected across pages; page numbers become a Word `PAGE` field              |

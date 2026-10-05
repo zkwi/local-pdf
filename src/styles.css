@@ -547,6 +547,7 @@ h3 {
   font-weight: 700;
   font-size: 19px;
   letter-spacing: -0.015em;
+  text-wrap: balance;
 }
 
 .dropzone__hint {
@@ -555,6 +556,14 @@ h3 {
   color: var(--text-dim);
   font-size: 14px;
   line-height: 1.7;
+  text-wrap: balance;
+}
+
+/* 触屏上没有 Ctrl+V，这一行说明不显示 */
+@media (pointer: coarse) {
+  .dropzone__hint-line {
+    display: none;
+  }
 }
 
 .dropzone__hint-line {
@@ -2001,33 +2010,39 @@ h3 {
   }
 }
 
-/* ---------- 工具导航：三组各三个，像三条分段选择器 ---------- */
+/* ---------- 工具导航：三组并排、组名在上，每组三个等宽 ---------- */
 
 .toolnav {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 10px 28px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px 14px;
 }
 
 .toolnav__group {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  display: grid;
+  gap: 6px;
+  min-width: 0;
 }
 
 .toolnav__label {
-  font-size: 12.5px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  justify-self: center;
   color: var(--text-faint);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   white-space: nowrap;
+  transition: color 0.2s;
+}
+
+/* 当前工具所在的那一组，组名稍微加深，告诉人「你在这一组」 */
+.toolnav__group--on .toolnav__label {
+  color: var(--text-dim);
 }
 
 .toolnav__list {
-  display: flex;
-  gap: 4px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2px;
   margin: 0;
   padding: 3px;
   list-style: none;
@@ -2037,10 +2052,13 @@ h3 {
 }
 
 .toolnav__item {
-  display: inline-flex;
+  position: relative;
+  display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 7px 14px;
+  min-width: 0;
+  padding: 7px 8px;
   border-radius: 999px;
   color: var(--text-dim);
   font-size: 13.5px;
@@ -2053,11 +2071,18 @@ h3 {
     box-shadow 0.2s;
 }
 
-.toolnav__item:hover {
-  color: var(--text);
+.toolnav__item > span:not(.toolnav__activity) {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.toolnav__item--on {
+.toolnav__item:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 55%, transparent);
+}
+
+.toolnav__item--on,
+.toolnav__item--on:hover {
   background: var(--surface);
   color: var(--accent-deep);
   box-shadow:
@@ -2066,6 +2091,7 @@ h3 {
 }
 
 .toolnav__item svg {
+  flex: none;
   width: 15px;
   height: 15px;
   fill: none;
@@ -2075,7 +2101,11 @@ h3 {
   stroke-linejoin: round;
 }
 
+/* 保留了几项：小圆角徽标挂在右上角，不占文字的位置，出现时不挤动导航 */
 .toolnav__activity {
+  position: absolute;
+  top: -6px;
+  right: 2px;
   display: inline-grid;
   place-items: center;
   min-width: 18px;
@@ -2088,6 +2118,7 @@ h3 {
   font-size: 10.5px;
   font-variant-numeric: tabular-nums;
   line-height: 1;
+  box-shadow: var(--shadow-sm);
 }
 
 .toolnav__activity[data-busy] {
@@ -2100,6 +2131,24 @@ h3 {
 .toolnav__item:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* 平板宽度：三组上下排，组名放左边 */
+@media (width <= 900px) {
+  .toolnav {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .toolnav__group {
+    grid-template-columns: 88px minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+  }
+
+  .toolnav__label {
+    justify-self: start;
+  }
 }
 
 /* 九个工具页都挂着，只显示当前的 */
@@ -2280,28 +2329,6 @@ h3 {
   cursor: default;
 }
 
-.composer__settings {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 10px 24px;
-  padding: 14px 18px;
-  border-top: 1px solid var(--border);
-  background: var(--surface-2);
-}
-
-.composer__settings .field__row {
-  margin-top: 0;
-}
-
-.composer__settings .field__row > span:first-child {
-  min-width: 68px;
-}
-
-.composer__settings-hint {
-  grid-column: 1 / -1;
-  margin: 0;
-}
-
 .composer__bar {
   gap: 12px;
 }
@@ -2366,34 +2393,29 @@ h3 {
 }
 
 @media (width <= 560px) {
+  /* 手机：组名缩窄、图标去掉，三组仍各占一行，导航不至于占掉半屏 */
   .toolnav {
-    gap: 8px;
+    gap: 6px;
   }
 
   .toolnav__group {
-    width: 100%;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 4px;
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 6px;
   }
 
   .toolnav__label {
-    min-width: 64px;
-  }
-
-  .toolnav__list {
-    flex: 1;
-    flex-wrap: wrap;
-  }
-
-  .toolnav__list li {
-    flex: 1;
+    font-size: 11.5px;
+    letter-spacing: 0.02em;
   }
 
   .toolnav__item {
-    justify-content: center;
-    padding: 7px 6px;
+    padding: 7px 4px;
     min-height: 38px;
+    font-size: 13px;
+  }
+
+  .toolnav__item svg {
+    display: none;
   }
 
   .thumbs {
@@ -2419,11 +2441,6 @@ h3 {
     min-height: 40px;
     padding-left: 8px;
     padding-right: 8px;
-  }
-
-  .composer__settings {
-    padding-left: 14px;
-    padding-right: 14px;
   }
 
   .composer__bar .btn--primary {
@@ -2776,48 +2793,47 @@ h3 {
   }
 }
 
-/* 设置区是个 fieldset：处理中整体禁用 */
-.imgset {
-  margin: 0;
-  min-width: 0;
-  border: none;
-  border-top: 1px solid var(--border);
-}
-
-.imgset:disabled {
-  opacity: 0.6;
-}
-
-.imgset .field__row {
-  flex-wrap: wrap;
-}
-
-.imgset .field__row > span:first-child {
-  min-width: 72px;
-}
-
-/* 「更多选项」开关单独占一行，靠左 */
-.imgset__toggle {
-  grid-column: 1 / -1;
+/* 设置栏：核心设置在左，「更多选项」在右，和 PDF 工具的设置栏是同一个样子 */
+.imgopts__main {
   display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  min-width: 0;
 }
 
-.imgset__toggle .panel__more {
-  margin-left: 0;
+.imgopts__label {
+  color: var(--text-dim);
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
-/* 精确尺寸的控件多，占满一整行，免得把同一行的其他设置挤歪 */
-.imgset .field__row--wide {
-  grid-column: 1 / -1;
+.imgopts__main select,
+.imgopts__main input[type='number'] {
+  padding: 6px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  font-size: 13.5px;
 }
 
-.field__row--muted .segmented {
-  opacity: 0.5;
+.imgopts__main select:focus-visible,
+.imgopts__main input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
-/* 取色块紧跟在「保留 / 填充」后面，不被撑到行尾 */
-.field__row--background .segmented-wrap {
-  flex: none;
+/* 「更多选项」展开后只有一行设置和一句说明 */
+.imgopts__more {
+  padding: 6px 18px 16px;
+}
+
+.imgopts__more .field__row > span:first-child {
+  min-width: 72px;
 }
 
 .unit-input {
@@ -2871,7 +2887,25 @@ h3 {
 }
 
 .imgbar {
+  position: relative;
   justify-content: space-between;
+}
+
+/* 处理进度：贴在操作栏顶边的一条细线，不额外占一行 */
+.imgbar__progress {
+  position: absolute;
+  top: -1px;
+  right: 0;
+  left: 0;
+  height: 3px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.imgbar__fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s var(--ease);
 }
 
 .imgbar__summary {
