@@ -5,6 +5,27 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+## [0.8.2] — 2026-10-06
+
+### Changed
+
+- Lossy PNG compression dithers only where colours change gradually (photos, gradients, shadows). Flat areas
+  and hard edges are mapped straight to the nearest colour, so screenshots, charts and other graphics come out
+  about half the size at the same visual quality, without dither noise. Photos are unchanged.
+
+### Fixed
+
+- "Smallest" could produce a larger PNG than "Standard" for graphics with many small coloured shapes.
+
+### Internal
+
+- The image tool is split into a batch hook (`useImageBatch`), a pure settings module with unit tests, the
+  settings bar, the list row and a reusable number field.
+- New consistency tests catch a tool missing from the static page list, the sitemap, the crawler links in
+  `index.html` or any of the four languages, and option-based message keys missing in any language.
+- The image tools browser regression also checks that changing a setting redoes the results, that Stop does
+  not restart by itself, and that Continue finishes the rest.
+
 ## [0.8.1] — 2026-10-05
 
 ### Changed

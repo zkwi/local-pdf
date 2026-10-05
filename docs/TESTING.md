@@ -23,6 +23,10 @@ npm test -- tests/sample-pdf.test.ts
 
 单元测试通过不代表输出版式正确。PDF、DOCX 或页面样式有变化时，必须额外做视觉检查。
 
+另有两类防漏改的一致性检查：`tests/registry.test.ts` 核对工具注册表、构建时生成的静态页列表、sitemap、
+`index.html` 里的链接和四种语言的标题说明，加工具时漏改哪一处都会失败；`tests/i18n.test.ts` 核对按选项拼出来的文案键
+（编译器查不到）在四种语言里都有。
+
 文档安全和取消的合成浏览器回归已放在 `tests/browser/document-safety.js`。启动 Vite 开发站后，用已有的 `playwright-cli` 打开该站，再执行：
 
 ```bash
@@ -32,7 +36,8 @@ playwright-cli run-code --filename tests/browser/document-safety.js
 使用命名浏览器会话时，命令带上相同的 `-s=会话名`。脚本检查远程图片、srcset、CSS、iframe、页面跳转、合并单元格、罕见字符占位，以及解码等待取消后的后续转换和 iframe 清理。它不需要新增测试框架或私有样本。
 
 `tests/browser/image-tools.js` 用同样方式运行，用画布现做的合成图片检查压缩、按目标大小、等比缩放、JPEG 铺底色、PNG 减色、
-透明留边、SVG 转 PDF，再在图片压缩页走一遍拖入、处理、对比和打包下载。
+透明留边、SVG 转 PDF，再在图片压缩页走一遍拖入、自动处理、对比和打包下载，最后检查改画质后自动重做（「最小体积」不比「标准」大）、
+处理中停止后不再自动开始、点「继续」处理完剩下的。
 
 ```bash
 playwright-cli run-code --filename tests/browser/image-tools.js

@@ -23,6 +23,35 @@ describe('i18n 文案表', () => {
     }
   });
 
+  it('按选项拼出来的文案键都在（这些地方用了类型断言，编译器查不到）', () => {
+    const keys = [
+      ...['fit', 'a4', 'letter'].flatMap((v) => [
+        `compose.pageSize.${v}`,
+        `compose.pageSize.${v}.hint`,
+      ]),
+      ...['auto', 'portrait', 'landscape'].map((v) => `compose.orientation.${v}`),
+      ...['none', 'small', 'normal'].map((v) => `compose.margin.${v}`),
+      ...['auto', 'lossless', 'compact'].flatMap((v) => [
+        `compose.quality.${v}`,
+        `compose.quality.${v}.hint`,
+      ]),
+      ...['word', 'markdown', 'images', 'compress', 'convert', 'resize'].map((v) => `nav.${v}`),
+      ...['local', 'editable', 'ocr', 'free', 'vector', 'compose', 'shrink', 'batch'].flatMap(
+        (v) => [`features.${v}.title`, `features.${v}.body`],
+      ),
+      ...[1, 2, 3].flatMap((i) => [`seo.how.${i}`, `seo.how.topdf.${i}`, `seo.how.image.${i}`]),
+      ...[1, 2, 3, 4, 5, 6].flatMap((i) => [
+        `seo.faq.q${i}`,
+        `seo.faq.a${i}`,
+        `seo.faq.image.q${i}`,
+        `seo.faq.image.a${i}`,
+      ]),
+    ];
+    for (const table of [zhCN, en, ja, zhTW]) {
+      for (const key of keys) expect(Object.hasOwn(table, key), key).toBe(true);
+    }
+  });
+
   it('每个警告码和进度键都有文案', () => {
     const codes = [
       'page-extract-failed',

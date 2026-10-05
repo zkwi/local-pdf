@@ -211,4 +211,51 @@ describe('减色', () => {
     const q = quantize(photo.data, photo.width, photo.height, 32, { dither: 0.8 });
     expect(Math.max(...q.indices)).toBeLessThan(q.count);
   });
+
+  it('只在细腻过渡处抖动：纯色块整块一个颜色，渐变照样抖', () => {
+    // 左边：蓝底上的几个纯色方块（界面、图表）；右边：一段平滑渐变（照片、阴影）
+    const blocks = [
+      [230, 60, 60],
+      [60, 200, 80],
+      [240, 200, 40],
+      [200, 60, 200],
+      [30, 30, 30],
+      [240, 240, 240],
+    ];
+    const src = image(96, 32, (x, y) => {
+      if (x >= 48) {
+        const v = (x - 48) * 5;
+        return [v, 60 + (v >> 1), 255 - v, 255];
+      }
+      const block = x >= 4 && x < 40 && y >= 4 && y < 28 && (x - 4) % 12 < 8 && (y - 4) % 12 < 8;
+      return block
+        ? [...blocks[Math.floor((x - 4) / 12) + 3 * Math.floor((y - 4) / 12)], 255]
+        : [40, 90, 160, 255];
+    });
+    const dithered = quantize(src.data, 96, 32, 8, { dither: 0.85 });
+    // 平整处同一种颜色只映射到一个调色板颜色，不撒噪点
+    const seen = new Map<string, number>();
+    for (let y = 0; y < 32; y++) {
+      for (let x = 0; x < 42; x++) {
+        const p = y * 96 + x;
+        const key = src.data.subarray(p * 4, p * 4 + 4).join();
+        expect(seen.get(key) ?? dithered.indices[p], key).toBe(dithered.indices[p]);
+        seen.set(key, dithered.indices[p]);
+      }
+    }
+    // 渐变处还在抖：按列平均的颜色比不抖时更贴近原图，没有色带
+    const columnError = (q: ReturnType<typeof quantize>): number => {
+      let total = 0;
+      for (let x = 50; x < 96; x++) {
+        for (let c = 0; c < 3; c++) {
+          let sum = 0;
+          for (let y = 0; y < 32; y++) sum += q.palette[q.indices[y * 96 + x] * 4 + c];
+          total += Math.abs(sum / 32 - src.data[x * 4 + c]);
+        }
+      }
+      return total / (46 * 3);
+    };
+    const flat = quantize(src.data, 96, 32, 8, { dither: 0 });
+    expect(columnError(dithered)).toBeLessThan(columnError(flat) / 2);
+  });
 });

@@ -282,7 +282,7 @@ export function encodePng(image: RgbaImage, options: PngEncodeOptions): PngEncod
   }
 
   if (options.colors > 0 && !grayLossless) {
-    // 照片类内容抖动更自然；颜色少的界面截图不抖动，免得平整的色块出现噪点
+    // 颜色越少抖得越重，免得渐变出色带；平整色块和边缘不抖，由 quantize 按内容判断
     const q = quantize(data, width, height, Math.min(256, options.colors), {
       dither: options.colors >= 128 ? 0.75 : 0.85,
     });

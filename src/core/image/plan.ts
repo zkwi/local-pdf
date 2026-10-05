@@ -1,3 +1,4 @@
+import { clampInt } from '../util/number.ts';
 import type { SourceFormat } from './sniff.ts';
 
 /**
@@ -60,9 +61,6 @@ export interface DrawPlan extends Size {
 
 /** 画布边长的保守上限：各浏览器都能分配 */
 export const MAX_SIDE = 16384;
-
-const clampInt = (value: number, min: number, max: number): number =>
-  Math.min(max, Math.max(min, Math.round(Number.isFinite(value) ? value : min)));
 
 function whole(src: Size, width: number, height: number): DrawPlan {
   return {

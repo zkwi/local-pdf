@@ -62,7 +62,8 @@ async (page) => {
   if (pipeline.containCorner[3] !== 0) throw new Error(`Transparent padding regression: ${JSON.stringify(pipeline)}`);
   if (pipeline.pdfPages !== 2) throw new Error(`SVG to PDF regression: ${JSON.stringify(pipeline)}`);
 
-  // 界面主流程：拖入后自动处理、结果、对比、打包
+  // 界面主流程：拖入后自动处理、结果、对比、打包。先清掉上次留下的设置，每次都从默认设置开始
+  await page.evaluate(() => localStorage.removeItem('local-pdf.compress-images'));
   await page.goto(`${page.url().split('/').slice(0, 3).join('/')}/compress-images?lang=en`);
   await page.waitForTimeout(500);
   const ui = await page.evaluate(async () => {
@@ -105,5 +106,59 @@ async (page) => {
   if (ui.statuses.some((s) => s !== 'done' && s !== 'kept')) throw new Error(`UI processing regression: ${JSON.stringify(ui)}`);
   if (!ui.opened || !ui.closed) throw new Error(`Compare dialog regression: ${JSON.stringify(ui)}`);
   if (ui.downloads[0] !== 'compressed-images.zip') throw new Error(`Download regression: ${JSON.stringify(ui)}`);
-  return { pipeline, ui };
+
+  // 自动处理的状态逻辑：改设置后作废结果并按新设置重做；停止后不再自动开始，点「继续」接着做
+  const batch = await page.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const tool = [...document.querySelectorAll('.tool')].find((el) => !el.hidden);
+    const rows = () => [...tool.querySelectorAll('.imgrow')];
+    const statuses = () => rows().map((r) => r.className.replace('imgrow imgrow--', ''));
+    const settle = async (ms) => {
+      const t0 = performance.now();
+      while (performance.now() - t0 < ms) {
+        await wait(50);
+        if (!statuses().some((s) => s === 'ready' || s === 'processing')) return true;
+      }
+      return false;
+    };
+    const sizes = () => Promise.all(rows().map(async (r) => (await (await fetch(r.querySelector('a[download]').href)).blob()).size));
+
+    const before = await sizes();
+    tool.querySelectorAll('.imgopts [role="radio"]')[2].click(); // 画质：标准 → 最小
+    await wait(100);
+    const invalidated = statuses();
+    const rerun = await settle(20000);
+    const after = await sizes();
+
+    tool.querySelector('.queue__actions button').click(); // 清空
+    await wait(200);
+    const c = new OffscreenCanvas(3000, 2000);
+    const ctx = c.getContext('2d');
+    for (let i = 0; i < 6000; i++) {
+      ctx.fillStyle = `hsl(${(i * 47) % 360} 65% ${25 + (i % 55)}%)`;
+      ctx.fillRect((i * 131) % 3000, (i * 71) % 2000, 31, 23);
+    }
+    const blob = await c.convertToBlob({ type: 'image/jpeg', quality: 0.95 });
+    const dt = new DataTransfer();
+    for (let i = 0; i < 6; i++) dt.items.add(new File([blob], `big-${i}.jpg`, { type: 'image/jpeg' }));
+    window.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }));
+    const t0 = performance.now();
+    while (!statuses().includes('processing') && performance.now() - t0 < 10000) await wait(20);
+    tool.querySelector('.imgbar__actions button').click(); // 停止
+    await wait(800);
+    const stopped = statuses();
+    await wait(800); // 停止后不会自己再开始
+    const paused = statuses();
+    const resume = tool.querySelector('.imgbar__actions .btn--primary');
+    const resumeLabel = resume?.textContent ?? '';
+    resume?.click();
+    const resumed = await settle(60000);
+    return { before, invalidated, rerun, after, stopped, paused, resumeLabel, resumed, final: statuses() };
+  });
+  await page.evaluate(() => localStorage.removeItem('local-pdf.compress-images'));
+  if (!batch.invalidated.every((s) => s === 'ready' || s === 'processing') || !batch.rerun) throw new Error(`Settings re-run regression: ${JSON.stringify(batch)}`);
+  if (!batch.after.every((size, i) => size <= batch.before[i]) || batch.after[0] >= batch.before[0]) throw new Error(`Re-run result regression: ${JSON.stringify(batch)}`);
+  if (batch.stopped.includes('processing') || !batch.stopped.includes('ready') || batch.paused.join() !== batch.stopped.join()) throw new Error(`Stop regression: ${JSON.stringify(batch)}`);
+  if (!/^Process \d+ more$/.test(batch.resumeLabel) || !batch.resumed || batch.final.some((s) => s !== 'done' && s !== 'kept')) throw new Error(`Resume regression: ${JSON.stringify(batch)}`);
+  return { pipeline, ui, batch };
 }
