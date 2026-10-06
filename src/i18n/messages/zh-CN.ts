@@ -12,7 +12,7 @@ export const zhCN = {
   'app.docTitle': 'PDF 转 Word / Markdown，本地转换 · Local PDF',
 
   'drop.title': '把 PDF 拖到这里，或点击选择',
-  'drop.hint': '支持多个文件 · 文件不会离开这台电脑',
+  'drop.hint': '支持多个文件\u00a0· 文件不会离开这台电脑',
 
   'drop.choose': '选择 PDF 文件',
   'drop.overlay': '松开即可开始转换',
@@ -83,9 +83,9 @@ export const zhCN = {
   'tool.pdf-to-word.lede':
     '把 PDF 变成可以接着编辑的 .docx：段落、表格、图片、页眉页脚都重建，扫描件自动识别。',
   'tool.pdf-to-markdown.title': 'PDF 转 Markdown',
-  'tool.pdf-to-markdown.lede': '同一套版面识别，输出 .md；有图片时连图片和坐标清单一起打包。',
+  'tool.pdf-to-markdown.lede': '同一套版面识别，输出 .md，有图片时连图片和坐标清单一起打包。',
   'tool.pdf-to-images.title': 'PDF 转图片',
-  'tool.pdf-to-images.lede': '每页渲染成一张 PNG 或 JPEG，清晰度可选；多页打成 zip。',
+  'tool.pdf-to-images.lede': '每页渲染成一张 PNG 或 JPEG，清晰度可选，多页打成 zip。',
   'tool.word-to-pdf.title': 'Word 转 PDF',
   'tool.word-to-pdf.lede': '.docx 在浏览器里排版后写成 PDF：文字可选中、可搜索，文件不上传。',
   'tool.markdown-to-pdf.title': 'Markdown 转 PDF',
@@ -97,10 +97,10 @@ export const zhCN = {
   'tool.markdown-to-pdf.hint':
     '支持标题、列表、表格、代码块、任务列表、引用和图片；纸张和字号在「更多选项」里调。',
   'drop.title.word': '把 Word 文档（.docx）拖到这里，或点击选择',
-  'drop.title.markdown': '把 Markdown 文件拖到这里，或点击选择',
+  'drop.title.markdown': '把 Markdown\u00a0文件拖到这里，或点击选择',
   'drop.title.images': '把图片拖到这里，或点击选择',
-  'drop.hint.markdown': '可以把 .md 引用的图片一起拖进来 · 也可以直接 Ctrl+V 粘贴文本',
-  'drop.hint.images': '支持 JPG、PNG、WebP、GIF 等 · 按添加顺序排列，之后可以拖动调整',
+  'drop.hint.markdown': '可以把 .md 引用的图片一起拖进来\u00a0· 也可以直接 Ctrl+V 粘贴文本',
+  'drop.hint.images': '支持 JPG、PNG、WebP、GIF 等\u00a0· 按添加顺序排列，之后可以拖动调整',
   'drop.choose.word': '选择 Word 文档',
   'drop.choose.markdown': '选择 Markdown 文件',
   'drop.choose.images': '选择图片',
@@ -446,7 +446,7 @@ export const zhCN = {
   'tool.resize-images.lede': '按长边、宽、高或百分比等比缩小，也能裁成精确尺寸，批量处理不变形。',
   'drop.title.imageTools': '把图片或文件夹拖到这里，或点击选择',
   'drop.hint.imageTools':
-    '支持 JPG、PNG、WebP、GIF、BMP、AVIF、SVG · 可一次选很多张 · 图片不会离开这台电脑',
+    '支持 JPG、PNG、WebP、GIF、BMP、AVIF、SVG\u00a0· 可一次选很多张\u00a0· 图片不会离开这台电脑',
   'drop.folder': '选择文件夹',
   'drop.folder.long': '也可以选择整个文件夹',
   'compat.mobile.banner':

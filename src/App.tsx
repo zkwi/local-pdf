@@ -148,10 +148,14 @@ export function App() {
     };
   }, [docJobs, imageActivity, imageToolActivity, pdfJobs]);
 
-  // 页面空闲时先把转换 Worker（含 pdf.js，约 2 MB）拉起来，第一次转换不用等下载
+  // 页面空闲时先把转换 Worker（含 pdf.js，约 2 MB，压缩后约 640 KB）拉起来，第一次转换不用等下载；
+  // 浏览器开了省流量的不预先下载，等真要转换时再拉
   const { warmUp } = pdfQueue;
   useEffect(() => {
     if (tool.group !== 'from-pdf') return;
+    if ((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData) {
+      return;
+    }
     const w = window as Window & { requestIdleCallback?: (cb: () => void) => number };
     if (typeof w.requestIdleCallback === 'function') {
       w.requestIdleCallback(() => warmUp());

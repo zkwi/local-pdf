@@ -17,6 +17,11 @@ export function DocJobCard({ job, onCancel, onRetry, onRemove }: DocJobCardProps
   const { t, tn, locale } = useI18n();
   const running = job.status === 'running' || job.status === 'queued';
   const tool = job.source === 'word' ? 'word-to-pdf' : 'markdown-to-pdf';
+  // docx-preview 解不开 zip 时抛的是 "end of central directory" 这类内部错误：文件本身坏了，换成人话，也不给重试
+  const invalid =
+    job.status === 'error' &&
+    job.source === 'word' &&
+    /central directory|zip|corrupt|end of data|invalid/i.test(job.error ?? '');
 
   let status: string;
   switch (job.status) {
@@ -32,16 +37,15 @@ export function DocJobCard({ job, onCancel, onRetry, onRemove }: DocJobCardProps
     case 'cancelled':
       status = t('topdf.cancelled');
       break;
-    default: {
-      // docx-preview 解不开 zip 时抛的是 "end of central directory" 这类内部错误，换成人话
-      const detail = job.error ?? '';
-      const invalid =
-        job.source === 'word' && /central directory|zip|corrupt|end of data|invalid/i.test(detail);
-      status = invalid ? t('topdf.error.invalid') : t('topdf.failed', { detail });
-    }
+    default:
+      status = invalid ? t('topdf.error.invalid') : t('topdf.failed', { detail: job.error ?? '' });
   }
+  // 不到一秒就做完的不写「用时 0:00」
   const duration =
-    job.status === 'done' && job.startedAt !== undefined && job.finishedAt !== undefined
+    job.status === 'done' &&
+    job.startedAt !== undefined &&
+    job.finishedAt !== undefined &&
+    job.finishedAt - job.startedAt >= 1000
       ? t('job.duration', { time: formatClock(job.finishedAt - job.startedAt) })
       : null;
 
@@ -73,7 +77,7 @@ export function DocJobCard({ job, onCancel, onRetry, onRemove }: DocJobCardProps
               {t('topdf.download')}
             </a>
           )}
-          {(job.status === 'error' || job.status === 'cancelled') && (
+          {(job.status === 'error' || job.status === 'cancelled') && !invalid && (
             <button className="btn btn--ghost" type="button" onClick={() => onRetry(job.id)}>
               {t('job.retry')}
             </button>

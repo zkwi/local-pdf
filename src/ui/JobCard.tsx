@@ -91,7 +91,8 @@ export function JobCard({ job, onCancel, onRetry, onRemove }: JobCardProps) {
     job.startedAt === undefined ? null : (running ? now : (job.finishedAt ?? now)) - job.startedAt;
   let timeText: string | null = null;
   if (elapsed !== null && running) timeText = t('job.elapsed', { time: formatClock(elapsed) });
-  else if (elapsed !== null && job.status === 'done') {
+  // 不到一秒就做完的不写「用时 0:00」，看着像出错了
+  else if (elapsed !== null && elapsed >= 1000 && job.status === 'done') {
     timeText = t('job.duration', { time: formatClock(elapsed) });
   }
 
@@ -163,11 +164,14 @@ export function JobCard({ job, onCancel, onRetry, onRemove }: JobCardProps) {
                 {t(`job.download.${output.kind}` as MessageKey)}
               </a>
             ))}
-          {(job.status === 'error' || job.status === 'cancelled') && !needsPassword && (
-            <button className="btn btn--ghost" type="button" onClick={() => onRetry(job.id)}>
-              {t('job.retry')}
-            </button>
-          )}
+          {/* 文件本身不是有效的 PDF，重试还是同一个结果，不给这个按钮 */}
+          {(job.status === 'error' || job.status === 'cancelled') &&
+            !needsPassword &&
+            job.error?.code !== 'invalid-pdf' && (
+              <button className="btn btn--ghost" type="button" onClick={() => onRetry(job.id)}>
+                {t('job.retry')}
+              </button>
+            )}
           {job.status === 'error' && !needsPassword && (
             <a
               className="btn btn--ghost"
@@ -211,7 +215,10 @@ export function JobCard({ job, onCancel, onRetry, onRemove }: JobCardProps) {
         <div className="job__status">
           {/* 每秒跳动的计时器放在朗读区外面，读屏不会每秒念一遍 */}
           <span className="job__live" aria-live="polite">
-            <span className="job__stage">{stageLabel(job.progress.stage)}</span>
+            {/* 完成时阶段名「完成」和「转换完成」是一个意思，只留后者（和转 PDF 的任务卡一样） */}
+            {job.status !== 'done' && (
+              <span className="job__stage">{stageLabel(job.progress.stage)}</span>
+            )}
             <span className="job__message">{statusText}</span>
           </span>
           {timeText !== null && (

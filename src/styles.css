@@ -123,6 +123,17 @@ h3 {
   text-wrap: balance;
 }
 
+/* 标题和说明换行：中文只在标点和空格处断，不把「拖到」「也能」这种词拆到两行，实在放不下再随处断开；
+   日文标点少，同样处理会硬拆「ドロ / ップ」，改按词组断（Chrome 支持，其他浏览器照常换行） */
+:lang(zh) :is(h1, h2, h3, .hero__lede, .dropzone__title, .dropzone__hint) {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+:lang(ja) :is(h1, h2, h3, .hero__lede, .dropzone__title, .dropzone__hint) {
+  word-break: auto-phrase;
+}
+
 ::selection {
   background: color-mix(in srgb, var(--accent) 22%, transparent);
 }

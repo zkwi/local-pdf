@@ -10,7 +10,7 @@ export const en: Messages = {
   'app.docTitle': 'PDF to Word / Markdown in your browser · Local PDF',
 
   'drop.title': 'Drop PDF files here, or click to choose',
-  'drop.hint': 'Multiple files supported · files never leave this computer',
+  'drop.hint': 'Multiple files supported\u00a0· files never leave this computer',
 
   'drop.choose': 'Choose PDF files',
   'drop.overlay': 'Drop to start converting',
@@ -105,8 +105,10 @@ export const en: Messages = {
   'drop.title.word': 'Drop Word documents (.docx) here, or click to choose',
   'drop.title.markdown': 'Drop Markdown files here, or click to choose',
   'drop.title.images': 'Drop images here, or click to choose',
-  'drop.hint.markdown': 'Drop the images a .md refers to along with it · or paste text with Ctrl+V',
-  'drop.hint.images': 'JPG, PNG, WebP, GIF and more · kept in the order added, drag to rearrange',
+  'drop.hint.markdown':
+    'Drop the images a .md refers to along with it\u00a0· or paste text with Ctrl+V',
+  'drop.hint.images':
+    'JPG, PNG, WebP, GIF and more\u00a0· kept in the order added, drag to rearrange',
   'drop.choose.word': 'Choose Word documents',
   'drop.choose.markdown': 'Choose Markdown files',
   'drop.choose.images': 'Choose images',
@@ -486,7 +488,7 @@ export const en: Messages = {
     'Scale images down by side or percentage without distortion, or crop to an exact size.',
   'drop.title.imageTools': 'Drop images or a folder here, or click to choose',
   'drop.hint.imageTools':
-    'JPG, PNG, WebP, GIF, BMP, AVIF, SVG · choose as many as you like · images never leave this computer',
+    'JPG, PNG, WebP, GIF, BMP, AVIF, SVG\u00a0· choose as many as you like\u00a0· images never leave this computer',
   'drop.folder': 'Choose a folder',
   'drop.folder.long': 'or choose a whole folder',
   'compat.mobile.banner':

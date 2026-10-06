@@ -10,7 +10,7 @@ export const zhTW: Messages = {
   'app.docTitle': 'PDF 轉 Word / Markdown，本機轉換 · Local PDF',
 
   'drop.title': '把 PDF 拖到這裡，或點擊選擇',
-  'drop.hint': '支援多個檔案 · 檔案不會離開這台電腦',
+  'drop.hint': '支援多個檔案\u00a0· 檔案不會離開這台電腦',
 
   'drop.choose': '選擇 PDF 檔案',
   'drop.overlay': '放開即可開始轉換',
@@ -81,9 +81,9 @@ export const zhTW: Messages = {
   'tool.pdf-to-word.lede':
     '把 PDF 變成可以接著編輯的 .docx：段落、表格、圖片、頁首頁尾都重建，掃描件自動辨識。',
   'tool.pdf-to-markdown.title': 'PDF 轉 Markdown',
-  'tool.pdf-to-markdown.lede': '同一套版面辨識，輸出 .md；有圖片時連圖片和座標清單一起打包。',
+  'tool.pdf-to-markdown.lede': '同一套版面辨識，輸出 .md，有圖片時連圖片和座標清單一起打包。',
   'tool.pdf-to-images.title': 'PDF 轉圖片',
-  'tool.pdf-to-images.lede': '每頁轉成一張 PNG 或 JPEG，清晰度可選；多頁打包成 zip。',
+  'tool.pdf-to-images.lede': '每頁轉成一張 PNG 或 JPEG，清晰度可選，多頁打包成 zip。',
   'tool.word-to-pdf.title': 'Word 轉 PDF',
   'tool.word-to-pdf.lede': '.docx 在瀏覽器裡排版後寫成 PDF：文字可選取、可搜尋，檔案不上傳。',
   'tool.markdown-to-pdf.title': 'Markdown 轉 PDF',
@@ -95,10 +95,10 @@ export const zhTW: Messages = {
   'tool.markdown-to-pdf.hint':
     '支援標題、清單、表格、程式碼區塊、工作清單、引用和圖片；紙張和字號在「更多選項」裡調整。',
   'drop.title.word': '把 Word 文件（.docx）拖到這裡，或點擊選擇',
-  'drop.title.markdown': '把 Markdown 檔案拖到這裡，或點擊選擇',
+  'drop.title.markdown': '把 Markdown\u00a0檔案拖到這裡，或點擊選擇',
   'drop.title.images': '把圖片拖到這裡，或點擊選擇',
-  'drop.hint.markdown': '可以把 .md 引用的圖片一起拖進來 · 也可以直接 Ctrl+V 貼上文字',
-  'drop.hint.images': '支援 JPG、PNG、WebP、GIF 等 · 依加入順序排列，之後可以拖曳調整',
+  'drop.hint.markdown': '可以把 .md 引用的圖片一起拖進來\u00a0· 也可以直接 Ctrl+V 貼上文字',
+  'drop.hint.images': '支援 JPG、PNG、WebP、GIF 等\u00a0· 依加入順序排列，之後可以拖曳調整',
   'drop.choose.word': '選擇 Word 文件',
   'drop.choose.markdown': '選擇 Markdown 檔案',
   'drop.choose.images': '選擇圖片',
@@ -444,7 +444,7 @@ export const zhTW: Messages = {
   'tool.resize-images.lede': '依長邊、寬、高或百分比等比縮小，也能裁成精確尺寸，批次處理不變形。',
   'drop.title.imageTools': '把圖片或資料夾拖到這裡，或點擊選擇',
   'drop.hint.imageTools':
-    '支援 JPG、PNG、WebP、GIF、BMP、AVIF、SVG · 可一次選很多張 · 圖片不會離開這台電腦',
+    '支援 JPG、PNG、WebP、GIF、BMP、AVIF、SVG\u00a0· 可一次選很多張\u00a0· 圖片不會離開這台電腦',
   'drop.folder': '選擇資料夾',
   'drop.folder.long': '也可以選擇整個資料夾',
   'compat.mobile.banner':

@@ -10,7 +10,7 @@ export const ja: Messages = {
   'app.docTitle': 'ブラウザで PDF → Word / Markdown · Local PDF',
 
   'drop.title': 'PDF をここにドロップ、またはクリックして選択',
-  'drop.hint': '複数ファイル対応 · ファイルはこのパソコンから出ません',
+  'drop.hint': '複数ファイル対応\u00a0· ファイルはこのパソコンから出ません',
 
   'drop.choose': 'PDF ファイルを選択',
   'drop.overlay': 'ドロップして変換を開始',
@@ -104,9 +104,9 @@ export const ja: Messages = {
   'drop.title.markdown': 'Markdown ファイルをここにドロップ、またはクリックして選択',
   'drop.title.images': '画像をここにドロップ、またはクリックして選択',
   'drop.hint.markdown':
-    '.md が参照する画像も一緒にドロップできます · Ctrl+V でテキストの貼り付けも可',
+    '.md が参照する画像も一緒にドロップできます\u00a0· Ctrl+V でテキストの貼り付けも可',
   'drop.hint.images':
-    'JPG、PNG、WebP、GIF など · 追加した順に並び、あとからドラッグで並べ替えできます',
+    'JPG、PNG、WebP、GIF など\u00a0· 追加した順に並び、あとからドラッグで並べ替えできます',
   'drop.choose.word': 'Word 文書を選択',
   'drop.choose.markdown': 'Markdown ファイルを選択',
   'drop.choose.images': '画像を選択',
@@ -486,7 +486,7 @@ export const ja: Messages = {
     '長辺・幅・高さ・パーセントで縦横比を保って縮小、正確なサイズへの切り抜きもできます。',
   'drop.title.imageTools': '画像またはフォルダーをここにドロップ、またはクリックして選択',
   'drop.hint.imageTools':
-    'JPG・PNG・WebP・GIF・BMP・AVIF・SVG に対応 · 何枚でもまとめて選べます · 画像はこのコンピューターから出ません',
+    'JPG・PNG・WebP・GIF・BMP・AVIF・SVG に対応\u00a0· 何枚でもまとめて選べます\u00a0· 画像はこのコンピューターから出ません',
   'drop.folder': 'フォルダーを選択',
   'drop.folder.long': 'フォルダーごと選ぶこともできます',
   'compat.mobile.banner':

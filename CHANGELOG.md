@@ -5,6 +5,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+## [0.8.5] — 2026-10-06
+
+### Changed
+
+- Headings, page descriptions and the upload area wrap at natural points: Chinese breaks only at punctuation
+  and spaces instead of splitting a word across lines, Japanese breaks between phrases (Chrome and Edge), and a
+  "·" separator never starts a line.
+- Finished conversions say "Conversion finished" once instead of "Done · Conversion finished", and jobs that
+  finish within a second no longer show "Took 0:00".
+- Files that are not a valid PDF or Word document no longer offer Retry, which would fail the same way; the
+  feedback link stays.
+- With the browser's data saver on, the PDF tools no longer download the conversion engine (about 640 KB)
+  before a file is added.
+
 ## [0.8.4] — 2026-10-06
 
 ### Changed
