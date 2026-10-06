@@ -162,9 +162,14 @@ hosting under another domain.
 
 ## Privacy
 
-- No upload code exists. Check the network panel: the only external requests are the optional OCR model and runtime downloads.
+- No upload code exists. Check the network panel: the app itself only makes external requests for the optional OCR model and runtime downloads.
 - pdf.js CMaps, standard fonts and WASM are self-hosted (copied into `public/` on `npm install`).
-- Nothing about the document (name, text, page count) is sent anywhere. There is no analytics.
+- Nothing about the document (name, text, page count) is sent anywhere, and the code in this repository contains no analytics.
+- The hosted site at localpdfconverter.com has Cloudflare Web Analytics turned on, so its network panel also shows a
+  Cloudflare script and requests to `/cdn-cgi/rum`. They report the page address (without the part after `?`), the
+  browser and operating system version, and load timings and similar performance figures; they set no cookies and
+  never see your files. Cloudflare adds the script at the edge, so a self-hosted copy only gets it if its host turns
+  the same feature on.
 
 ## Browser support
 
